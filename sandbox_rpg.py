@@ -1195,7 +1195,6 @@ class Game:
         self.renderer.update(self.em, self.camera)
         self._draw_mob_health_bars()
         self._draw_placeable_health_bars()
-        self._draw_placeable_health_bars()
         if self.attack_anim > 0:
             self._draw_attack_arc()
         self.particles.draw(self.screen, self.camera.x, self.camera.y)
@@ -1354,20 +1353,6 @@ class Game:
             pygame.draw.rect(self.screen, (40, 10, 10), (sx, sy, 28, 4))
             fill = int(28 * h.current / h.maximum)
             pygame.draw.rect(self.screen, (220, 40, 40), (sx, sy, fill, 4))
-
-    def _draw_placeable_health_bars(self) -> None:
-        for eid in self.em.get_entities_with(Transform, Health, Placeable):
-            if self.em.has_component(eid, AI):
-                continue
-            t: Transform = self.em.get_component(eid, Transform)
-            h: Health = self.em.get_component(eid, Health)
-            if h.current >= h.maximum:
-                continue
-            sx = int(t.x - self.camera.x)
-            sy = int(t.y - self.camera.y - 6)
-            pygame.draw.rect(self.screen, (40, 30, 10), (sx, sy, 28, 3))
-            fill = int(28 * h.current / h.maximum)
-            pygame.draw.rect(self.screen, (200, 160, 40), (sx, sy, fill, 3))
 
     def _draw_placeable_health_bars(self) -> None:
         for eid in self.em.get_entities_with(Transform, Health, Placeable):
