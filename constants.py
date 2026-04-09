@@ -103,12 +103,6 @@ MOB_RESPAWN_INTERVAL: float = 8.0    # seconds between natural mob respawns
 # -- Ranged enemies ------------------------------------------------------------
 RANGED_ENEMY_START_DAY: int = 3      # ranged enemies appear after this day
 
-# -- Boss system ---------------------------------------------------------------
-BOSS_GLOW_COLORS: Tuple[Tuple[int, int, int], ...] = (
-    (255, 60, 60), (60, 255, 60), (60, 60, 255),
-    (255, 200, 60), (200, 60, 255),
-)
-
 # -- Placement preview ---------------------------------------------------------
 PLACEMENT_PREVIEW_COLOR: Tuple[int, int, int, int] = (60, 220, 80, 120)
 PLACEMENT_INVALID_COLOR: Tuple[int, int, int, int] = (220, 60, 60, 120)

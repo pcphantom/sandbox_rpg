@@ -241,7 +241,7 @@ WAVE_MOB_TIERS: List[List[str]] = [
     ['slime', 'spider'],                            # tier 0 -- easy
     ['skeleton', 'wolf', 'goblin', 'zombie'],       # tier 1 -- medium
     ['orc', 'wraith'],                              # tier 2 -- hard
-    ['dark_knight', 'troll'],                       # tier 3 -- boss-tier
+    ['dark_knight', 'troll'],                       # tier 3 -- elite
 ]
 
 # Ranged enemies that join waves after RANGED_ENEMY_START_DAY

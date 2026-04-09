@@ -133,12 +133,6 @@ Format: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_count_mult)`
 | `MOB_RESPAWN_INTERVAL` | 8.0 | Seconds between natural mob respawns |
 | `RANGED_ENEMY_START_DAY` | 3 | Day after which ranged enemies appear |
 
-## Boss System (`constants.py`)
-
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `BOSS_GLOW_COLORS` | 5 RGB tuples | Available boss glow colors |
-
 ## Placement Preview (`constants.py`)
 
 | Constant | Value | Purpose |

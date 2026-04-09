@@ -122,7 +122,7 @@ class DayNightCycle:
             self.day_number += 1
             self._day_flash_timer = 3.0
         # Detect night start (dusk -> night)
-        if not is_day_now and self._was_day and self.get_darkness() > 0.3:
+        if not is_day_now and self._was_day:
             self._night_flash_timer = 2.5
         self._was_day = is_day_now
         self._day_flash_timer = max(0.0, self._day_flash_timer - dt)

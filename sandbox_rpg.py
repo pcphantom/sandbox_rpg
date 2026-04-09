@@ -1870,7 +1870,7 @@ class Game:
 
         # Wave info — simplified, no numbers
         if self.wave_system.wave_active:
-            wave_txt = "ENEMIES ATTACKING!"
+            wave_txt = "DEFEND!"
             wt = self.font.render(wave_txt, True, RED)
             wbg = pygame.Surface((wt.get_width() + 16, wt.get_height() + 6),
                                  pygame.SRCALPHA)
