@@ -1,4 +1,5 @@
 """Game-wide constants for the sandbox RPG."""
+import os
 from typing import Tuple
 
 # -- Display -------------------------------------------------------------------
@@ -17,9 +18,12 @@ RED:    Tuple[int, int, int] = (255, 60, 60)
 GREEN:  Tuple[int, int, int] = (60, 220, 80)
 CYAN:   Tuple[int, int, int] = (80, 200, 255)
 GRAY:   Tuple[int, int, int] = (160, 160, 170)
-DARK_GRAY: Tuple[int, int, int] = (80, 80, 90)
-ORANGE: Tuple[int, int, int] = (255, 160, 60)
-PURPLE: Tuple[int, int, int] = (160, 80, 200)
+DARK_GRAY:   Tuple[int, int, int] = (80, 80, 90)
+ORANGE:      Tuple[int, int, int] = (255, 160, 60)
+PURPLE:      Tuple[int, int, int] = (160, 80, 200)
+DARK_BROWN:  Tuple[int, int, int] = (60, 35, 15)
+LIGHT_BLUE:  Tuple[int, int, int] = (140, 200, 255)
+DARK_GREEN:  Tuple[int, int, int] = (30, 80, 30)
 
 # -- Tile types ----------------------------------------------------------------
 TILE_WATER:       int = 0
@@ -28,9 +32,10 @@ TILE_GRASS:       int = 2
 TILE_DIRT:        int = 3
 TILE_STONE_FLOOR: int = 4
 TILE_STONE_WALL:  int = 5
+TILE_FOREST:      int = 6
 
 # -- Save system ---------------------------------------------------------------
-SAVE_DIR: str = "saves"
+SAVE_DIR: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save")
 SAVE_SLOTS: int = 4          # 0 = quick-save, 1-3 = manual
 QUICK_SAVE_SLOT: int = 0
 
@@ -58,3 +63,17 @@ MOISTURE_SCALE: float = 0.06
 MOISTURE_OFFSET: float = 500.0
 ELEVATION_OCTAVES: int = 6
 MOISTURE_OCTAVES: int = 4
+
+# -- Building system -----------------------------------------------------------
+WALL_HP: int = 100
+TURRET_HP: int = 80
+TURRET_RANGE: float = 200.0
+TURRET_DAMAGE: int = 8
+TURRET_COOLDOWN: float = 1.5
+CHEST_CAPACITY: int = 24
+
+# -- Wave system ---------------------------------------------------------------
+WAVE_START_NIGHT: int = 3
+WAVE_BASE_COUNT: int = 3
+WAVE_SCALE_PER_NIGHT: int = 2
+WAVE_SPAWN_RADIUS: float = 350.0
