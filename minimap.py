@@ -1,4 +1,6 @@
 """Player-centred minimap that tracks the current area."""
+from __future__ import annotations
+
 from typing import Dict, Tuple
 
 import pygame
@@ -6,6 +8,7 @@ import pygame
 from constants import (SCREEN_WIDTH, TILE_SIZE, TILE_WATER, TILE_SAND,
                        TILE_GRASS, TILE_DIRT, TILE_STONE_FLOOR,
                        TILE_STONE_WALL, BLACK, WHITE, RED)
+from world import World
 
 
 TILE_COLORS: Dict[int, Tuple[int, int, int]] = {
@@ -30,7 +33,7 @@ class Minimap:
         self.size = size
         self.surface = pygame.Surface((size, size))
 
-    def draw(self, screen: pygame.Surface, world: "World",      # noqa: F821
+    def draw(self, screen: pygame.Surface, world: World,
              px: float, py: float,
              mob_positions: list | None = None) -> None:
         """Redraw the minimap every frame (fast enough at 160²)."""

@@ -260,7 +260,6 @@ class CraftingPanel:
             if icon:
                 surface.blit(pygame.transform.scale(icon, (28, 28)),
                              (btn.x + 6, ry + 8))
-            self.font.render(recipe['name'], True, WHITE)
             surface.blit(
                 self.font.render(recipe['name'], True, WHITE),
                 (btn.x + 40, ry + 4))

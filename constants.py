@@ -42,3 +42,19 @@ INVENTORY_TOTAL_SLOTS: int = INVENTORY_SLOTS_PER_PAGE * INVENTORY_PAGES  # 96
 
 # -- Stats ---------------------------------------------------------------------
 STAT_POINTS_PER_LEVEL: int = 3
+
+# -- Combat --------------------------------------------------------------------
+MIN_ATTACK_COOLDOWN: float = 0.15
+BASE_ATTACK_COOLDOWN: float = 0.30
+AGILITY_COOLDOWN_REDUCTION: float = 0.02
+
+# -- Sleep ---------------------------------------------------------------------
+SLEEP_DURATION: float = 5.0
+SLEEP_TIME_MULTIPLIER: float = 12.0
+
+# -- World Generation ----------------------------------------------------------
+ELEVATION_SCALE: float = 0.045
+MOISTURE_SCALE: float = 0.06
+MOISTURE_OFFSET: float = 500.0
+ELEVATION_OCTAVES: int = 6
+MOISTURE_OCTAVES: int = 4

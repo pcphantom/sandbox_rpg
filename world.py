@@ -3,7 +3,9 @@ import random
 from typing import List
 
 from constants import (TILE_WATER, TILE_SAND, TILE_GRASS, TILE_DIRT,
-                       TILE_STONE_FLOOR, TILE_STONE_WALL, TILE_SIZE)
+                       TILE_STONE_FLOOR, TILE_STONE_WALL, TILE_SIZE,
+                       ELEVATION_SCALE, MOISTURE_SCALE, MOISTURE_OFFSET,
+                       ELEVATION_OCTAVES, MOISTURE_OCTAVES)
 from utils import fbm_noise
 
 
@@ -40,9 +42,11 @@ class WorldGenerator:
         # Two-channel noise for richer biomes
         for x in range(w):
             for y in range(h):
-                elev = fbm_noise(x * 0.045, y * 0.045, self.seed, 6)
-                moist = fbm_noise(x * 0.06 + 500, y * 0.06 + 500,
-                                  self.seed + 777, 4)
+                elev = fbm_noise(x * ELEVATION_SCALE, y * ELEVATION_SCALE,
+                                 self.seed, ELEVATION_OCTAVES)
+                moist = fbm_noise(x * MOISTURE_SCALE + MOISTURE_OFFSET,
+                                  y * MOISTURE_SCALE + MOISTURE_OFFSET,
+                                  self.seed + 777, MOISTURE_OCTAVES)
                 world.biome_noise[x][y] = elev
 
                 if elev < 0.28:

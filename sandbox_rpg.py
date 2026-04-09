@@ -16,6 +16,8 @@ from constants import (
     FPS, BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY,
     TILE_WATER, TILE_GRASS, TILE_DIRT, TILE_SAND, TILE_STONE_FLOOR,
     TILE_STONE_WALL, QUICK_SAVE_SLOT, INVENTORY_TOTAL_SLOTS,
+    MIN_ATTACK_COOLDOWN, BASE_ATTACK_COOLDOWN, AGILITY_COOLDOWN_REDUCTION,
+    SLEEP_DURATION, SLEEP_TIME_MULTIPLIER,
 )
 from utils import clamp, lerp
 from ecs import EntityManager
@@ -406,7 +408,8 @@ class Game:
         # Melee attack
         if keys[pygame.K_SPACE] and self.attack_cd == 0:
             self._attack()
-            cd = max(0.15, 0.30 - ps.agility * 0.02)
+            cd = max(MIN_ATTACK_COOLDOWN,
+                     BASE_ATTACK_COOLDOWN - ps.agility * AGILITY_COOLDOWN_REDUCTION)
             self.attack_cd = cd
             self.attack_anim = 0.18
 
@@ -849,8 +852,8 @@ class Game:
                 bt: Transform = self.em.get_component(eid, Transform)
                 if math.hypot(bt.x - pt.x, bt.y - pt.y) < 50:
                     self.sleeping = True
-                    self.sleep_timer = 5.0  # real seconds to skip night
-                    self.daynight.set_speed(12.0)
+                    self.sleep_timer = SLEEP_DURATION
+                    self.daynight.set_speed(SLEEP_TIME_MULTIPLIER)
                     self._notify("Sleeping...")
                     return
         self._notify("No bed nearby!")

@@ -161,17 +161,17 @@ class AISystem:
 
             # Target placeables when idle/wandering
             if mob_ai.state != "chase" and mob_ai.behavior == "wander":
-                best_p = None
-                best_d = mob_ai.detection_range
+                best_placeable = None
+                best_distance = mob_ai.detection_range
                 for pid in em.get_entities_with(Transform, Placeable, Health):
                     pt2 = em.get_component(pid, Transform)
                     d2 = math.hypot(pt2.x - t.x, pt2.y - t.y)
-                    if d2 < best_d:
-                        best_d = d2
-                        best_p = pid
-                if best_p is not None:
+                    if d2 < best_distance:
+                        best_distance = d2
+                        best_placeable = pid
+                if best_placeable is not None:
                     mob_ai.state = "attack_structure"
-                    mob_ai.target_id = best_p
+                    mob_ai.target_id = best_placeable
 
             if mob_ai.state == "attack_structure":
                 target = mob_ai.target_id
