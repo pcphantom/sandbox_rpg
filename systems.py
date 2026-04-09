@@ -5,7 +5,9 @@ from typing import Any
 
 import pygame
 
-from constants import (TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT)
+from constants import (TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT,
+                       DIFFICULTY_EASY, DIFFICULTY_MULTIPLIERS,
+                       MOB_RESPAWN_INTERVAL, RANGED_ENEMY_START_DAY)
 from utils import clamp
 from ecs import EntityManager
 from components import (Transform, Velocity, Renderable, Collider, Health,
@@ -102,13 +104,29 @@ class RenderSystem:
 # DAY / NIGHT
 # ======================================================================
 class DayNightCycle:
-    def __init__(self, day_length: float = 300.0) -> None:
+    def __init__(self, day_length: float = 960.0) -> None:
         self.time = 0.30
         self.day_length = day_length
         self._speed_mult = 1.0
+        self.day_number: int = 1
+        self._was_day: bool = True
+        self._day_flash_timer: float = 0.0
+        self._night_flash_timer: float = 0.0
 
     def update(self, dt: float) -> None:
+        old_time = self.time
         self.time = (self.time + dt * self._speed_mult / self.day_length) % 1.0
+        # Detect day transition (night -> dawn)
+        is_day_now = 0.30 <= self.time < 0.70
+        if is_day_now and not self._was_day:
+            self.day_number += 1
+            self._day_flash_timer = 3.0
+        # Detect night start (dusk -> night)
+        if not is_day_now and self._was_day:
+            self._night_flash_timer = 2.5
+        self._was_day = is_day_now
+        self._day_flash_timer = max(0.0, self._day_flash_timer - dt)
+        self._night_flash_timer = max(0.0, self._night_flash_timer - dt)
 
     def set_speed(self, mult: float) -> None:
         self._speed_mult = mult
@@ -144,7 +162,8 @@ class DayNightCycle:
 # AI SYSTEM
 # ======================================================================
 class AISystem:
-    def update(self, dt: float, em: EntityManager, player_id: int) -> None:
+    def update(self, dt: float, em: EntityManager, player_id: int,
+               on_ranged_fire: Any = None) -> None:
         pt = em.get_component(player_id, Transform)
         if not pt:
             return
@@ -156,6 +175,7 @@ class AISystem:
             mob_ai = em.get_component(eid, AI)
             mob_ai.timer -= dt
             mob_ai.attack_timer = max(0, mob_ai.attack_timer - dt)
+            mob_ai.ranged_timer = max(0, mob_ai.ranged_timer - dt)
             dx = pt.x - t.x
             dy = pt.y - t.y
             dist = math.hypot(dx, dy)
@@ -213,9 +233,24 @@ class AISystem:
                     v.vx = math.cos(angle) * mob_ai.speed
                     v.vy = math.sin(angle) * mob_ai.speed
                     mob_ai.timer = random.uniform(1.5, 3.5)
+
             if mob_ai.state == "chase":
                 if dist > mob_ai.detection_range * 2.0:
                     mob_ai.state = "idle"
+                elif mob_ai.is_ranged and dist < mob_ai.ranged_range and dist > 60:
+                    # Ranged enemy: keep distance and shoot
+                    if mob_ai.ranged_timer <= 0 and on_ranged_fire:
+                        on_ranged_fire(eid, t, pt)
+                        mob_ai.ranged_timer = mob_ai.ranged_cooldown
+                    # Strafe rather than charge
+                    if dist < 100:
+                        v.vx = -(dx / dist) * mob_ai.speed * 0.5
+                        v.vy = -(dy / dist) * mob_ai.speed * 0.5
+                    else:
+                        perp_x = -dy / dist
+                        perp_y = dx / dist
+                        v.vx = perp_x * mob_ai.speed * 0.6
+                        v.vy = perp_y * mob_ai.speed * 0.6
                 elif dist > 5:
                     v.vx = (dx / dist) * mob_ai.speed * 1.3
                     v.vy = (dy / dist) * mob_ai.speed * 1.3
@@ -336,7 +371,7 @@ class TurretSystem:
 class WaveSystem:
     """Manages night-time enemy wave spawning with escalating difficulty."""
 
-    def __init__(self) -> None:
+    def __init__(self, difficulty: int = DIFFICULTY_EASY) -> None:
         self.night_count: int = 0
         self.was_night: bool = False
         self.wave_active: bool = False
@@ -345,10 +380,12 @@ class WaveSystem:
         self.wave_timer: float = 0.0
         self.wave_spawn_interval: float = 2.0
         self.current_tier: int = 0
+        self.difficulty: int = difficulty
+        self.boss_spawned_this_wave: bool = False
 
-    def update(self, dt: float, is_night: bool) -> dict | None:
+    def update(self, dt: float, is_night: bool, day_number: int = 1) -> dict | None:
         """Returns spawn request dict or None.
-        {'count': N, 'tier': T} when mobs should be spawned."""
+        {'count': N, 'tier': T, 'ranged': bool, 'boss': bool}"""
         if is_night and not self.was_night:
             # Night just started
             self.night_count += 1
@@ -356,8 +393,15 @@ class WaveSystem:
             if self.night_count >= WAVE_START_NIGHT:
                 self.wave_active = True
                 self.wave_spawned = 0
+                self.boss_spawned_this_wave = False
                 diff = self.night_count - WAVE_START_NIGHT
-                self.wave_target = WAVE_BASE_COUNT + diff * WAVE_SCALE_PER_NIGHT
+                # Scale wave count with difficulty
+                _, _, _, wave_mult = DIFFICULTY_MULTIPLIERS.get(
+                    self.difficulty, (1.0, 1.0, 1.0, 1.0))
+                base_count = WAVE_BASE_COUNT + diff * WAVE_SCALE_PER_NIGHT
+                # Each day adds slightly more enemies
+                day_bonus = max(0, (day_number - 1)) * 1
+                self.wave_target = int((base_count + day_bonus) * wave_mult)
                 self.current_tier = min(3, diff // 2)
                 self.wave_timer = 0.0
                 self.wave_spawn_interval = max(0.8, 2.0 - diff * 0.1)
@@ -373,7 +417,16 @@ class WaveSystem:
             self.wave_timer = 0.0
             batch = min(3, self.wave_target - self.wave_spawned)
             self.wave_spawned += batch
-            return {'count': batch, 'tier': self.current_tier}
+            # Determine if ranged enemies should be included
+            include_ranged = day_number > RANGED_ENEMY_START_DAY
+            # Boss spawn: one per wave, after tier 2+
+            include_boss = (not self.boss_spawned_this_wave
+                            and self.current_tier >= 2
+                            and self.wave_spawned >= self.wave_target // 2)
+            if include_boss:
+                self.boss_spawned_this_wave = True
+            return {'count': batch, 'tier': self.current_tier,
+                    'ranged': include_ranged, 'boss': include_boss}
         return None
 
 

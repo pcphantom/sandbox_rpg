@@ -39,6 +39,8 @@ def slot_info(slot: int) -> Optional[Dict[str, Any]]:
         'level': data.get('level', 1),
         'kills': data.get('kills', 0),
         'day_time': data.get('day_time', 0.3),
+        'day_number': data.get('day_number', 1),
+        'difficulty': data.get('difficulty', 0),
     }
 
 

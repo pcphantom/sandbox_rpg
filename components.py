@@ -103,6 +103,14 @@ class AI(Component):
         self.speed = 40.0; self.detection_range = 150.0
         self.contact_damage = 5; self.xp_value = 15
         self.attack_timer = 0.0
+        self.is_ranged = False
+        self.ranged_damage = 0
+        self.ranged_range = 0.0
+        self.ranged_cooldown = 2.0
+        self.ranged_speed = 350.0
+        self.ranged_timer = 0.0
+        self.is_boss = False
+        self.glow_color: Optional[Tuple[int, int, int]] = None
 
 
 class PlayerStats(Component):

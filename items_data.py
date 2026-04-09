@@ -17,6 +17,8 @@ ITEM_DATA: Dict[str, Tuple[str, str, int, int, int, bool]] = {
     'bandage':       ('Bandage',       'Restores 25 HP. [F] to use.',        0, 0, 25, False),
     'health_potion': ('Health Potion', 'Restores 80 HP. [F] to drink.',      0, 0, 80, False),
     'antidote':      ('Antidote',      'Cures poison. Restores 10 HP.',      0, 0, 10, False),
+    # -- Spell books (consumable, cast on use) --
+    'spell_fireball': ('Fireball Tome', 'Cast fireball at target. [F] use.', 0, 0,  0, False),
     # -- Melee weapons --
     'axe':           ('Stone Axe',     '+2 harvest yield. Decent weapon.',  12, 2,  0, False),
     'sword':         ('Wood Sword',    'Solid melee damage.',               20, 0,  0, False),
@@ -60,6 +62,7 @@ ITEM_CATEGORIES: Dict[str, str] = {
     'leather': 'material',
     'berry': 'consumable', 'pie': 'consumable', 'bandage': 'consumable',
     'health_potion': 'consumable', 'antidote': 'consumable',
+    'spell_fireball': 'spell',
     'axe': 'weapon', 'sword': 'weapon', 'iron_sword': 'weapon',
     'spear': 'weapon', 'iron_axe': 'weapon', 'mace': 'weapon',
     'bone_club': 'weapon',
@@ -147,50 +150,114 @@ RECIPES: List[Dict[str, Any]] = [
 MOB_DATA: Dict[str, Dict[str, Any]] = {
     'slime': {
         'hp': 30, 'speed': 35, 'detection': 180, 'damage': 5, 'xp': 15,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('berry', 1, 3)],
     },
     'skeleton': {
         'hp': 60, 'speed': 50, 'detection': 220, 'damage': 10, 'xp': 35,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('stone', 1, 3), ('bone', 1, 2)],
     },
     'wolf': {
         'hp': 40, 'speed': 65, 'detection': 160, 'damage': 8, 'xp': 25,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('leather', 1, 2), ('bone', 0, 1)],
     },
     'goblin': {
         'hp': 50, 'speed': 45, 'detection': 200, 'damage': 12, 'xp': 40,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('stone', 2, 4), ('stick', 2, 3), ('arrow', 0, 2)],
     },
     'ghost': {
         'hp': 35, 'speed': 40, 'detection': 250, 'damage': 6, 'xp': 50,
-        'solid': False,
+        'solid': False, 'ranged': False,
         'drops': [('cloth', 1, 2)],
     },
     'spider': {
         'hp': 25, 'speed': 55, 'detection': 140, 'damage': 7, 'xp': 20,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('cloth', 1, 3), ('stick', 0, 1)],
     },
     'orc': {
         'hp': 90, 'speed': 38, 'detection': 180, 'damage': 16, 'xp': 60,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('iron', 1, 2), ('leather', 1, 2), ('bone', 1, 3)],
     },
     'dark_knight': {
         'hp': 120, 'speed': 42, 'detection': 200, 'damage': 20, 'xp': 80,
-        'solid': True,
+        'solid': True, 'ranged': False,
         'drops': [('iron', 2, 4), ('bone', 1, 2), ('cloth', 1, 2)],
+    },
+    # -- New enemies --
+    'zombie': {
+        'hp': 70, 'speed': 30, 'detection': 160, 'damage': 14, 'xp': 35,
+        'solid': True, 'ranged': False,
+        'drops': [('cloth', 1, 2), ('bone', 1, 2)],
+    },
+    'wraith': {
+        'hp': 55, 'speed': 52, 'detection': 280, 'damage': 10, 'xp': 55,
+        'solid': False, 'ranged': False,
+        'drops': [('cloth', 2, 3)],
+    },
+    'troll': {
+        'hp': 150, 'speed': 28, 'detection': 160, 'damage': 22, 'xp': 75,
+        'solid': True, 'ranged': False,
+        'drops': [('stone', 3, 5), ('iron', 1, 3), ('leather', 2, 3)],
+    },
+    # -- Ranged enemies (appear after Day 3) --
+    'skeleton_archer': {
+        'hp': 50, 'speed': 35, 'detection': 260, 'damage': 8, 'xp': 45,
+        'solid': True, 'ranged': True,
+        'ranged_damage': 12, 'ranged_range': 250.0, 'ranged_cooldown': 2.0,
+        'ranged_speed': 350.0,
+        'drops': [('bone', 1, 2), ('arrow', 1, 3)],
+    },
+    'goblin_shaman': {
+        'hp': 45, 'speed': 32, 'detection': 240, 'damage': 6, 'xp': 50,
+        'solid': True, 'ranged': True,
+        'ranged_damage': 15, 'ranged_range': 220.0, 'ranged_cooldown': 2.5,
+        'ranged_speed': 300.0,
+        'drops': [('stick', 2, 3), ('cloth', 1, 2), ('berry', 1, 3)],
+    },
+    # -- Boss mobs (glow, drop spell books) --
+    'boss_golem': {
+        'hp': 400, 'speed': 22, 'detection': 300, 'damage': 35, 'xp': 250,
+        'solid': True, 'ranged': False, 'boss': True,
+        'glow_color': (255, 60, 60),
+        'drops': [('iron', 4, 8), ('stone', 5, 10), ('spell_fireball', 1, 1)],
+    },
+    'boss_lich': {
+        'hp': 300, 'speed': 35, 'detection': 350, 'damage': 28, 'xp': 300,
+        'solid': True, 'ranged': True, 'boss': True,
+        'glow_color': (200, 60, 255),
+        'ranged_damage': 25, 'ranged_range': 300.0, 'ranged_cooldown': 1.8,
+        'ranged_speed': 400.0,
+        'drops': [('bone', 5, 8), ('cloth', 3, 5), ('spell_fireball', 1, 1)],
     },
 }
 
 # Mobs that can appear in night waves, ordered by difficulty tier
 WAVE_MOB_TIERS: List[List[str]] = [
-    ['slime', 'spider'],              # tier 0 -- easy
-    ['skeleton', 'wolf', 'goblin'],   # tier 1 -- medium
-    ['orc'],                          # tier 2 -- hard
-    ['dark_knight'],                  # tier 3 -- boss-tier
+    ['slime', 'spider'],                            # tier 0 -- easy
+    ['skeleton', 'wolf', 'goblin', 'zombie'],       # tier 1 -- medium
+    ['orc', 'wraith'],                              # tier 2 -- hard
+    ['dark_knight', 'troll'],                       # tier 3 -- elite
 ]
+
+# Ranged enemies that join waves after RANGED_ENEMY_START_DAY
+WAVE_RANGED_MOBS: List[str] = ['skeleton_archer', 'goblin_shaman']
+
+# Boss mobs that can spawn during waves
+WAVE_BOSS_MOBS: List[str] = ['boss_golem', 'boss_lich']
+
+# Spell data for spell items
+SPELL_DATA: Dict[str, Dict[str, Any]] = {
+    'spell_fireball': {
+        'name': 'Fireball',
+        'damage': 60,
+        'radius': 80.0,
+        'speed': 350.0,
+        'range': 400.0,
+        'color': (255, 120, 30),
+    },
+}

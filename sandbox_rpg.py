@@ -14,12 +14,18 @@ pygame.font.init()
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT,
     FPS, BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY, ORANGE, DARK_GRAY,
+    PURPLE,
     TILE_WATER, TILE_GRASS, TILE_DIRT, TILE_SAND, TILE_STONE_FLOOR,
     TILE_STONE_WALL, TILE_FOREST, QUICK_SAVE_SLOT, INVENTORY_TOTAL_SLOTS,
     MIN_ATTACK_COOLDOWN, BASE_ATTACK_COOLDOWN, AGILITY_COOLDOWN_REDUCTION,
     SLEEP_DURATION, SLEEP_TIME_MULTIPLIER,
     WALL_HP, TURRET_HP, TURRET_RANGE, TURRET_DAMAGE, TURRET_COOLDOWN,
     CHEST_CAPACITY, WAVE_SPAWN_RADIUS,
+    DAY_LENGTH_BASE, NIGHT_SLEEP_SPEED_MULT,
+    DIFFICULTY_EASY, DIFFICULTY_NORMAL, DIFFICULTY_HARD, DIFFICULTY_HARDCORE,
+    DIFFICULTY_NAMES, DIFFICULTY_MULTIPLIERS,
+    MOB_RESPAWN_INTERVAL, RANGED_ENEMY_START_DAY,
+    PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
 )
 from utils import clamp, lerp
 from ecs import EntityManager
@@ -30,7 +36,8 @@ from components import (
 )
 from items_data import (
     ITEM_DATA, ITEM_CATEGORIES, RECIPES, RANGED_DATA, AMMO_BONUS_DAMAGE,
-    ARMOR_VALUES, MOB_DATA, WAVE_MOB_TIERS,
+    ARMOR_VALUES, MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS,
+    WAVE_BOSS_MOBS, SPELL_DATA,
 )
 from world import World, WorldGenerator
 from camera import Camera
@@ -53,7 +60,7 @@ import save_load
 # ==========================================================================
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, difficulty: int = DIFFICULTY_EASY) -> None:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Sandbox Survival RPG")
         self.clock = pygame.time.Clock()
@@ -61,6 +68,8 @@ class Game:
         self.dead = False
         self.paused = False
         self.seed = 42
+        self.difficulty = difficulty
+        self.in_main_menu = True
 
         # Fonts
         self.font = pygame.font.SysFont('consolas', 16)
@@ -81,12 +90,12 @@ class Game:
         self.movement = MovementSystem()
         self.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
         self.renderer = RenderSystem(self.screen)
-        self.daynight = DayNightCycle(day_length=240.0)
+        self.daynight = DayNightCycle(day_length=DAY_LENGTH_BASE)
         self.ai_system = AISystem()
         self.projectile_system = ProjectileSystem()
         self.trap_system = TrapSystem()
         self.turret_system = TurretSystem()
-        self.wave_system = WaveSystem()
+        self.wave_system = WaveSystem(difficulty=self.difficulty)
         self.camera = Camera()
         self.particles = ParticleSystem()
 
@@ -101,6 +110,15 @@ class Game:
         self.show_chest = False
         self.active_chest: Optional[int] = None
         self.tooltip = Tooltip()
+
+        # Placement preview mode
+        self.placement_mode = False
+        self.placement_item: Optional[str] = None
+        self.placement_valid = True
+
+        # Spell targeting mode
+        self.spell_targeting = False
+        self.spell_item: Optional[str] = None
 
         inv_comp: Inventory = self.em.get_component(self.player_id, Inventory)
         self.inventory_ui = InventoryGrid(
@@ -174,12 +192,30 @@ class Game:
         surf = self.textures.get(tex_key)
         self.em.add_component(eid, Collider(
             surf.get_width(), surf.get_height(), data['solid']))
-        self.em.add_component(eid, Health(data['hp']))
+        # Apply difficulty multipliers
+        hp_mult, dmg_mult, _, _ = DIFFICULTY_MULTIPLIERS.get(
+            self.difficulty, (1.0, 1.0, 1.0, 1.0))
+        # Per-day scaling: +5% hp/dmg per day
+        day_scale = 1.0 + max(0, (self.daynight.day_number - 1)) * 0.05
+        scaled_hp = int(data['hp'] * hp_mult * day_scale)
+        scaled_dmg = int(data['damage'] * dmg_mult * day_scale)
+        self.em.add_component(eid, Health(scaled_hp))
         mob_ai = AI('wander', mob_type)
         mob_ai.speed = data['speed']
         mob_ai.detection_range = data['detection']
-        mob_ai.contact_damage = data['damage']
+        mob_ai.contact_damage = scaled_dmg
         mob_ai.xp_value = data['xp']
+        # Ranged enemy setup
+        if data.get('ranged', False):
+            mob_ai.is_ranged = True
+            mob_ai.ranged_damage = int(data.get('ranged_damage', 10) * dmg_mult * day_scale)
+            mob_ai.ranged_range = data.get('ranged_range', 200.0)
+            mob_ai.ranged_cooldown = data.get('ranged_cooldown', 2.0)
+            mob_ai.ranged_speed = data.get('ranged_speed', 350.0)
+        # Boss setup
+        if data.get('boss', False):
+            mob_ai.is_boss = True
+            mob_ai.glow_color = data.get('glow_color', (255, 60, 60))
         self.em.add_component(eid, mob_ai)
         return eid
 
@@ -263,7 +299,9 @@ class Game:
             self._create_mob(wx, wy, mob)
             return
 
-    def _spawn_wave_mobs(self, count: int, tier: int) -> None:
+    def _spawn_wave_mobs(self, count: int, tier: int,
+                         include_ranged: bool = False,
+                         include_boss: bool = False) -> None:
         """Spawn wave mobs near player buildings (or player if no buildings)."""
         pt: Transform = self.em.get_component(self.player_id, Transform)
         target_x, target_y = pt.x, pt.y
@@ -277,14 +315,21 @@ class Game:
         for t in range(min(tier + 1, len(WAVE_MOB_TIERS))):
             available.extend(WAVE_MOB_TIERS[t])
 
-        for _ in range(count):
+        for i in range(count):
             angle = random.uniform(0, math.tau)
             dist = WAVE_SPAWN_RADIUS + random.uniform(0, 100)
             wx = target_x + math.cos(angle) * dist
             wy = target_y + math.sin(angle) * dist
             wx = clamp(wx, TILE_SIZE * 2, (WORLD_WIDTH - 2) * TILE_SIZE)
             wy = clamp(wy, TILE_SIZE * 2, (WORLD_HEIGHT - 2) * TILE_SIZE)
-            mob_type = random.choice(available)
+
+            # Boss spawn on the designated mob
+            if include_boss and i == 0:
+                mob_type = random.choice(WAVE_BOSS_MOBS)
+            elif include_ranged and random.random() < 0.25:
+                mob_type = random.choice(WAVE_RANGED_MOBS)
+            else:
+                mob_type = random.choice(available)
             self._create_mob(wx, wy, mob_type)
 
     # ======================================================================
@@ -293,19 +338,94 @@ class Game:
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
-            self._handle_events()
-            if not self.dead and not self.paused:
+            if self.in_main_menu:
+                self._handle_main_menu_events()
+                self._draw_main_menu()
+            elif not self.dead and not self.paused:
+                self._handle_events()
                 self._update(dt)
+                self._render()
             else:
+                self._handle_events()
                 # Animate particles & dmg numbers even while paused/dead
                 self.particles.update(dt)
                 self.dmg_numbers = [
                     (x, y - 40 * dt, t, c, l - dt)
                     for x, y, t, c, l in self.dmg_numbers if l - dt > 0
                 ]
-            self._render()
+                self._render()
         pygame.quit()
         sys.exit()
+
+    def _handle_main_menu_events(self) -> None:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                continue
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                    self.in_main_menu = False
+                elif event.key == pygame.K_q:
+                    self.running = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                # Difficulty buttons
+                btn_w, btn_h = 200, 40
+                bx = SCREEN_WIDTH // 2 - btn_w // 2
+                for i, name in enumerate(DIFFICULTY_NAMES):
+                    by = 340 + i * 55
+                    if pygame.Rect(bx, by, btn_w, btn_h).collidepoint(mx, my):
+                        self.difficulty = i
+                        self.wave_system.difficulty = i
+                # Start button
+                start_y = 340 + len(DIFFICULTY_NAMES) * 55 + 20
+                start_r = pygame.Rect(bx, start_y, btn_w, btn_h)
+                if start_r.collidepoint(mx, my):
+                    self.in_main_menu = False
+
+    def _draw_main_menu(self) -> None:
+        self.screen.fill((15, 15, 30))
+        title = self.font_xl.render("Sandbox Survival RPG", True, WHITE)
+        self.screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 120))
+        sub = self.font_lg.render("Select Difficulty", True, GRAY)
+        self.screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, 260))
+
+        mx, my = pygame.mouse.get_pos()
+        btn_w, btn_h = 200, 40
+        bx = SCREEN_WIDTH // 2 - btn_w // 2
+        diff_colors = [GREEN, YELLOW, ORANGE, RED]
+        for i, name in enumerate(DIFFICULTY_NAMES):
+            by = 340 + i * 55
+            r = pygame.Rect(bx, by, btn_w, btn_h)
+            sel = i == self.difficulty
+            hov = r.collidepoint(mx, my)
+            if sel:
+                bc = (80, 80, 120)
+            elif hov:
+                bc = (50, 50, 75)
+            else:
+                bc = (30, 30, 50)
+            pygame.draw.rect(self.screen, bc, r, border_radius=6)
+            bd = diff_colors[i] if sel else (100, 100, 130)
+            pygame.draw.rect(self.screen, bd, r, 2, border_radius=6)
+            lt = self.font.render(name, True, diff_colors[i] if sel else WHITE)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        start_y = 340 + len(DIFFICULTY_NAMES) * 55 + 20
+        start_r = pygame.Rect(bx, start_y, btn_w, btn_h)
+        hov = start_r.collidepoint(mx, my)
+        pygame.draw.rect(self.screen, (40, 80, 40) if hov else (30, 60, 30),
+                         start_r, border_radius=6)
+        pygame.draw.rect(self.screen, GREEN, start_r, 2, border_radius=6)
+        st = self.font_lg.render("Start Game", True, WHITE)
+        self.screen.blit(st, (start_r.centerx - st.get_width() // 2,
+                              start_r.centery - st.get_height() // 2))
+
+        hint = self.font_sm.render("Press ENTER to start  |  Q to quit", True, GRAY)
+        self.screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2,
+                                SCREEN_HEIGHT - 60))
+        pygame.display.flip()
 
     # ======================================================================
     # EVENTS
@@ -319,10 +439,25 @@ class Game:
             # --- Dead state ---
             if self.dead:
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        self._respawn()
+                    if event.key == pygame.K_F9:
+                        self._quick_load()
                     elif event.key == pygame.K_q:
                         self.running = False
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # Check death screen buttons
+                    mx, my = event.pos
+                    btn_w = 200
+                    bx = SCREEN_WIDTH // 2 - btn_w // 2
+                    # Quick Load button
+                    if pygame.Rect(bx, SCREEN_HEIGHT // 2 + 10, btn_w, 36).collidepoint(mx, my):
+                        self._quick_load()
+                    # Load Save button
+                    elif pygame.Rect(bx, SCREEN_HEIGHT // 2 + 56, btn_w, 36).collidepoint(mx, my):
+                        self.paused = True
+                        self.dead = False
+                    # Restart button
+                    elif pygame.Rect(bx, SCREEN_HEIGHT // 2 + 102, btn_w, 36).collidepoint(mx, my):
+                        self._full_restart()
                 continue
 
             # --- Pause menu ---
@@ -340,7 +475,13 @@ class Game:
             # --- Global hotkeys ---
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if (self.show_inventory or self.show_crafting
+                    if self.placement_mode:
+                        self.placement_mode = False
+                        self.placement_item = None
+                    elif self.spell_targeting:
+                        self.spell_targeting = False
+                        self.spell_item = None
+                    elif (self.show_inventory or self.show_crafting
                             or self.show_character or self.show_chest):
                         self.show_inventory = False
                         self.show_crafting = False
@@ -389,8 +530,29 @@ class Game:
 
             # Mouse-wheel for hotbar
             if event.type == pygame.MOUSEWHEEL:
-                inv = self.em.get_component(self.player_id, Inventory)
-                inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+                if not self.placement_mode and not self.spell_targeting:
+                    inv = self.em.get_component(self.player_id, Inventory)
+                    inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+
+            # Placement mode click
+            if self.placement_mode and event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self._placement_confirm()
+                    continue
+                elif event.button == 3:
+                    self.placement_mode = False
+                    self.placement_item = None
+                    continue
+
+            # Spell targeting click
+            if self.spell_targeting and event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self._spell_cast_at_mouse()
+                    continue
+                elif event.button == 3:
+                    self.spell_targeting = False
+                    self.spell_item = None
+                    continue
 
             # Overlay event handling
             if self.show_chest and self.active_chest is not None:
@@ -442,7 +604,8 @@ class Game:
         # Systems tick
         self.movement.update(dt, self.em)
         self.physics.update(dt, self.em, self.world)
-        self.ai_system.update(dt, self.em, self.player_id)
+        self.ai_system.update(dt, self.em, self.player_id,
+                              on_ranged_fire=self._on_enemy_ranged_fire)
         self.projectile_system.update(dt, self.em, on_hit=self._on_proj_hit)
         self.trap_system.update(dt, self.em, on_hit=self._on_trap_hit)
         self.turret_system.update(dt, self.em, on_fire=self._on_turret_fire)
@@ -452,13 +615,17 @@ class Game:
         self.particles.update(dt)
 
         # Wave system
-        wave_req = self.wave_system.update(dt, self.daynight.is_night())
+        wave_req = self.wave_system.update(
+            dt, self.daynight.is_night(), self.daynight.day_number)
         if wave_req:
-            self._spawn_wave_mobs(wave_req['count'], wave_req['tier'])
+            self._spawn_wave_mobs(
+                wave_req['count'], wave_req['tier'],
+                include_ranged=wave_req.get('ranged', False),
+                include_boss=wave_req.get('boss', False))
             if self.wave_system.wave_spawned <= wave_req['count']:
-                self._notify(f"Wave {self.wave_system.night_count}! Defend yourself!", 3.0)
+                self._notify("Defend yourself!", 2.5)
 
-        # Sleeping (bed mechanic)
+        # Sleeping (bed mechanic) — only speeds night while on bed
         if self.sleeping:
             self.sleep_timer -= dt
             if self.sleep_timer <= 0 or not self.daynight.is_night():
@@ -520,6 +687,9 @@ class Game:
         # Mob contact damage
         self._check_contact_damage(pt)
 
+        # Enemy projectile damage to player
+        self._check_enemy_projectile_damage(pt)
+
         # Campfire healing
         self._campfire_heal(dt, pt)
 
@@ -528,7 +698,10 @@ class Game:
 
         # Mob respawning
         self.mob_spawn_timer += dt
-        if self.mob_spawn_timer > 15.0:
+        _, _, spawn_mult, _ = DIFFICULTY_MULTIPLIERS.get(
+            self.difficulty, (1.0, 1.0, 1.0, 1.0))
+        respawn_interval = MOB_RESPAWN_INTERVAL / spawn_mult
+        if self.mob_spawn_timer > respawn_interval:
             self.mob_spawn_timer = 0.0
             if len(self.em.get_entities_with(AI)) < 60:
                 self._spawn_mob()
@@ -670,6 +843,135 @@ class Game:
         self.particles.emit(turret_t.x + 16, turret_t.y + 8, 4, ORANGE, 60, 0.2)
         self.particles.emit(target_t.x, target_t.y, 3, RED, 40, 0.2)
 
+    def _on_enemy_ranged_fire(self, mob_eid: int, mob_t: Transform,
+                               player_t: Transform) -> None:
+        """Called by AISystem when a ranged enemy fires a projectile."""
+        mob_ai = self.em.get_component(mob_eid, AI)
+        if not mob_ai:
+            return
+        dx = player_t.x - mob_t.x
+        dy = player_t.y - mob_t.y
+        dist = math.hypot(dx, dy)
+        if dist < 1:
+            return
+        dx /= dist
+        dy /= dist
+        pid = self.em.create_entity()
+        self.em.add_component(pid, Transform(mob_t.x + 12, mob_t.y + 12))
+        self.em.add_component(pid, Velocity(
+            dx * mob_ai.ranged_speed, dy * mob_ai.ranged_speed, 1.0))
+        self.em.add_component(pid, Renderable(
+            self.textures.get('proj_enemy'), layer=4))
+        self.em.add_component(pid, Collider(8, 8, False))
+        # Enemy projectiles target the player — we use negative owner
+        proj = Projectile(mob_ai.ranged_damage, mob_eid,
+                          mob_ai.ranged_speed, mob_ai.ranged_range)
+        self.em.add_component(pid, proj)
+        self.particles.emit(mob_t.x + 12, mob_t.y + 10, 3, RED, 40, 0.2)
+
+    def _placement_confirm(self) -> None:
+        """Place the item at the mouse cursor position in the world."""
+        if not self.placement_mode or not self.placement_item:
+            return
+        mx, my = pygame.mouse.get_pos()
+        world_x = mx + self.camera.x
+        world_y = my + self.camera.y
+        # Snap to tile grid
+        tx = int(world_x // TILE_SIZE)
+        ty = int(world_y // TILE_SIZE)
+        place_x = tx * TILE_SIZE
+        place_y = ty * TILE_SIZE
+        # Check if valid
+        if self.world.is_solid(tx, ty):
+            self._notify("Can't place here!")
+            return
+        inv: Inventory = self.em.get_component(self.player_id, Inventory)
+        if not inv.has(self.placement_item):
+            self.placement_mode = False
+            self.placement_item = None
+            self._notify("No more items to place!")
+            return
+        inv.remove_item(self.placement_item, 1)
+        self._place_item(self.placement_item, place_x, place_y)
+        self._notify(f"Placed {ITEM_DATA[self.placement_item][0]}")
+        # If player has more of this item, stay in placement mode
+        if not inv.has(self.placement_item):
+            self.placement_mode = False
+            self.placement_item = None
+
+    def _spell_cast_at_mouse(self) -> None:
+        """Cast spell at mouse target position."""
+        if not self.spell_targeting or not self.spell_item:
+            return
+        sdata = SPELL_DATA.get(self.spell_item)
+        if not sdata:
+            self.spell_targeting = False
+            self.spell_item = None
+            return
+        mx, my = pygame.mouse.get_pos()
+        target_x = mx + self.camera.x
+        target_y = my + self.camera.y
+        pt: Transform = self.em.get_component(self.player_id, Transform)
+        dx = target_x - pt.x
+        dy = target_y - pt.y
+        dist = math.hypot(dx, dy)
+        if dist < 1:
+            return
+        dx /= dist
+        dy /= dist
+        # Create fireball projectile
+        pid = self.em.create_entity()
+        self.em.add_component(pid, Transform(pt.x + 10, pt.y + 14))
+        self.em.add_component(pid, Velocity(
+            dx * sdata['speed'], dy * sdata['speed'], 1.0))
+        self.em.add_component(pid, Renderable(
+            self.textures.get('proj_fireball'), layer=4))
+        self.em.add_component(pid, Collider(12, 12, False))
+        self.em.add_component(pid, Projectile(
+            sdata['damage'], self.player_id, sdata['speed'], sdata['range']))
+        self.particles.emit(pt.x + 10, pt.y + 14, 8, sdata['color'], 60, 0.3)
+        self._notify(f"Cast {sdata['name']}!")
+        inv: Inventory = self.em.get_component(self.player_id, Inventory)
+        inv.remove_item(self.spell_item, 1)
+        self.spell_targeting = False
+        self.spell_item = None
+
+    def _full_restart(self) -> None:
+        """Reset game completely for death restart."""
+        # Remove all entities
+        for eid in list(self.em._components.keys()):
+            self.em.destroy_entity(eid)
+        # Regenerate
+        self.world = self.world_gen.generate(WORLD_WIDTH, WORLD_HEIGHT)
+        self.player_id = self._create_player()
+        self._populate_world()
+        self.daynight = DayNightCycle(day_length=DAY_LENGTH_BASE)
+        self.wave_system = WaveSystem(difficulty=self.difficulty)
+        self.dead = False
+        self.paused = False
+        self.sleeping = False
+        self.placement_mode = False
+        self.placement_item = None
+        self.spell_targeting = False
+        self.spell_item = None
+        self.show_inventory = False
+        self.show_crafting = False
+        self.show_character = False
+        self.show_chest = False
+        self.active_chest = None
+        inv_comp = self.em.get_component(self.player_id, Inventory)
+        self.inventory_ui = InventoryGrid(
+            pygame.Rect(SCREEN_WIDTH // 2 - 195,
+                        SCREEN_HEIGHT // 2 - 180, 390, 340),
+            inv_comp, self.textures)
+        ph = self.em.get_component(self.player_id, Health)
+        self.health_bar.max_value = ph.maximum
+        self.health_bar.set_value(ph.current)
+        ps = self.em.get_component(self.player_id, PlayerStats)
+        self.xp_bar.max_value = ps.xp_to_next
+        self.xp_bar.set_value(ps.xp)
+        self._notify("New game started.")
+
     def _interact(self) -> None:
         pt: Transform = self.em.get_component(self.player_id, Transform)
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
@@ -738,6 +1040,15 @@ class Game:
         heal = data[4]
         placeable = data[5]
         pt: Transform = self.em.get_component(self.player_id, Transform)
+
+        # Spell items: enter targeting mode
+        cat = ITEM_CATEGORIES.get(eq_id, '')
+        if cat == 'spell' and eq_id in SPELL_DATA:
+            self.spell_targeting = True
+            self.spell_item = eq_id
+            self._notify("Click target to cast spell. ESC/Right-click to cancel.")
+            return
+
         if heal > 0:
             ph: Health = self.em.get_component(self.player_id, Health)
             if ph.current >= ph.maximum:
@@ -751,16 +1062,20 @@ class Game:
             self.particles.emit(pt.x + 10, pt.y + 14, 8, GREEN, 40, 0.4)
             self._notify(f"Used {data[0]} (+{heal} HP)")
         elif placeable:
-            self._place_item(eq_id)
-            inv.remove_item(eq_id, 1)
-            self._notify(f"Placed {data[0]}")
+            # Enter placement preview mode
+            self.placement_mode = True
+            self.placement_item = eq_id
+            self._notify(f"Click to place {data[0]}. ESC/Right-click to cancel.")
 
-    def _place_item(self, item_id: str) -> None:
-        pt: Transform = self.em.get_component(self.player_id, Transform)
-        pr: Renderable = self.em.get_component(self.player_id, Renderable)
-        offset_x = -30 if pr.flip_x else 30
+    def _place_item(self, item_id: str,
+                    px: Optional[float] = None,
+                    py: Optional[float] = None) -> None:
+        if px is None or py is None:
+            pt: Transform = self.em.get_component(self.player_id, Transform)
+            pr: Renderable = self.em.get_component(self.player_id, Renderable)
+            offset_x = -30 if pr.flip_x else 30
+            px, py = pt.x + offset_x, pt.y + 20
         eid = self.em.create_entity()
-        px, py = pt.x + offset_x, pt.y + 20
         self.em.add_component(eid, Transform(px, py))
         self.em.add_component(eid, Placeable(item_id))
 
@@ -848,6 +1163,10 @@ class Game:
             'wolf': (100, 100, 100), 'goblin': (80, 140, 60),
             'ghost': (180, 180, 220), 'spider': (60, 40, 30),
             'orc': (80, 100, 50), 'dark_knight': (40, 40, 50),
+            'zombie': (100, 140, 80), 'wraith': (140, 80, 180),
+            'troll': (80, 120, 60), 'skeleton_archer': (200, 200, 210),
+            'goblin_shaman': (100, 60, 160),
+            'boss_golem': (180, 80, 60), 'boss_lich': (120, 60, 180),
         }
         color = mob_colors.get(mob_ai.mob_type, GRAY)
         self.particles.emit(td.x + 12, td.y + 10, 15, color, 80, 0.5)
@@ -899,6 +1218,36 @@ class Game:
                     self.dmg_numbers.append(
                         (pt.x, pt.y - 30, 'YOU DIED', RED, 2.5))
                 break
+
+    def _check_enemy_projectile_damage(self, pt: Transform) -> None:
+        """Check if enemy projectiles hit the player."""
+        eq: Equipment = self.em.get_component(self.player_id, Equipment)
+        dmg_red = calc_damage_reduction(eq)
+        to_remove = []
+        for pid in self.em.get_entities_with(Transform, Projectile):
+            proj = self.em.get_component(pid, Projectile)
+            if proj.owner == self.player_id:
+                continue
+            proj_t = self.em.get_component(pid, Transform)
+            dist = math.hypot(proj_t.x - pt.x - 10, proj_t.y - pt.y - 14)
+            if dist < 20:
+                ph: Health = self.em.get_component(self.player_id, Health)
+                dmg = max(1, proj.damage - dmg_red)
+                ph.damage(dmg)
+                self.health_bar.set_value(ph.current)
+                self.damage_flash = 0.15
+                self.camera.shake(3.0, 0.15)
+                self.particles.emit(pt.x + 10, pt.y + 14, 5, RED, 40, 0.3)
+                self.dmg_numbers.append(
+                    (pt.x, pt.y - 16, str(dmg), RED, 0.8))
+                to_remove.append(pid)
+                if not ph.is_alive():
+                    self.dead = True
+                    self.dmg_numbers.append(
+                        (pt.x, pt.y - 30, 'YOU DIED', RED, 2.5))
+                break
+        for pid in to_remove:
+            self.em.destroy_entity(pid)
 
     def _campfire_heal(self, dt: float, pt: Transform) -> None:
         self.campfire_heal_timer += dt
@@ -979,7 +1328,7 @@ class Game:
                 if math.hypot(bt.x - pt.x, bt.y - pt.y) < 50:
                     self.sleeping = True
                     self.sleep_timer = SLEEP_DURATION
-                    self.daynight.set_speed(SLEEP_TIME_MULTIPLIER)
+                    self.daynight.set_speed(NIGHT_SLEEP_SPEED_MULT)
                     self._notify("Sleeping...")
                     return
         self._notify("No bed nearby!")
@@ -1029,7 +1378,9 @@ class Game:
             'eq_shield': eq.shield, 'eq_ranged': eq.ranged,
             'eq_ammo': eq.ammo,
             'day_time': self.daynight.time,
+            'day_number': self.daynight.day_number,
             'night_count': self.wave_system.night_count,
+            'difficulty': self.difficulty,
             'structures': structures,
         }
 
@@ -1058,7 +1409,10 @@ class Game:
         eq.ranged = data.get('eq_ranged')
         eq.ammo = data.get('eq_ammo')
         self.daynight.time = data.get('day_time', 0.3)
+        self.daynight.day_number = data.get('day_number', 1)
         self.wave_system.night_count = data.get('night_count', 0)
+        self.difficulty = data.get('difficulty', DIFFICULTY_EASY)
+        self.wave_system.difficulty = self.difficulty
         self.health_bar.max_value = ph.maximum
         self.health_bar.set_value(ph.current)
         self.xp_bar.max_value = ps.xp_to_next
@@ -1193,6 +1547,7 @@ class Game:
         self.tooltip.clear()
         self._draw_world()
         self.renderer.update(self.em, self.camera)
+        self._draw_boss_glow()
         self._draw_mob_health_bars()
         self._draw_placeable_health_bars()
         if self.attack_anim > 0:
@@ -1205,6 +1560,12 @@ class Game:
             alpha = int(80 * (self.damage_flash / 0.15))
             fs.fill((255, 0, 0, min(255, alpha)))
             self.screen.blit(fs, (0, 0))
+        # Placement preview
+        if self.placement_mode and self.placement_item:
+            self._draw_placement_preview()
+        # Spell targeting cursor
+        if self.spell_targeting:
+            self._draw_spell_targeting()
         self._draw_hud()
         self._draw_hotbar()
 
@@ -1269,6 +1630,27 @@ class Game:
             zt = self.font_lg.render("Sleeping... Zzz", True, (180, 180, 255))
             self.screen.blit(zt, (SCREEN_WIDTH // 2 - zt.get_width() // 2,
                                   SCREEN_HEIGHT // 2 - 20))
+
+        # Day number flash
+        if self.daynight._day_flash_timer > 0:
+            alpha = min(1.0, self.daynight._day_flash_timer / 1.0)
+            dt_text = self.font_xl.render(
+                f"Day {self.daynight.day_number}", True,
+                (255, 255, 200))
+            dt_text.set_alpha(int(255 * alpha))
+            self.screen.blit(dt_text,
+                             (SCREEN_WIDTH // 2 - dt_text.get_width() // 2,
+                              SCREEN_HEIGHT // 4))
+
+        # Night warning flash
+        if self.daynight._night_flash_timer > 0:
+            alpha = min(1.0, self.daynight._night_flash_timer / 0.8)
+            nt = self.font_lg.render("Night falls — Defend!", True,
+                                     (255, 120, 80))
+            nt.set_alpha(int(255 * alpha))
+            self.screen.blit(nt,
+                             (SCREEN_WIDTH // 2 - nt.get_width() // 2,
+                              SCREEN_HEIGHT // 4 + 60))
 
         pygame.display.flip()
 
@@ -1467,21 +1849,28 @@ class Game:
         self.screen.blit(self.font_sm.render(res, True, (200, 200, 210)),
                          (20, 58))
 
-        # Time of day
+        # Time of day + Day number
         period = self.daynight.get_period_name()
         period_colors = {'Day': (255, 255, 200), 'Dawn': (255, 200, 140),
                          'Dusk': (200, 140, 180), 'Night': (140, 140, 220)}
         pc = period_colors.get(period, WHITE)
-        self.screen.blit(self.font.render(period, True, pc),
-                         (SCREEN_WIDTH - 195, 16))
+        # Background for top-right HUD area
+        tr_bg = pygame.Surface((200, 55), pygame.SRCALPHA)
+        tr_bg.fill((10, 10, 20, 150))
+        self.screen.blit(tr_bg, (SCREEN_WIDTH - 210, 8))
+        day_str = f"Day {self.daynight.day_number}  {period}"
+        self.screen.blit(self.font.render(day_str, True, pc),
+                         (SCREEN_WIDTH - 200, 14))
         t_str = (f"{int(self.daynight.time * 24):02d}"
                  f":{int((self.daynight.time * 1440) % 60):02d}")
-        self.screen.blit(self.font_sm.render(t_str, True, GRAY),
-                         (SCREEN_WIDTH - 195, 36))
+        diff_name = DIFFICULTY_NAMES[self.difficulty] if 0 <= self.difficulty < len(DIFFICULTY_NAMES) else "?"
+        self.screen.blit(self.font_sm.render(
+            f"{t_str}   [{diff_name}]", True, GRAY),
+            (SCREEN_WIDTH - 200, 36))
 
-        # Wave info
+        # Wave info — simplified, no numbers
         if self.wave_system.wave_active:
-            wave_txt = f"WAVE {self.wave_system.night_count}  ({self.wave_system.wave_spawned}/{self.wave_system.wave_target})"
+            wave_txt = "DEFEND!"
             wt = self.font.render(wave_txt, True, RED)
             wbg = pygame.Surface((wt.get_width() + 16, wt.get_height() + 6),
                                  pygame.SRCALPHA)
@@ -1505,14 +1894,21 @@ class Game:
             self.screen.blit(
                 et, (SCREEN_WIDTH // 2 - et.get_width() // 2, 94))
 
-        # Controls hint
-        ctrl = ("WASD:Move  Space:Attack  R:Ranged  E:Harvest/Chest  F:Use  "
-                "I:Inv  C:Craft  P:Stats  Esc:Pause")
-        ctrl_bg = pygame.Surface((len(ctrl) * 7 + 10, 18), pygame.SRCALPHA)
-        ctrl_bg.fill((10, 10, 20, 140))
-        self.screen.blit(ctrl_bg, (15, SCREEN_HEIGHT - 84))
-        self.screen.blit(self.font_sm.render(ctrl, True, (140, 140, 160)),
-                         (20, SCREEN_HEIGHT - 82))
+        # Controls hint — only show when no overlays are open
+        if not (self.show_inventory or self.show_crafting
+                or self.show_character or self.show_chest
+                or self.paused):
+            ctrl = ("WASD:Move  Space:Atk  R:Ranged  E:Harvest  F:Use  "
+                    "I:Inv  C:Craft  P:Stats  Esc:Menu")
+            ctrl_surf = self.font_sm.render(ctrl, True, (120, 120, 140))
+            ctrl_bg = pygame.Surface(
+                (ctrl_surf.get_width() + 10, 18), pygame.SRCALPHA)
+            ctrl_bg.fill((10, 10, 20, 100))
+            # Position at top center, below wave info area
+            ctrl_x = SCREEN_WIDTH // 2 - ctrl_surf.get_width() // 2
+            ctrl_y = SCREEN_HEIGHT - 28
+            self.screen.blit(ctrl_bg, (ctrl_x - 5, ctrl_y - 2))
+            self.screen.blit(ctrl_surf, (ctrl_x, ctrl_y))
 
     # -- death screen ------------------------------------------------------
     def _draw_death_screen(self) -> None:
@@ -1522,18 +1918,108 @@ class Game:
         dt_text = self.font_xl.render("YOU DIED", True, RED)
         self.screen.blit(
             dt_text, (SCREEN_WIDTH // 2 - dt_text.get_width() // 2,
-                      SCREEN_HEIGHT // 2 - 80))
-        ht = self.font.render("Press [R] to Respawn  |  [Q] to Quit",
-                              True, GRAY)
-        self.screen.blit(
-            ht, (SCREEN_WIDTH // 2 - ht.get_width() // 2,
-                 SCREEN_HEIGHT // 2))
+                      SCREEN_HEIGHT // 2 - 100))
         ps: PlayerStats = self.em.get_component(self.player_id, PlayerStats)
         st = self.font.render(
-            f"Level {ps.level}  |  {ps.kills} Kills", True, WHITE)
+            f"Day {self.daynight.day_number}  |  Level {ps.level}  |  "
+            f"{ps.kills} Kills", True, WHITE)
         self.screen.blit(
             st, (SCREEN_WIDTH // 2 - st.get_width() // 2,
-                 SCREEN_HEIGHT // 2 + 40))
+                 SCREEN_HEIGHT // 2 - 30))
+
+        # Buttons
+        mx, my = pygame.mouse.get_pos()
+        btn_w = 200
+        bx = SCREEN_WIDTH // 2 - btn_w // 2
+        buttons = [
+            (SCREEN_HEIGHT // 2 + 10, "Quick Load [F9]"),
+            (SCREEN_HEIGHT // 2 + 56, "Load Save..."),
+            (SCREEN_HEIGHT // 2 + 102, "Restart"),
+        ]
+        for by, label in buttons:
+            r = pygame.Rect(bx, by, btn_w, 36)
+            hov = r.collidepoint(mx, my)
+            bc = (60, 60, 90) if hov else (40, 40, 60)
+            pygame.draw.rect(self.screen, bc, r, border_radius=5)
+            pygame.draw.rect(self.screen, GRAY, r, 1, border_radius=5)
+            lt = self.font.render(label, True, WHITE)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        quit_hint = self.font_sm.render("Press Q to quit", True, GRAY)
+        self.screen.blit(quit_hint,
+                         (SCREEN_WIDTH // 2 - quit_hint.get_width() // 2,
+                          SCREEN_HEIGHT // 2 + 160))
+
+    # -- placement preview -------------------------------------------------
+    def _draw_placement_preview(self) -> None:
+        mx, my = pygame.mouse.get_pos()
+        world_x = mx + self.camera.x
+        world_y = my + self.camera.y
+        tx = int(world_x // TILE_SIZE)
+        ty = int(world_y // TILE_SIZE)
+        sx = int(tx * TILE_SIZE - self.camera.x)
+        sy = int(ty * TILE_SIZE - self.camera.y)
+        valid = not self.world.is_solid(tx, ty)
+        color = PLACEMENT_PREVIEW_COLOR if valid else PLACEMENT_INVALID_COLOR
+        # Ghost preview
+        ghost = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        ghost.fill(color)
+        # Try to get item texture
+        tex_key = None
+        if self.placement_item:
+            for k in [f'{self.placement_item}_placed',
+                      f'campfire_True',
+                      f'item_{self.placement_item}']:
+                if k in self.textures.cache:
+                    tex_key = k
+                    break
+        if tex_key:
+            icon = self.textures.get(tex_key)
+            scaled = pygame.transform.scale(icon, (TILE_SIZE, TILE_SIZE))
+            scaled.set_alpha(140)
+            self.screen.blit(scaled, (sx, sy))
+        self.screen.blit(ghost, (sx, sy))
+        # Border
+        bd_color = (60, 220, 80) if valid else (220, 60, 60)
+        pygame.draw.rect(self.screen, bd_color,
+                         (sx, sy, TILE_SIZE, TILE_SIZE), 2)
+        # Hint text
+        hint = self.font_sm.render(
+            "Click to place | ESC/Right-click to cancel", True, WHITE)
+        self.screen.blit(hint,
+                         (SCREEN_WIDTH // 2 - hint.get_width() // 2, 40))
+
+    # -- spell targeting ---------------------------------------------------
+    def _draw_spell_targeting(self) -> None:
+        mx, my = pygame.mouse.get_pos()
+        # Targeting crosshair
+        pygame.draw.circle(self.screen, (255, 120, 30), (mx, my), 16, 2)
+        pygame.draw.line(self.screen, (255, 120, 30), (mx - 20, my), (mx + 20, my), 1)
+        pygame.draw.line(self.screen, (255, 120, 30), (mx, my - 20), (mx, my + 20), 1)
+        hint = self.font_sm.render(
+            "Click to cast | ESC/Right-click to cancel", True, (255, 180, 80))
+        self.screen.blit(hint,
+                         (SCREEN_WIDTH // 2 - hint.get_width() // 2, 40))
+
+    # -- boss glow ---------------------------------------------------------
+    def _draw_boss_glow(self) -> None:
+        for eid in self.em.get_entities_with(Transform, AI):
+            ai_c = self.em.get_component(eid, AI)
+            if not ai_c.is_boss or not ai_c.glow_color:
+                continue
+            t = self.em.get_component(eid, Transform)
+            sx = int(t.x - self.camera.x + 14)
+            sy = int(t.y - self.camera.y + 14)
+            # Pulsing glow
+            pulse = 0.7 + 0.3 * math.sin(pygame.time.get_ticks() * 0.005)
+            radius = int(40 * pulse)
+            glow_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            r, g, b = ai_c.glow_color
+            pygame.draw.circle(glow_surf, (r, g, b, int(60 * pulse)),
+                               (radius, radius), radius)
+            self.screen.blit(glow_surf, (sx - radius, sy - radius),
+                             special_flags=pygame.BLEND_RGBA_ADD)
 
 
 # ==========================================================================

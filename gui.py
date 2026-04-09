@@ -352,7 +352,8 @@ class PauseMenu:
             info = slot_infos.get(slot)
             label = f"Slot {slot}: "
             if info:
-                label += f"Lv.{info['level']}  Kills:{info['kills']}"
+                day_num = info.get('day_number', '?')
+                label += f"Day {day_num}  Lv.{info['level']}  Kills:{info['kills']}"
             else:
                 label += "Empty"
             bc = (70, 70, 110) if sel else (45, 45, 60)
