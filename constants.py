@@ -77,3 +77,38 @@ WAVE_START_NIGHT: int = 3
 WAVE_BASE_COUNT: int = 3
 WAVE_SCALE_PER_NIGHT: int = 2
 WAVE_SPAWN_RADIUS: float = 350.0
+
+# -- Day/Night timing ----------------------------------------------------------
+DAY_LENGTH_BASE: float = 960.0           # 4x slower than old 240.0
+NIGHT_SLEEP_SPEED_MULT: float = 12.0     # speed mult when sleeping on bed at night
+
+# -- Difficulty ----------------------------------------------------------------
+DIFFICULTY_EASY: int = 0
+DIFFICULTY_NORMAL: int = 1
+DIFFICULTY_HARD: int = 2
+DIFFICULTY_HARDCORE: int = 3
+DIFFICULTY_NAMES: Tuple[str, ...] = ("Easy", "Normal", "Hard", "Hardcore")
+
+# Difficulty multipliers: (enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_count_mult)
+DIFFICULTY_MULTIPLIERS: dict = {
+    DIFFICULTY_EASY:     (1.0, 1.0, 1.0, 1.0),
+    DIFFICULTY_NORMAL:   (1.3, 1.3, 1.2, 1.3),
+    DIFFICULTY_HARD:     (1.8, 1.8, 1.5, 1.8),
+    DIFFICULTY_HARDCORE: (2.5, 2.5, 2.0, 2.5),
+}
+
+# -- Mob respawn ---------------------------------------------------------------
+MOB_RESPAWN_INTERVAL: float = 8.0    # seconds between natural mob respawns
+
+# -- Ranged enemies ------------------------------------------------------------
+RANGED_ENEMY_START_DAY: int = 3      # ranged enemies appear after this day
+
+# -- Boss system ---------------------------------------------------------------
+BOSS_GLOW_COLORS: Tuple[Tuple[int, int, int], ...] = (
+    (255, 60, 60), (60, 255, 60), (60, 60, 255),
+    (255, 200, 60), (200, 60, 255),
+)
+
+# -- Placement preview ---------------------------------------------------------
+PLACEMENT_PREVIEW_COLOR: Tuple[int, int, int, int] = (60, 220, 80, 120)
+PLACEMENT_INVALID_COLOR: Tuple[int, int, int, int] = (220, 60, 60, 120)
