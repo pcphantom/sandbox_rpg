@@ -13,21 +13,24 @@ pygame.font.init()
 # -- project imports (order matters: constants first) ----------------------
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT,
-    FPS, BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY,
+    FPS, BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY, ORANGE, DARK_GRAY,
     TILE_WATER, TILE_GRASS, TILE_DIRT, TILE_SAND, TILE_STONE_FLOOR,
-    TILE_STONE_WALL, QUICK_SAVE_SLOT, INVENTORY_TOTAL_SLOTS,
+    TILE_STONE_WALL, TILE_FOREST, QUICK_SAVE_SLOT, INVENTORY_TOTAL_SLOTS,
     MIN_ATTACK_COOLDOWN, BASE_ATTACK_COOLDOWN, AGILITY_COOLDOWN_REDUCTION,
     SLEEP_DURATION, SLEEP_TIME_MULTIPLIER,
+    WALL_HP, TURRET_HP, TURRET_RANGE, TURRET_DAMAGE, TURRET_COOLDOWN,
+    CHEST_CAPACITY, WAVE_SPAWN_RADIUS,
 )
 from utils import clamp, lerp
 from ecs import EntityManager
 from components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
     LightSource, AI, PlayerStats, Equipment, Projectile, Placeable,
+    Storage, Turret, Building,
 )
 from items_data import (
     ITEM_DATA, ITEM_CATEGORIES, RECIPES, RANGED_DATA, AMMO_BONUS_DAMAGE,
-    ARMOR_VALUES, MOB_DATA,
+    ARMOR_VALUES, MOB_DATA, WAVE_MOB_TIERS,
 )
 from world import World, WorldGenerator
 from camera import Camera
@@ -36,12 +39,12 @@ from textures import TextureGenerator
 from minimap import Minimap
 from systems import (
     MovementSystem, PhysicsSystem, RenderSystem, DayNightCycle,
-    AISystem, ProjectileSystem, TrapSystem,
+    AISystem, ProjectileSystem, TrapSystem, TurretSystem, WaveSystem,
     calc_melee_damage, calc_ranged_damage, calc_damage_reduction,
 )
 from gui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
-    CharacterMenu,
+    CharacterMenu, ChestUI,
 )
 import save_load
 
@@ -82,6 +85,8 @@ class Game:
         self.ai_system = AISystem()
         self.projectile_system = ProjectileSystem()
         self.trap_system = TrapSystem()
+        self.turret_system = TurretSystem()
+        self.wave_system = WaveSystem()
         self.camera = Camera()
         self.particles = ParticleSystem()
 
@@ -93,6 +98,8 @@ class Game:
         self.show_inventory = False
         self.show_crafting = False
         self.show_character = False
+        self.show_chest = False
+        self.active_chest: Optional[int] = None
         self.tooltip = Tooltip()
 
         inv_comp: Inventory = self.em.get_component(self.player_id, Inventory)
@@ -103,6 +110,7 @@ class Game:
         self.crafting_ui = CraftingPanel(self.textures)
         self.pause_menu = PauseMenu()
         self.character_menu = CharacterMenu(self.textures)
+        self.chest_ui = ChestUI(self.textures)
 
         self.health_bar = ProgressBar(
             pygame.Rect(20, 16, 200, 18), 100, (210, 50, 50), (40, 15, 15))
@@ -176,11 +184,23 @@ class Game:
         return eid
 
     def _populate_world(self) -> None:
-        # Trees — denser in grass biome
-        for _ in range(300):
+        # Trees — denser in forest/grass biomes
+        for _ in range(350):
             x = random.randint(5, WORLD_WIDTH - 5)
             y = random.randint(5, WORLD_HEIGHT - 5)
-            if self.world.get_tile(x, y) == TILE_GRASS:
+            tile = self.world.get_tile(x, y)
+            if tile in (TILE_GRASS, TILE_FOREST):
+                eid = self.em.create_entity()
+                self.em.add_component(eid, Transform(
+                    x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+                self.em.add_component(eid, Renderable(
+                    self.textures.get('tree'), layer=2))
+                self.em.add_component(eid, Collider(24, 32, True))
+        # Extra trees in forest
+        for _ in range(150):
+            x = random.randint(5, WORLD_WIDTH - 5)
+            y = random.randint(5, WORLD_HEIGHT - 5)
+            if self.world.get_tile(x, y) == TILE_FOREST:
                 eid = self.em.create_entity()
                 self.em.add_component(eid, Transform(
                     x * TILE_SIZE + 8, y * TILE_SIZE - 16))
@@ -188,31 +208,32 @@ class Game:
                     self.textures.get('tree'), layer=2))
                 self.em.add_component(eid, Collider(24, 32, True))
         # Rocks
-        for _ in range(180):
+        for _ in range(200):
             x = random.randint(5, WORLD_WIDTH - 5)
             y = random.randint(5, WORLD_HEIGHT - 5)
             if self.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
-                                              TILE_STONE_FLOOR):
+                                              TILE_STONE_FLOOR, TILE_FOREST):
                 eid = self.em.create_entity()
                 self.em.add_component(eid, Transform(
                     x * TILE_SIZE + 4, y * TILE_SIZE + 6))
                 self.em.add_component(eid, Renderable(
                     self.textures.get('rock'), layer=1))
                 self.em.add_component(eid, Collider(26, 18, True))
-        # Initial mobs — mix of slimes and wolves
-        for _ in range(25):
-            x = random.randint(5, WORLD_WIDTH - 5)
-            y = random.randint(5, WORLD_HEIGHT - 5)
-            if self.world.get_tile(x, y) == TILE_GRASS:
-                self._create_mob(x * TILE_SIZE + 8, y * TILE_SIZE + 8,
-                                 'slime')
-        for _ in range(10):
-            x = random.randint(5, WORLD_WIDTH - 5)
-            y = random.randint(5, WORLD_HEIGHT - 5)
-            tile = self.world.get_tile(x, y)
-            if tile in (TILE_GRASS, TILE_DIRT):
-                self._create_mob(x * TILE_SIZE + 8, y * TILE_SIZE + 8,
-                                 'wolf')
+        # Initial mobs — diverse mix
+        mob_spawns = [
+            ('slime', TILE_GRASS, 25),
+            ('wolf', TILE_FOREST, 10),
+            ('spider', TILE_FOREST, 8),
+            ('goblin', TILE_DIRT, 5),
+        ]
+        for mob_type, biome, count in mob_spawns:
+            for _ in range(count):
+                x = random.randint(5, WORLD_WIDTH - 5)
+                y = random.randint(5, WORLD_HEIGHT - 5)
+                tile = self.world.get_tile(x, y)
+                if tile == biome or (biome == TILE_GRASS and tile == TILE_FOREST):
+                    self._create_mob(x * TILE_SIZE + 8, y * TILE_SIZE + 8,
+                                     mob_type)
 
     def _spawn_mob(self) -> None:
         pt: Transform = self.em.get_component(self.player_id, Transform)
@@ -227,18 +248,44 @@ class Game:
             tile = self.world.get_tile(x, y)
             is_night = self.daynight.is_night()
             # Choose mob type based on biome & time
-            if is_night and random.random() < 0.3:
+            if is_night and random.random() < 0.25:
                 mob = 'ghost'
-            elif is_night and random.random() < 0.5:
-                mob = 'skeleton'
+            elif is_night and random.random() < 0.4:
+                mob = 'dark_knight' if random.random() < 0.15 else 'skeleton'
+            elif tile == TILE_FOREST and random.random() < 0.5:
+                mob = random.choice(['wolf', 'spider'])
             elif tile in (TILE_DIRT, TILE_STONE_FLOOR) and random.random() < 0.4:
-                mob = 'goblin'
+                mob = 'orc' if random.random() < 0.2 else 'goblin'
             elif tile == TILE_GRASS and random.random() < 0.4:
                 mob = 'wolf'
             else:
                 mob = 'slime'
             self._create_mob(wx, wy, mob)
             return
+
+    def _spawn_wave_mobs(self, count: int, tier: int) -> None:
+        """Spawn wave mobs near player buildings (or player if no buildings)."""
+        pt: Transform = self.em.get_component(self.player_id, Transform)
+        target_x, target_y = pt.x, pt.y
+        buildings = self.em.get_entities_with(Transform, Building)
+        if buildings:
+            b_eid = random.choice(buildings)
+            bt = self.em.get_component(b_eid, Transform)
+            target_x, target_y = bt.x, bt.y
+
+        available: list[str] = []
+        for t in range(min(tier + 1, len(WAVE_MOB_TIERS))):
+            available.extend(WAVE_MOB_TIERS[t])
+
+        for _ in range(count):
+            angle = random.uniform(0, math.tau)
+            dist = WAVE_SPAWN_RADIUS + random.uniform(0, 100)
+            wx = target_x + math.cos(angle) * dist
+            wy = target_y + math.sin(angle) * dist
+            wx = clamp(wx, TILE_SIZE * 2, (WORLD_WIDTH - 2) * TILE_SIZE)
+            wy = clamp(wy, TILE_SIZE * 2, (WORLD_HEIGHT - 2) * TILE_SIZE)
+            mob_type = random.choice(available)
+            self._create_mob(wx, wy, mob_type)
 
     # ======================================================================
     # MAIN LOOP
@@ -293,10 +340,13 @@ class Game:
             # --- Global hotkeys ---
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if self.show_inventory or self.show_crafting or self.show_character:
+                    if (self.show_inventory or self.show_crafting
+                            or self.show_character or self.show_chest):
                         self.show_inventory = False
                         self.show_crafting = False
                         self.show_character = False
+                        self.show_chest = False
+                        self.active_chest = None
                     else:
                         self.paused = True
                     continue
@@ -304,16 +354,22 @@ class Game:
                     self.show_inventory = not self.show_inventory
                     self.show_crafting = False
                     self.show_character = False
+                    self.show_chest = False
+                    self.active_chest = None
                     continue
                 if event.key == pygame.K_c:
                     self.show_crafting = not self.show_crafting
                     self.show_inventory = False
                     self.show_character = False
+                    self.show_chest = False
+                    self.active_chest = None
                     continue
                 if event.key == pygame.K_p:
                     self.show_character = not self.show_character
                     self.show_inventory = False
                     self.show_crafting = False
+                    self.show_chest = False
+                    self.active_chest = None
                     continue
                 if event.key == pygame.K_f:
                     self._use_equipped_item()
@@ -337,6 +393,12 @@ class Game:
                 inv.equipped_slot = (inv.equipped_slot - event.y) % 6
 
             # Overlay event handling
+            if self.show_chest and self.active_chest is not None:
+                stor = self.em.get_component(self.active_chest, Storage)
+                if stor:
+                    self.chest_ui.handle_event(
+                        event, stor,
+                        self.em.get_component(self.player_id, Inventory))
             if self.show_inventory:
                 self.inventory_ui.handle_event(event)
             if self.show_crafting:
@@ -383,10 +445,18 @@ class Game:
         self.ai_system.update(dt, self.em, self.player_id)
         self.projectile_system.update(dt, self.em, on_hit=self._on_proj_hit)
         self.trap_system.update(dt, self.em, on_hit=self._on_trap_hit)
+        self.turret_system.update(dt, self.em, on_fire=self._on_turret_fire)
         self.daynight.update(dt)
         self.camera.follow(pt.x, pt.y)
         self.camera.update(dt)
         self.particles.update(dt)
+
+        # Wave system
+        wave_req = self.wave_system.update(dt, self.daynight.is_night())
+        if wave_req:
+            self._spawn_wave_mobs(wave_req['count'], wave_req['tier'])
+            if self.wave_system.wave_spawned <= wave_req['count']:
+                self._notify(f"Wave {self.wave_system.night_count}! Defend yourself!", 3.0)
 
         # Sleeping (bed mechanic)
         if self.sleeping:
@@ -442,6 +512,9 @@ class Game:
             if not h.is_alive():
                 td = self.em.get_component(eid, Transform)
                 self.particles.emit(td.x + 10, td.y + 10, 8, GRAY, 40, 0.3)
+                if self.active_chest == eid:
+                    self.show_chest = False
+                    self.active_chest = None
                 self.em.destroy_entity(eid)
 
         # Mob contact damage
@@ -566,7 +639,9 @@ class Game:
         self.em.add_component(pid, Transform(pt.x + 10, pt.y + 14))
         self.em.add_component(pid, Velocity(
             dx * rdata['speed'], dy * rdata['speed'], 1.0))
-        proj_tex = ('proj_arrow' if eq.ranged == 'bow' else 'proj_rock')
+        proj_tex = ('proj_arrow' if eq.ranged == 'bow'
+                    else 'proj_bolt' if eq.ranged == 'crossbow'
+                    else 'proj_rock')
         self.em.add_component(pid, Renderable(
             self.textures.get(proj_tex), layer=4))
         self.em.add_component(pid, Collider(8, 8, False))
@@ -588,10 +663,29 @@ class Game:
             (trap_t.x, trap_t.y - 16, str(damage), RED, 0.8))
         self.particles.emit(trap_t.x, trap_t.y, 5, RED, 40, 0.3)
 
+    def _on_turret_fire(self, target_eid: int, damage: int,
+                        turret_t: Transform, target_t: Transform) -> None:
+        self.dmg_numbers.append(
+            (target_t.x, target_t.y - 16, str(damage), ORANGE, 0.8))
+        self.particles.emit(turret_t.x + 16, turret_t.y + 8, 4, ORANGE, 60, 0.2)
+        self.particles.emit(target_t.x, target_t.y, 3, RED, 40, 0.2)
+
     def _interact(self) -> None:
         pt: Transform = self.em.get_component(self.player_id, Transform)
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
         px, py = pt.x + 10, pt.y + 14
+
+        # Check for nearby chest interaction
+        for eid in self.em.get_entities_with(Transform, Storage):
+            ct = self.em.get_component(eid, Transform)
+            if math.hypot(ct.x - px, ct.y - py) < 50:
+                self.show_chest = True
+                self.active_chest = eid
+                self.show_inventory = False
+                self.show_crafting = False
+                self.show_character = False
+                return
+
         nearest: Optional[int] = None
         nearest_dist = 50.0
         for eid in self.em.get_entities_with(Transform, Renderable):
@@ -688,6 +782,37 @@ class Game:
             self.em.add_component(eid, Renderable(
                 self.textures.get('bed_placed'), layer=1))
             self.em.add_component(eid, Health(80))
+        elif item_id == 'wall':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('wall_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            self.em.add_component(eid, Health(WALL_HP))
+            self.em.add_component(eid, Building('wall'))
+        elif item_id == 'stone_wall_b':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('stone_wall_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            self.em.add_component(eid, Health(int(WALL_HP * 1.5)))
+            self.em.add_component(eid, Building('stone_wall'))
+        elif item_id == 'turret':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('turret_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            self.em.add_component(eid, Health(TURRET_HP))
+            self.em.add_component(eid, Turret(TURRET_DAMAGE, TURRET_RANGE, TURRET_COOLDOWN))
+            self.em.add_component(eid, Building('turret'))
+        elif item_id == 'chest':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('chest_placed'), layer=1))
+            self.em.add_component(eid, Health(60))
+            self.em.add_component(eid, Storage(CHEST_CAPACITY))
+            self.em.add_component(eid, Building('chest'))
+        elif item_id == 'door':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('door_placed'), layer=2))
+            self.em.add_component(eid, Health(50))
+            self.em.add_component(eid, Collider(24, 32, True))
+            self.em.add_component(eid, Building('door'))
 
     def _craft(self, recipe: Dict[str, Any]) -> None:
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
@@ -721,7 +846,8 @@ class Game:
         mob_colors = {
             'slime': (50, 200, 70), 'skeleton': (200, 200, 210),
             'wolf': (100, 100, 100), 'goblin': (80, 140, 60),
-            'ghost': (180, 180, 220),
+            'ghost': (180, 180, 220), 'spider': (60, 40, 30),
+            'orc': (80, 100, 50), 'dark_knight': (40, 40, 50),
         }
         color = mob_colors.get(mob_ai.mob_type, GRAY)
         self.particles.emit(td.x + 12, td.y + 10, 15, color, 80, 0.5)
@@ -868,6 +994,27 @@ class Game:
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
         eq: Equipment = self.em.get_component(self.player_id, Equipment)
         inv_data = {str(s): [iid, c] for s, (iid, c) in inv.slots.items()}
+
+        # Save placed structures
+        structures: list[dict[str, Any]] = []
+        for eid in self.em.get_entities_with(Transform, Placeable):
+            if self.em.has_component(eid, AI):
+                continue
+            pl = self.em.get_component(eid, Placeable)
+            t = self.em.get_component(eid, Transform)
+            h = self.em.get_component(eid, Health)
+            struct_data: Dict[str, Any] = {
+                'type': pl.item_type,
+                'x': t.x, 'y': t.y,
+                'hp': h.current if h else 0,
+                'max_hp': h.maximum if h else 0,
+            }
+            stor = self.em.get_component(eid, Storage)
+            if stor:
+                struct_data['storage'] = {str(s): [iid, c]
+                                          for s, (iid, c) in stor.slots.items()}
+            structures.append(struct_data)
+
         return {
             'seed': self.seed,
             'px': pt.x, 'py': pt.y,
@@ -882,6 +1029,8 @@ class Game:
             'eq_shield': eq.shield, 'eq_ranged': eq.ranged,
             'eq_ammo': eq.ammo,
             'day_time': self.daynight.time,
+            'night_count': self.wave_system.night_count,
+            'structures': structures,
         }
 
     def _apply_save_data(self, data: Dict[str, Any]) -> None:
@@ -909,11 +1058,97 @@ class Game:
         eq.ranged = data.get('eq_ranged')
         eq.ammo = data.get('eq_ammo')
         self.daynight.time = data.get('day_time', 0.3)
+        self.wave_system.night_count = data.get('night_count', 0)
         self.health_bar.max_value = ph.maximum
         self.health_bar.set_value(ph.current)
         self.xp_bar.max_value = ps.xp_to_next
         self.xp_bar.set_value(ps.xp)
         self.dead = False
+
+        # Restore structures
+        for eid in list(self.em.get_entities_with(Placeable)):
+            if not self.em.has_component(eid, AI):
+                self.em.destroy_entity(eid)
+        for struct in data.get('structures', []):
+            self._restore_structure(struct)
+
+    def _restore_structure(self, struct: Dict[str, Any]) -> None:
+        """Recreate a placed structure from save data."""
+        item_id = struct['type']
+        eid = self.em.create_entity()
+        self.em.add_component(eid, Transform(struct['x'], struct['y']))
+        self.em.add_component(eid, Placeable(item_id))
+
+        if item_id == 'campfire':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('campfire_True'), layer=2))
+            self.em.add_component(eid, LightSource(180, (255, 160, 80), 1.0))
+            h = Health(struct.get('max_hp', 60))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+        elif item_id == 'torch':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('torch_placed'), layer=2))
+            self.em.add_component(eid, LightSource(120, (255, 180, 60), 0.8))
+            h = Health(struct.get('max_hp', 30))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+        elif item_id == 'trap':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('trap_placed'), layer=1))
+            h = Health(struct.get('max_hp', 40))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+        elif item_id == 'bed':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('bed_placed'), layer=1))
+            h = Health(struct.get('max_hp', 80))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+        elif item_id == 'wall':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('wall_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            h = Health(struct.get('max_hp', WALL_HP))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+            self.em.add_component(eid, Building('wall'))
+        elif item_id == 'stone_wall_b':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('stone_wall_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            h = Health(struct.get('max_hp', int(WALL_HP * 1.5)))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+            self.em.add_component(eid, Building('stone_wall'))
+        elif item_id == 'turret':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('turret_placed'), layer=2))
+            self.em.add_component(eid, Collider(32, 32, True))
+            h = Health(struct.get('max_hp', TURRET_HP))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+            self.em.add_component(eid, Turret(TURRET_DAMAGE, TURRET_RANGE, TURRET_COOLDOWN))
+            self.em.add_component(eid, Building('turret'))
+        elif item_id == 'chest':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('chest_placed'), layer=1))
+            h = Health(struct.get('max_hp', 60))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+            stor = Storage(CHEST_CAPACITY)
+            for s_str, (iid, c) in struct.get('storage', {}).items():
+                stor.slots[int(s_str)] = (iid, c)
+            self.em.add_component(eid, stor)
+            self.em.add_component(eid, Building('chest'))
+        elif item_id == 'door':
+            self.em.add_component(eid, Renderable(
+                self.textures.get('door_placed'), layer=2))
+            h = Health(struct.get('max_hp', 50))
+            h.current = struct.get('hp', h.maximum)
+            self.em.add_component(eid, h)
+            self.em.add_component(eid, Collider(24, 32, True))
+            self.em.add_component(eid, Building('door'))
 
     def _quick_save(self) -> None:
         save_load.save_game(QUICK_SAVE_SLOT, self._build_save_data())
@@ -960,6 +1195,7 @@ class Game:
         self.renderer.update(self.em, self.camera)
         self._draw_mob_health_bars()
         self._draw_placeable_health_bars()
+        self._draw_placeable_health_bars()
         if self.attack_anim > 0:
             self._draw_attack_arc()
         self.particles.draw(self.screen, self.camera.x, self.camera.y)
@@ -978,10 +1214,22 @@ class Game:
         for eid in self.em.get_entities_with(Transform, AI):
             mt = self.em.get_component(eid, Transform)
             mob_pos.append((mt.x, mt.y))
+        build_pos = []
+        for eid in self.em.get_entities_with(Transform, Building):
+            bt = self.em.get_component(eid, Transform)
+            build_pos.append((bt.x, bt.y))
         pt: Transform = self.em.get_component(self.player_id, Transform)
-        self.minimap.draw(self.screen, self.world, pt.x, pt.y, mob_pos)
+        self.minimap.draw(self.screen, self.world, pt.x, pt.y,
+                          mob_pos, build_pos)
 
         # Overlays
+        if self.show_chest and self.active_chest is not None:
+            stor = self.em.get_component(self.active_chest, Storage)
+            if stor:
+                self.chest_ui.draw(
+                    self.screen, stor,
+                    self.em.get_component(self.player_id, Inventory),
+                    self.tooltip)
         if self.show_inventory:
             self.inventory_ui.draw(self.screen, self.tooltip)
         if self.show_crafting:
@@ -1002,9 +1250,14 @@ class Game:
         if self.notification_timer > 0:
             alpha = min(1.0, self.notification_timer / 0.5)
             ns = self.font.render(self.notification, True,
-                                  (220, 220, 240, int(255 * alpha)))
-            self.screen.blit(ns, (SCREEN_WIDTH // 2 - ns.get_width() // 2,
-                                  SCREEN_HEIGHT // 2 + 120))
+                                  (220, 220, 240))
+            nbg = pygame.Surface((ns.get_width() + 20, ns.get_height() + 8),
+                                 pygame.SRCALPHA)
+            nbg.fill((10, 10, 20, int(180 * alpha)))
+            nx = SCREEN_WIDTH // 2 - ns.get_width() // 2
+            ny = SCREEN_HEIGHT // 2 + 120
+            self.screen.blit(nbg, (nx - 10, ny - 4))
+            self.screen.blit(ns, (nx, ny))
         self.tooltip.draw(self.screen)
         if self.dead:
             self._draw_death_screen()
@@ -1035,6 +1288,7 @@ class Game:
             TILE_DIRT: self.textures.get('dirt'),
             TILE_STONE_FLOOR: self.textures.get('stone'),
             TILE_STONE_WALL: self.textures.get('stone'),
+            TILE_FOREST: self.textures.get('forest'),
         }
         default_surf = self.textures.get('grass')
         for x in range(sx_start, sx_end):
@@ -1115,6 +1369,20 @@ class Game:
             fill = int(28 * h.current / h.maximum)
             pygame.draw.rect(self.screen, (200, 160, 40), (sx, sy, fill, 3))
 
+    def _draw_placeable_health_bars(self) -> None:
+        for eid in self.em.get_entities_with(Transform, Health, Placeable):
+            if self.em.has_component(eid, AI):
+                continue
+            t: Transform = self.em.get_component(eid, Transform)
+            h: Health = self.em.get_component(eid, Health)
+            if h.current >= h.maximum:
+                continue
+            sx = int(t.x - self.camera.x)
+            sy = int(t.y - self.camera.y - 6)
+            pygame.draw.rect(self.screen, (40, 30, 10), (sx, sy, 28, 3))
+            fill = int(28 * h.current / h.maximum)
+            pygame.draw.rect(self.screen, (200, 160, 40), (sx, sy, fill, 3))
+
     # -- attack arc --------------------------------------------------------
     def _draw_attack_arc(self) -> None:
         pt: Transform = self.em.get_component(self.player_id, Transform)
@@ -1150,6 +1418,14 @@ class Game:
         bx = SCREEN_WIDTH // 2 - tw // 2
         by = SCREEN_HEIGHT - ss - 14
         mx, my = pygame.mouse.get_pos()
+
+        # Background strip
+        bg = pygame.Surface((tw + 16, ss + 12), pygame.SRCALPHA)
+        bg.fill((15, 15, 25, 180))
+        self.screen.blit(bg, (bx - 8, by - 6))
+        pygame.draw.rect(self.screen, (100, 100, 130),
+                         (bx - 8, by - 6, tw + 16, ss + 12), 1, border_radius=6)
+
         for i in range(slots):
             x = bx + i * (ss + gap)
             rect = pygame.Rect(x, by, ss, ss)
@@ -1183,6 +1459,11 @@ class Game:
 
     # -- HUD ---------------------------------------------------------------
     def _draw_hud(self) -> None:
+        # Background for HUD area
+        hud_bg = pygame.Surface((230, 70), pygame.SRCALPHA)
+        hud_bg.fill((10, 10, 20, 150))
+        self.screen.blit(hud_bg, (12, 10))
+
         self.health_bar.draw(self.screen)
         ph: Health = self.em.get_component(self.player_id, Health)
         ht = self.font_sm.render(f"HP {ph.current}/{ph.maximum}", True, WHITE)
@@ -1197,7 +1478,7 @@ class Game:
 
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
         res = (f"Wood:{inv.count('wood')}  Stone:{inv.count('stone')}"
-               f"  Kills:{ps.kills}")
+               f"  Iron:{inv.count('iron')}  Kills:{ps.kills}")
         self.screen.blit(self.font_sm.render(res, True, (200, 200, 210)),
                          (20, 58))
 
@@ -1212,6 +1493,17 @@ class Game:
                  f":{int((self.daynight.time * 1440) % 60):02d}")
         self.screen.blit(self.font_sm.render(t_str, True, GRAY),
                          (SCREEN_WIDTH - 195, 36))
+
+        # Wave info
+        if self.wave_system.wave_active:
+            wave_txt = f"WAVE {self.wave_system.night_count}  ({self.wave_system.wave_spawned}/{self.wave_system.wave_target})"
+            wt = self.font.render(wave_txt, True, RED)
+            wbg = pygame.Surface((wt.get_width() + 16, wt.get_height() + 6),
+                                 pygame.SRCALPHA)
+            wbg.fill((40, 10, 10, 180))
+            wx = SCREEN_WIDTH // 2 - wt.get_width() // 2
+            self.screen.blit(wbg, (wx - 8, 8))
+            self.screen.blit(wt, (wx, 11))
 
         # Warnings
         if 0.2 < self.daynight.get_darkness() < 0.55:
@@ -1229,8 +1521,11 @@ class Game:
                 et, (SCREEN_WIDTH // 2 - et.get_width() // 2, 94))
 
         # Controls hint
-        ctrl = ("WASD:Move  Space:Attack  R:Ranged  E:Harvest  F:Use  "
-                "I:Inv  C:Craft  P:Character  Esc:Pause")
+        ctrl = ("WASD:Move  Space:Attack  R:Ranged  E:Harvest/Chest  F:Use  "
+                "I:Inv  C:Craft  P:Stats  Esc:Pause")
+        ctrl_bg = pygame.Surface((len(ctrl) * 7 + 10, 18), pygame.SRCALPHA)
+        ctrl_bg.fill((10, 10, 20, 140))
+        self.screen.blit(ctrl_bg, (15, SCREEN_HEIGHT - 84))
         self.screen.blit(self.font_sm.render(ctrl, True, (140, 140, 160)),
                          (20, SCREEN_HEIGHT - 82))
 

@@ -1,5 +1,5 @@
 """GUI elements — HUD, inventory with pages, crafting, pause menu,
-character/equipment menu, tooltip, progress bars."""
+character/equipment menu, chest UI, tooltip, progress bars."""
 from __future__ import annotations
 
 from typing import List, Tuple, Dict, Optional, Any, Callable
@@ -7,10 +7,11 @@ from typing import List, Tuple, Dict, Optional, Any, Callable
 import pygame
 
 from constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, GREEN,
-                       CYAN, GRAY, YELLOW, INVENTORY_SLOTS_PER_PAGE,
+                       CYAN, GRAY, YELLOW, DARK_GRAY, ORANGE,
+                       INVENTORY_SLOTS_PER_PAGE,
                        INVENTORY_PAGES, INVENTORY_COLS, SAVE_SLOTS,
-                       QUICK_SAVE_SLOT)
-from components import Inventory, Health, PlayerStats, Equipment
+                       QUICK_SAVE_SLOT, CHEST_CAPACITY)
+from components import Inventory, Health, PlayerStats, Equipment, Storage
 from items_data import ITEM_DATA, ITEM_CATEGORIES, RECIPES, ARMOR_VALUES
 
 
@@ -614,4 +615,122 @@ class CharacterMenu:
                             break
                 return True
             ey += 28
+        return False
+
+
+# ======================================================================
+# CHEST UI
+# ======================================================================
+class ChestUI:
+    """Side-by-side chest + player inventory panel for transferring items."""
+
+    def __init__(self, textures: Any) -> None:
+        self.textures = textures
+        self.font = pygame.font.SysFont('consolas', 14)
+        self.title_font = pygame.font.SysFont('consolas', 18, bold=True)
+        self.slot_size = 44
+        self.cols = 6
+        self.chest_entity: int | None = None
+
+    def draw(self, surface: pygame.Surface, storage: Storage,
+             inventory: Inventory, tooltip: Tooltip) -> None:
+        pw, ph = 620, 320
+        px = SCREEN_WIDTH // 2 - pw // 2
+        py = SCREEN_HEIGHT // 2 - ph // 2
+        bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        bg.fill((20, 20, 35, 240))
+        surface.blit(bg, (px, py))
+        pygame.draw.rect(surface, (140, 140, 170),
+                         (px, py, pw, ph), 2, border_radius=10)
+
+        mx, my = pygame.mouse.get_pos()
+        ss = self.slot_size
+
+        # Left half: Chest
+        title_l = self.title_font.render("Chest", True, ORANGE)
+        surface.blit(title_l, (px + 20, py + 8))
+        self._draw_grid(surface, storage.slots, storage.capacity,
+                        px + 10, py + 34, mx, my, tooltip, 'chest')
+
+        # Divider
+        pygame.draw.line(surface, GRAY,
+                         (px + pw // 2, py + 8),
+                         (px + pw // 2, py + ph - 8), 1)
+
+        # Right half: Player inventory (first page)
+        title_r = self.title_font.render("Inventory", True, CYAN)
+        surface.blit(title_r, (px + pw // 2 + 20, py + 8))
+        self._draw_grid(surface, inventory.slots, 24,
+                        px + pw // 2 + 10, py + 34, mx, my, tooltip, 'inv')
+
+    def _draw_grid(self, surface: pygame.Surface,
+                   slots: Dict[int, tuple], capacity: int,
+                   ox: int, oy: int, mx: int, my: int,
+                   tooltip: Tooltip, side: str) -> None:
+        ss = self.slot_size
+        for i in range(min(capacity, 24)):
+            col = i % self.cols
+            row = i // self.cols
+            x = ox + col * (ss + 4)
+            y = oy + row * (ss + 4)
+            sr = pygame.Rect(x, y, ss, ss)
+            bg_c = (50, 50, 65) if not sr.collidepoint(mx, my) else (70, 70, 95)
+            pygame.draw.rect(surface, bg_c, sr, border_radius=4)
+            pygame.draw.rect(surface, (100, 100, 120), sr, 1, border_radius=4)
+            if i in slots:
+                item_id, count = slots[i]
+                icon = self.textures.cache.get(f'item_{item_id}')
+                if icon:
+                    surface.blit(pygame.transform.scale(icon, (30, 30)),
+                                 (x + 7, y + 7))
+                if count > 1:
+                    ct = self.font.render(str(count), True, WHITE)
+                    surface.blit(ct, (x + ss - ct.get_width() - 3,
+                                      y + ss - ct.get_height() - 2))
+                if sr.collidepoint(mx, my) and item_id in ITEM_DATA:
+                    d = ITEM_DATA[item_id]
+                    action = "Click: Move to " + ("Inventory" if side == 'chest' else "Chest")
+                    tooltip.show([d[0], d[1], action], (mx, my))
+
+    def handle_event(self, event: pygame.event.Event,
+                     storage: Storage, inventory: Inventory) -> bool:
+        if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+            return False
+        mx, my = event.pos
+        pw, ph = 620, 320
+        px = SCREEN_WIDTH // 2 - pw // 2
+        py = SCREEN_HEIGHT // 2 - ph // 2
+        ss = self.slot_size
+
+        # Click in chest grid → move to inventory
+        for i in range(min(storage.capacity, 24)):
+            col = i % self.cols
+            row = i // self.cols
+            x = px + 10 + col * (ss + 4)
+            y = py + 34 + row * (ss + 4)
+            if pygame.Rect(x, y, ss, ss).collidepoint(mx, my):
+                if i in storage.slots:
+                    item_id, count = storage.slots[i]
+                    overflow = inventory.add_item(item_id, count)
+                    if overflow == 0:
+                        del storage.slots[i]
+                    else:
+                        storage.slots[i] = (item_id, overflow)
+                    return True
+
+        # Click in inventory grid → move to chest
+        for i in range(24):
+            col = i % self.cols
+            row = i // self.cols
+            x = px + pw // 2 + 10 + col * (ss + 4)
+            y = py + 34 + row * (ss + 4)
+            if pygame.Rect(x, y, ss, ss).collidepoint(mx, my):
+                if i in inventory.slots:
+                    item_id, count = inventory.slots[i]
+                    overflow = storage.add_item(item_id, count)
+                    if overflow == 0:
+                        del inventory.slots[i]
+                    else:
+                        inventory.slots[i] = (item_id, overflow)
+                    return True
         return False
