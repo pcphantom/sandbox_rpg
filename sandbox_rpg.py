@@ -1168,7 +1168,6 @@ class Game:
             'goblin_shaman': (100, 60, 160),
             'boss_golem': (180, 80, 60), 'boss_lich': (120, 60, 180),
         }
-        }
         color = mob_colors.get(mob_ai.mob_type, GRAY)
         self.particles.emit(td.x + 12, td.y + 10, 15, color, 80, 0.5)
 
