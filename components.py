@@ -2,6 +2,8 @@
 import pygame
 from typing import Dict, Tuple, Optional
 
+from constants import INVENTORY_TOTAL_SLOTS, STAT_POINTS_PER_LEVEL
+
 
 class Component:
     pass
@@ -14,7 +16,8 @@ class Transform(Component):
 
 
 class Velocity(Component):
-    def __init__(self, vx: float = 0.0, vy: float = 0.0, friction: float = 0.85) -> None:
+    def __init__(self, vx: float = 0.0, vy: float = 0.0,
+                 friction: float = 0.85) -> None:
         self.vx = vx; self.vy = vy; self.friction = friction
 
 
@@ -45,7 +48,7 @@ class Health(Component):
 
 
 class Inventory(Component):
-    def __init__(self, capacity: int = 96) -> None:
+    def __init__(self, capacity: int = INVENTORY_TOTAL_SLOTS) -> None:
         self.capacity = capacity
         self.slots: Dict[int, Tuple[str, int]] = {}
         self.equipped_slot: int = 0
@@ -85,13 +88,15 @@ class Inventory(Component):
 
 
 class LightSource(Component):
-    def __init__(self, radius: int, color: Tuple[int, int, int] = (255, 200, 120),
+    def __init__(self, radius: int,
+                 color: Tuple[int, int, int] = (255, 200, 120),
                  intensity: float = 1.0) -> None:
         self.radius = radius; self.color = color; self.intensity = intensity
 
 
 class AI(Component):
-    def __init__(self, behavior: str = "wander", mob_type: str = "slime") -> None:
+    def __init__(self, behavior: str = "wander",
+                 mob_type: str = "slime") -> None:
         self.behavior = behavior; self.mob_type = mob_type
         self.state = "idle"; self.timer = 0.0
         self.target_id: Optional[int] = None
@@ -116,7 +121,7 @@ class PlayerStats(Component):
             self.xp -= self.xp_to_next
             self.level += 1
             self.xp_to_next = self.level * 50
-            self.stat_points += 3
+            self.stat_points += STAT_POINTS_PER_LEVEL
             return True
         return False
 
@@ -141,3 +146,48 @@ class Projectile(Component):
 class Placeable(Component):
     def __init__(self, item_type: str) -> None:
         self.item_type = item_type
+
+
+class Storage(Component):
+    """Container that holds items (chests)."""
+    def __init__(self, capacity: int = 24) -> None:
+        self.capacity = capacity
+        self.slots: Dict[int, Tuple[str, int]] = {}
+
+    def add_item(self, item_id: str, count: int = 1) -> int:
+        for slot, (iid, c) in self.slots.items():
+            if iid == item_id:
+                self.slots[slot] = (iid, c + count)
+                return 0
+        for i in range(self.capacity):
+            if i not in self.slots:
+                self.slots[i] = (item_id, count)
+                return 0
+        return count  # overflow
+
+    def remove_item(self, item_id: str, count: int = 1) -> bool:
+        for slot, (iid, c) in list(self.slots.items()):
+            if iid == item_id:
+                if c > count:
+                    self.slots[slot] = (iid, c - count)
+                    return True
+                elif c == count:
+                    del self.slots[slot]
+                    return True
+        return False
+
+
+class Turret(Component):
+    """Auto-firing turret that targets nearby mobs."""
+    def __init__(self, damage: int = 8, fire_range: float = 200.0,
+                 cooldown: float = 1.5) -> None:
+        self.damage = damage
+        self.fire_range = fire_range
+        self.cooldown = cooldown
+        self.timer: float = 0.0
+
+
+class Building(Component):
+    """Marks an entity as a player-built structure."""
+    def __init__(self, building_type: str = 'wall') -> None:
+        self.building_type = building_type
