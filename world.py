@@ -3,9 +3,9 @@ import random
 from typing import List
 
 from constants import (TILE_WATER, TILE_SAND, TILE_GRASS, TILE_DIRT,
-                       TILE_STONE_FLOOR, TILE_STONE_WALL, TILE_SIZE,
-                       ELEVATION_SCALE, MOISTURE_SCALE, MOISTURE_OFFSET,
-                       ELEVATION_OCTAVES, MOISTURE_OCTAVES)
+                       TILE_STONE_FLOOR, TILE_STONE_WALL, TILE_FOREST,
+                       TILE_SIZE, ELEVATION_SCALE, MOISTURE_SCALE,
+                       MOISTURE_OFFSET, ELEVATION_OCTAVES, MOISTURE_OCTAVES)
 from utils import fbm_noise
 
 
@@ -54,12 +54,17 @@ class WorldGenerator:
                 elif elev < 0.34:
                     world.set_tile(x, y, TILE_SAND)
                 elif elev < 0.68:
-                    if moist < 0.35:
+                    if moist > 0.55:
+                        world.set_tile(x, y, TILE_FOREST)
+                    elif moist < 0.35:
                         world.set_tile(x, y, TILE_DIRT)
                     else:
                         world.set_tile(x, y, TILE_GRASS)
                 elif elev < 0.80:
-                    world.set_tile(x, y, TILE_DIRT)
+                    if moist > 0.5:
+                        world.set_tile(x, y, TILE_FOREST)
+                    else:
+                        world.set_tile(x, y, TILE_DIRT)
                 else:
                     world.set_tile(x, y, TILE_STONE_FLOOR)
 

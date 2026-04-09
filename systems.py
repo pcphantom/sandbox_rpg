@@ -9,7 +9,8 @@ from constants import (TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT)
 from utils import clamp
 from ecs import EntityManager
 from components import (Transform, Velocity, Renderable, Collider, Health,
-                        AI, Placeable, Projectile, Equipment, PlayerStats)
+                        AI, Placeable, Projectile, Equipment, PlayerStats,
+                        Turret, Building, Storage)
 from items_data import ARMOR_VALUES
 
 
@@ -293,6 +294,87 @@ class TrapSystem:
                     if on_hit:
                         on_hit(mid, self.TRAP_DAMAGE, tt)
                     break
+
+
+# ======================================================================
+# TURRET SYSTEM
+# ======================================================================
+class TurretSystem:
+    """Auto-fires projectiles at the nearest mob within range."""
+
+    def update(self, dt: float, em: EntityManager,
+               on_fire: Any = None) -> None:
+        for tid in em.get_entities_with(Transform, Turret, Health):
+            th = em.get_component(tid, Health)
+            if not th.is_alive():
+                continue
+            turr = em.get_component(tid, Turret)
+            turr.timer = max(0, turr.timer - dt)
+            if turr.timer > 0:
+                continue
+            tt = em.get_component(tid, Transform)
+            # Find nearest mob
+            best_eid, best_dist = None, turr.fire_range
+            for mid in em.get_entities_with(Transform, Health, AI):
+                mt = em.get_component(mid, Transform)
+                d = math.hypot(mt.x - tt.x, mt.y - tt.y)
+                if d < best_dist:
+                    best_dist = d
+                    best_eid = mid
+            if best_eid is not None:
+                mt = em.get_component(best_eid, Transform)
+                mh = em.get_component(best_eid, Health)
+                mh.damage(turr.damage)
+                turr.timer = turr.cooldown
+                if on_fire:
+                    on_fire(best_eid, turr.damage, tt, mt)
+
+
+# ======================================================================
+# WAVE SYSTEM
+# ======================================================================
+class WaveSystem:
+    """Manages night-time enemy wave spawning with escalating difficulty."""
+
+    def __init__(self) -> None:
+        self.night_count: int = 0
+        self.was_night: bool = False
+        self.wave_active: bool = False
+        self.wave_spawned: int = 0
+        self.wave_target: int = 0
+        self.wave_timer: float = 0.0
+        self.wave_spawn_interval: float = 2.0
+        self.current_tier: int = 0
+
+    def update(self, dt: float, is_night: bool) -> dict | None:
+        """Returns spawn request dict or None.
+        {'count': N, 'tier': T} when mobs should be spawned."""
+        if is_night and not self.was_night:
+            # Night just started
+            self.night_count += 1
+            from constants import WAVE_START_NIGHT, WAVE_BASE_COUNT, WAVE_SCALE_PER_NIGHT
+            if self.night_count >= WAVE_START_NIGHT:
+                self.wave_active = True
+                self.wave_spawned = 0
+                diff = self.night_count - WAVE_START_NIGHT
+                self.wave_target = WAVE_BASE_COUNT + diff * WAVE_SCALE_PER_NIGHT
+                self.current_tier = min(3, diff // 2)
+                self.wave_timer = 0.0
+                self.wave_spawn_interval = max(0.8, 2.0 - diff * 0.1)
+        elif not is_night and self.was_night:
+            self.wave_active = False
+        self.was_night = is_night
+
+        if not self.wave_active or self.wave_spawned >= self.wave_target:
+            return None
+
+        self.wave_timer += dt
+        if self.wave_timer >= self.wave_spawn_interval:
+            self.wave_timer = 0.0
+            batch = min(3, self.wave_target - self.wave_spawned)
+            self.wave_spawned += batch
+            return {'count': batch, 'tier': self.current_tier}
+        return None
 
 
 # ======================================================================

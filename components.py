@@ -146,3 +146,48 @@ class Projectile(Component):
 class Placeable(Component):
     def __init__(self, item_type: str) -> None:
         self.item_type = item_type
+
+
+class Storage(Component):
+    """Container that holds items (chests)."""
+    def __init__(self, capacity: int = 24) -> None:
+        self.capacity = capacity
+        self.slots: Dict[int, Tuple[str, int]] = {}
+
+    def add_item(self, item_id: str, count: int = 1) -> int:
+        for slot, (iid, c) in self.slots.items():
+            if iid == item_id:
+                self.slots[slot] = (iid, c + count)
+                return 0
+        for i in range(self.capacity):
+            if i not in self.slots:
+                self.slots[i] = (item_id, count)
+                return 0
+        return count  # overflow
+
+    def remove_item(self, item_id: str, count: int = 1) -> bool:
+        for slot, (iid, c) in list(self.slots.items()):
+            if iid == item_id:
+                if c > count:
+                    self.slots[slot] = (iid, c - count)
+                    return True
+                elif c == count:
+                    del self.slots[slot]
+                    return True
+        return False
+
+
+class Turret(Component):
+    """Auto-firing turret that targets nearby mobs."""
+    def __init__(self, damage: int = 8, fire_range: float = 200.0,
+                 cooldown: float = 1.5) -> None:
+        self.damage = damage
+        self.fire_range = fire_range
+        self.cooldown = cooldown
+        self.timer: float = 0.0
+
+
+class Building(Component):
+    """Marks an entity as a player-built structure."""
+    def __init__(self, building_type: str = 'wall') -> None:
+        self.building_type = building_type

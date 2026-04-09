@@ -7,7 +7,8 @@ import pygame
 
 from constants import (SCREEN_WIDTH, TILE_SIZE, TILE_WATER, TILE_SAND,
                        TILE_GRASS, TILE_DIRT, TILE_STONE_FLOOR,
-                       TILE_STONE_WALL, BLACK, WHITE, RED)
+                       TILE_STONE_WALL, TILE_FOREST, BLACK, WHITE, RED,
+                       CYAN, GREEN)
 from world import World
 
 
@@ -18,6 +19,7 @@ TILE_COLORS: Dict[int, Tuple[int, int, int]] = {
     TILE_DIRT:        (100, 75, 45),
     TILE_STONE_FLOOR: (110, 110, 120),
     TILE_STONE_WALL:  (55, 55, 65),
+    TILE_FOREST:      (25, 80, 30),
 }
 
 # Minimap is 160 × 160 pixels, each pixel = 1 tile → shows 80-tile radius.
@@ -35,7 +37,8 @@ class Minimap:
 
     def draw(self, screen: pygame.Surface, world: World,
              px: float, py: float,
-             mob_positions: list | None = None) -> None:
+             mob_positions: list | None = None,
+             building_positions: list | None = None) -> None:
         """Redraw the minimap every frame (fast enough at 160²)."""
         self.surface.fill(BLACK)
 
@@ -54,6 +57,14 @@ class Minimap:
                     self.surface.set_at((mx, my), TILE_COLORS.get(tile, BLACK))
                 # else stays black
 
+        # Building dots (cyan)
+        if building_positions:
+            for (bx, by) in building_positions:
+                btx = int(bx / TILE_SIZE) - ptx + half
+                bty = int(by / TILE_SIZE) - pty + half
+                if 0 <= btx < self.size and 0 <= bty < self.size:
+                    self.surface.set_at((btx, bty), CYAN)
+
         # Mob dots (red)
         if mob_positions:
             for (ex, ey) in mob_positions:
@@ -62,8 +73,9 @@ class Minimap:
                 if 0 <= etx < self.size and 0 <= ety < self.size:
                     self.surface.set_at((etx, ety), RED)
 
-        # Player dot (white)
+        # Player dot (white with green outline)
         cx, cy = half, half
+        pygame.draw.circle(self.surface, GREEN, (cx, cy), 3)
         pygame.draw.circle(self.surface, WHITE, (cx, cy), 2)
 
         # Blit to screen
