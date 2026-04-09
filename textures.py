@@ -33,6 +33,9 @@ class TextureGenerator:
         self.generate_wolf()
         self.generate_goblin()
         self.generate_ghost()
+        self.generate_spider()
+        self.generate_orc()
+        self.generate_dark_knight()
         # Resources
         self.generate_tree()
         self.generate_rock()
@@ -42,6 +45,7 @@ class TextureGenerator:
         self.generate_sand_tile()
         self.generate_water_tile(0)
         self.generate_stone_tile()
+        self.generate_forest_tile()
         # Original items
         self.generate_item_wood()
         self.generate_item_stone()
@@ -65,15 +69,42 @@ class TextureGenerator:
         self.generate_item_wood_shield()
         self.generate_item_trap()
         self.generate_item_bed()
+        # New items (phase 2)
+        self.generate_item_iron()
+        self.generate_item_cloth()
+        self.generate_item_bone()
+        self.generate_item_leather()
+        self.generate_item_health_potion()
+        self.generate_item_antidote()
+        self.generate_item_iron_axe()
+        self.generate_item_mace()
+        self.generate_item_bone_club()
+        self.generate_item_crossbow()
+        self.generate_item_fire_arrow()
+        self.generate_item_bolt()
+        self.generate_item_iron_armor()
+        self.generate_item_iron_shield()
+        # Building items
+        self.generate_item_wall()
+        self.generate_item_stone_wall_b()
+        self.generate_item_turret()
+        self.generate_item_chest()
+        self.generate_item_door()
         # Placed objects
         self.generate_campfire(True)
         self.generate_campfire(False)
         self.generate_torch_placed()
         self.generate_trap_placed()
         self.generate_bed_placed()
+        self.generate_wall_placed()
+        self.generate_stone_wall_placed()
+        self.generate_turret_placed()
+        self.generate_chest_placed()
+        self.generate_door_placed()
         # Projectiles
         self.generate_projectile_arrow()
         self.generate_projectile_rock()
+        self.generate_projectile_bolt()
 
     # ==================================================================
     # PLAYER
@@ -233,6 +264,111 @@ class TextureGenerator:
             return s
         return self._get("ghost", make)
 
+    def generate_spider(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((24, 20), pygame.SRCALPHA)
+            body = (70, 40, 20, 255)
+            leg = (50, 30, 15, 255)
+            # Body ellipse
+            for y in range(6, 16):
+                for x in range(6, 18):
+                    dx = (x - 12) / 6.0
+                    dy = (y - 11) / 5.0
+                    if dx * dx + dy * dy < 1.0:
+                        c = 70 + int(20 * hash_noise(x, y, self.seed + 50))
+                        s.set_at((x, y), (c, int(c * 0.57), int(c * 0.29), 255))
+            # 8 legs (4 per side)
+            for i in range(4):
+                ly = 8 + i * 2
+                # Left legs
+                for j in range(5):
+                    s.set_at((5 - j, ly - j // 2), leg)
+                # Right legs
+                for j in range(5):
+                    s.set_at((18 + j, ly - j // 2), leg)
+            # Red eyes
+            s.set_at((10, 8), (255, 0, 0, 255))
+            s.set_at((14, 8), (255, 0, 0, 255))
+            return s
+        return self._get("spider", make)
+
+    def generate_orc(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((26, 32), pygame.SRCALPHA)
+            skin = (90, 120, 60, 255)
+            dark_skin = (70, 95, 45, 255)
+            # Head
+            for y in range(2, 12):
+                for x in range(7, 19):
+                    if (x - 13) ** 2 + (y - 7) ** 2 < 35:
+                        c = 90 + int(20 * hash_noise(x, y, self.seed + 51))
+                        s.set_at((x, y), (c, int(c * 1.3), int(c * 0.65), 255))
+            # Angry red eyes
+            s.set_at((10, 6), (255, 30, 30, 255))
+            s.set_at((11, 6), (255, 30, 30, 255))
+            s.set_at((15, 6), (255, 30, 30, 255))
+            s.set_at((16, 6), (255, 30, 30, 255))
+            # Tusks (white pixels near mouth)
+            s.set_at((10, 10), (240, 240, 230, 255))
+            s.set_at((16, 10), (240, 240, 230, 255))
+            # Muscular body
+            for y in range(12, 24):
+                for x in range(5, 21):
+                    c = 85 + int(25 * hash_noise(x, y, self.seed + 52))
+                    s.set_at((x, y), (c, int(c * 1.2), int(c * 0.6), 255))
+            # Dark loincloth
+            for y in range(20, 26):
+                for x in range(8, 18):
+                    s.set_at((x, y), (50, 35, 20, 255))
+            # Legs
+            for y in range(26, 32):
+                for x in range(7, 11):
+                    s.set_at((x, y), dark_skin)
+                for x in range(15, 19):
+                    s.set_at((x, y), dark_skin)
+            return s
+        return self._get("orc", make)
+
+    def generate_dark_knight(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((24, 34), pygame.SRCALPHA)
+            armor = (35, 35, 40, 255)
+            armor_hi = (55, 55, 65, 255)
+            # Helmet
+            for y in range(1, 10):
+                for x in range(7, 17):
+                    if (x - 12) ** 2 + (y - 5) ** 2 < 28:
+                        s.set_at((x, y), armor)
+            # Visor slit
+            for x in range(9, 15):
+                s.set_at((x, 5), (20, 20, 25, 255))
+            # Red glowing eyes
+            s.set_at((10, 5), (255, 20, 20, 255))
+            s.set_at((14, 5), (255, 20, 20, 255))
+            # Armored body
+            for y in range(10, 24):
+                for x in range(5, 19):
+                    c = 35 + int(20 * hash_noise(x, y, self.seed + 53))
+                    s.set_at((x, y), (c, c, c + 5, 255))
+            # Shoulder pauldrons
+            for y in range(10, 14):
+                for x in range(3, 7):
+                    s.set_at((x, y), armor_hi)
+                for x in range(17, 21):
+                    s.set_at((x, y), armor_hi)
+            # Legs
+            for y in range(24, 32):
+                for x in range(6, 11):
+                    s.set_at((x, y), armor)
+                for x in range(13, 18):
+                    s.set_at((x, y), armor)
+            # Sword in right hand (thin gray line)
+            for y in range(8, 22):
+                s.set_at((20, y), (140, 140, 160, 255))
+            s.set_at((20, 7), (180, 180, 200, 255))
+            return s
+        return self._get("dark_knight", make)
+
     # ==================================================================
     # RESOURCES
     # ==================================================================
@@ -335,6 +471,25 @@ class TextureGenerator:
                     (random.randint(2, 29), random.randint(2, 29)), 1)
             return s
         return self._get("stone", make)
+
+    def generate_forest_tile(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((TILE_SIZE, TILE_SIZE))
+            for y in range(TILE_SIZE):
+                for x in range(TILE_SIZE):
+                    n = fbm_noise(x * 0.1, y * 0.1, self.seed + 60, 3)
+                    g = int(60 + n * 50)
+                    s.set_at((x, y), (25, g, 25))
+            # Small tree dots scattered
+            for _ in range(12):
+                tx = random.randint(2, 29)
+                ty = random.randint(2, 29)
+                s.set_at((tx, ty), (20, 90, 20))
+                s.set_at((tx + 1, ty), (20, 90, 20))
+                s.set_at((tx, ty + 1), (20, 90, 20))
+                s.set_at((tx + 1, ty + 1), (20, 90, 20))
+            return s
+        return self._get("forest", make)
 
     # ==================================================================
     # ORIGINAL ITEM ICONS (16×16)
@@ -655,6 +810,388 @@ class TextureGenerator:
         return self._get("item_bed", make)
 
     # ==================================================================
+    # NEW ITEM ICONS — PHASE 2 (16×16)
+    # ==================================================================
+    def generate_item_iron(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Metallic ingot shape
+            for y in range(5, 12):
+                for x in range(3, 13):
+                    c = 160 + int(25 * hash_noise(x, y, self.seed + 61))
+                    s.set_at((x, y), (c, c, c + 10, 255))
+            # Top highlight
+            for x in range(4, 12):
+                s.set_at((x, 5), (200, 200, 215, 255))
+            # Bottom shadow
+            for x in range(3, 13):
+                s.set_at((x, 11), (120, 120, 130, 255))
+            return s
+        return self._get("item_iron", make)
+
+    def generate_item_cloth(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Folded fabric shape
+            for y in range(4, 13):
+                for x in range(3, 13):
+                    c = 220 + int(15 * hash_noise(x, y, self.seed + 62))
+                    s.set_at((x, y), (c, c, min(255, c - 5), 255))
+            # Fold lines
+            for y in range(5, 12):
+                s.set_at((6, y), (190, 190, 185, 255))
+                s.set_at((10, y), (190, 190, 185, 255))
+            return s
+        return self._get("item_cloth", make)
+
+    def generate_item_bone(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            bone = (230, 225, 210, 255)
+            dark = (200, 195, 180, 255)
+            # Femur shaft
+            for y in range(5, 12):
+                s.set_at((7, y), bone)
+                s.set_at((8, y), bone)
+            # Top knob
+            for y in range(3, 6):
+                for x in range(5, 10):
+                    if (x - 7) ** 2 + (y - 4) ** 2 < 5:
+                        s.set_at((x, y), bone)
+            # Bottom knob
+            for y in range(11, 14):
+                for x in range(5, 10):
+                    if (x - 8) ** 2 + (y - 12) ** 2 < 5:
+                        s.set_at((x, y), bone)
+            # Joint lines
+            s.set_at((7, 5), dark)
+            s.set_at((8, 11), dark)
+            return s
+        return self._get("item_bone", make)
+
+    def generate_item_leather(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Leather hide shape (irregular)
+            for y in range(3, 14):
+                for x in range(3, 13):
+                    dx = (x - 8) / 5.5
+                    dy = (y - 8.5) / 5.5
+                    if dx * dx + dy * dy < 0.9 + 0.1 * hash_noise(x, y, self.seed + 63):
+                        c = 140 + int(30 * hash_noise(x, y, self.seed + 64))
+                        s.set_at((x, y), (c, int(c * 0.6), int(c * 0.25), 255))
+            return s
+        return self._get("item_leather", make)
+
+    def generate_item_health_potion(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            glass = (220, 220, 230, 255)
+            # Flask neck
+            for y in range(2, 5):
+                s.set_at((7, y), glass)
+                s.set_at((8, y), glass)
+            # Cork
+            s.set_at((7, 2), (160, 120, 70, 255))
+            s.set_at((8, 2), (160, 120, 70, 255))
+            # Flask body
+            for y in range(5, 14):
+                for x in range(4, 12):
+                    dx = (x - 8) / 4.0
+                    dy = (y - 9.5) / 4.5
+                    if dx * dx + dy * dy < 1.0:
+                        s.set_at((x, y), (200, 30, 40, 255))
+            # Glass highlight
+            s.set_at((6, 7), (255, 120, 130, 255))
+            s.set_at((6, 8), (255, 120, 130, 255))
+            return s
+        return self._get("item_health_potion", make)
+
+    def generate_item_antidote(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            glass = (220, 220, 230, 255)
+            # Flask neck
+            for y in range(2, 5):
+                s.set_at((7, y), glass)
+                s.set_at((8, y), glass)
+            # Cork
+            s.set_at((7, 2), (160, 120, 70, 255))
+            s.set_at((8, 2), (160, 120, 70, 255))
+            # Flask body (green liquid)
+            for y in range(5, 14):
+                for x in range(4, 12):
+                    dx = (x - 8) / 4.0
+                    dy = (y - 9.5) / 4.5
+                    if dx * dx + dy * dy < 1.0:
+                        s.set_at((x, y), (30, 180, 50, 255))
+            # Glass highlight
+            s.set_at((6, 7), (120, 240, 140, 255))
+            s.set_at((6, 8), (120, 240, 140, 255))
+            return s
+        return self._get("item_antidote", make)
+
+    def generate_item_iron_axe(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Handle
+            for y in range(3, 14):
+                s.set_at((7, y), (120, 80, 40, 255))
+            # Metallic axe head (silver/gray)
+            for y in range(2, 7):
+                for x in range(8, 14):
+                    if (x - 8) + (y - 2) < 6:
+                        c = 170 + int(20 * hash_noise(x, y, self.seed + 65))
+                        s.set_at((x, y), (c, c, c + 15, 255))
+            return s
+        return self._get("item_iron_axe", make)
+
+    def generate_item_mace(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Brown handle
+            for y in range(7, 15):
+                s.set_at((7, y), (120, 80, 40, 255))
+                s.set_at((8, y), (100, 65, 30, 255))
+            # Spiked metal head
+            for y in range(2, 8):
+                for x in range(5, 11):
+                    if (x - 8) ** 2 + (y - 5) ** 2 < 10:
+                        s.set_at((x, y), (160, 160, 175, 255))
+            # Spikes
+            s.set_at((8, 1), (190, 190, 210, 255))
+            s.set_at((4, 5), (190, 190, 210, 255))
+            s.set_at((11, 5), (190, 190, 210, 255))
+            s.set_at((5, 2), (190, 190, 210, 255))
+            s.set_at((11, 2), (190, 190, 210, 255))
+            return s
+        return self._get("item_mace", make)
+
+    def generate_item_bone_club(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            bone = (230, 225, 210, 255)
+            dark = (200, 195, 180, 255)
+            # Shaft (thinner bottom)
+            for y in range(8, 15):
+                s.set_at((7, y), bone)
+                s.set_at((8, y), bone)
+            # Club head (wider top)
+            for y in range(2, 9):
+                for x in range(5, 11):
+                    if (x - 8) ** 2 + (y - 5) ** 2 < 12:
+                        s.set_at((x, y), bone)
+            # Cracks
+            s.set_at((7, 4), dark)
+            s.set_at((9, 6), dark)
+            return s
+        return self._get("item_bone_club", make)
+
+    def generate_item_crossbow(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            wood = (140, 90, 40, 255)
+            metal = (170, 170, 185, 255)
+            string = (200, 200, 200, 255)
+            # Stock (vertical)
+            for y in range(5, 14):
+                s.set_at((8, y), wood)
+                s.set_at((9, y), wood)
+            # Horizontal cross piece (bow)
+            for x in range(2, 14):
+                s.set_at((x, 5), wood)
+                s.set_at((x, 6), wood)
+            # String
+            pygame.draw.line(s, string, (2, 5), (8, 7), 1)
+            pygame.draw.line(s, string, (13, 5), (8, 7), 1)
+            # Metal tip
+            s.set_at((8, 4), metal)
+            s.set_at((9, 4), metal)
+            return s
+        return self._get("item_crossbow", make)
+
+    def generate_item_fire_arrow(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Shaft
+            for y in range(6, 14):
+                s.set_at((8, y), (140, 100, 50, 255))
+            # Flame tip (orange/red)
+            s.set_at((8, 3), (255, 200, 30, 255))
+            s.set_at((7, 4), (255, 140, 20, 255))
+            s.set_at((8, 4), (255, 80, 20, 255))
+            s.set_at((9, 4), (255, 140, 20, 255))
+            s.set_at((8, 5), (230, 60, 20, 255))
+            s.set_at((7, 5), (255, 120, 30, 255))
+            s.set_at((9, 5), (255, 120, 30, 255))
+            # Fletching
+            s.set_at((7, 13), (200, 60, 60, 255))
+            s.set_at((9, 13), (200, 60, 60, 255))
+            return s
+        return self._get("item_fire_arrow", make)
+
+    def generate_item_bolt(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Short thick shaft
+            for y in range(5, 12):
+                s.set_at((7, y), (140, 100, 50, 255))
+                s.set_at((8, y), (140, 100, 50, 255))
+            # Metal tip
+            s.set_at((7, 3), (180, 180, 200, 255))
+            s.set_at((8, 3), (180, 180, 200, 255))
+            s.set_at((7, 4), (200, 200, 220, 255))
+            s.set_at((8, 4), (200, 200, 220, 255))
+            # Fletching (small)
+            s.set_at((6, 11), (100, 100, 110, 255))
+            s.set_at((9, 11), (100, 100, 110, 255))
+            return s
+        return self._get("item_bolt", make)
+
+    def generate_item_iron_armor(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            metal = (160, 165, 180, 255)
+            dark = (120, 125, 140, 255)
+            # Body
+            for y in range(3, 14):
+                for x in range(4, 12):
+                    c = 155 + int(20 * hash_noise(x, y, self.seed + 66))
+                    s.set_at((x, y), (c, c, c + 15, 255))
+            # Shoulders
+            for x in range(2, 14):
+                s.set_at((x, 3), dark)
+                s.set_at((x, 4), dark)
+            # Centre line
+            for y in range(5, 13):
+                s.set_at((8, y), dark)
+            return s
+        return self._get("item_iron_armor", make)
+
+    def generate_item_iron_shield(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            for y in range(2, 14):
+                for x in range(3, 13):
+                    dx = (x - 8) / 5.0
+                    dy = (y - 8) / 6.0
+                    if dx * dx + dy * dy < 1:
+                        c = 155 + int(25 * hash_noise(x, y, self.seed + 67))
+                        s.set_at((x, y), (c, c, c + 15, 255))
+            # Metal boss
+            pygame.draw.circle(s, (200, 205, 220, 255), (8, 8), 2)
+            # Rivets
+            s.set_at((5, 4), (120, 120, 135, 255))
+            s.set_at((11, 4), (120, 120, 135, 255))
+            s.set_at((5, 12), (120, 120, 135, 255))
+            s.set_at((11, 12), (120, 120, 135, 255))
+            return s
+        return self._get("item_iron_shield", make)
+
+    # ==================================================================
+    # BUILDING / PLACEABLE ITEM ICONS (16×16)
+    # ==================================================================
+    def generate_item_wall(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            for y in range(3, 14):
+                for x in range(2, 14):
+                    c = 130 + int(20 * hash_noise(x, y, self.seed + 68))
+                    s.set_at((x, y), (c, int(c * 0.65), 30, 255))
+            # Plank lines
+            for y in range(3, 14):
+                s.set_at((5, y), (100, 60, 25, 255))
+                s.set_at((10, y), (100, 60, 25, 255))
+            return s
+        return self._get("item_wall", make)
+
+    def generate_item_stone_wall_b(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            for y in range(3, 14):
+                for x in range(2, 14):
+                    c = 120 + int(25 * hash_noise(x // 3, y // 3, self.seed + 69))
+                    s.set_at((x, y), (c, c, c + 5, 255))
+            # Mortar lines
+            for x in range(2, 14):
+                s.set_at((x, 6), (90, 90, 95, 255))
+                s.set_at((x, 10), (90, 90, 95, 255))
+            for y in range(3, 7):
+                s.set_at((8, y), (90, 90, 95, 255))
+            for y in range(7, 11):
+                s.set_at((5, y), (90, 90, 95, 255))
+                s.set_at((11, y), (90, 90, 95, 255))
+            return s
+        return self._get("item_stone_wall_b", make)
+
+    def generate_item_turret(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            wood = (130, 85, 40, 255)
+            metal = (150, 150, 165, 255)
+            # Wooden base
+            for y in range(10, 15):
+                for x in range(3, 13):
+                    s.set_at((x, y), wood)
+            # Metal top / mechanism
+            for y in range(4, 10):
+                for x in range(5, 11):
+                    s.set_at((x, y), metal)
+            # Barrel
+            for x in range(11, 15):
+                s.set_at((x, 7), (130, 130, 145, 255))
+                s.set_at((x, 8), (130, 130, 145, 255))
+            return s
+        return self._get("item_turret", make)
+
+    def generate_item_chest(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            wood = (140, 90, 40, 255)
+            dark = (100, 60, 25, 255)
+            gold = (220, 190, 50, 255)
+            # Chest body
+            for y in range(5, 13):
+                for x in range(3, 13):
+                    s.set_at((x, y), wood)
+            # Lid (top)
+            for x in range(3, 13):
+                s.set_at((x, 5), dark)
+                s.set_at((x, 6), dark)
+            # Gold clasp
+            s.set_at((7, 8), gold)
+            s.set_at((8, 8), gold)
+            s.set_at((7, 9), gold)
+            s.set_at((8, 9), gold)
+            # Bottom edge
+            for x in range(3, 13):
+                s.set_at((x, 12), dark)
+            return s
+        return self._get("item_chest", make)
+
+    def generate_item_door(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            wood = (140, 90, 45, 255)
+            dark = (100, 60, 25, 255)
+            # Door body
+            for y in range(2, 15):
+                for x in range(4, 12):
+                    s.set_at((x, y), wood)
+            # Frame
+            for y in range(2, 15):
+                s.set_at((4, y), dark)
+                s.set_at((11, y), dark)
+            for x in range(4, 12):
+                s.set_at((x, 2), dark)
+                s.set_at((x, 14), dark)
+            # Handle
+            s.set_at((10, 8), (200, 180, 50, 255))
+            s.set_at((10, 9), (200, 180, 50, 255))
+            return s
+        return self._get("item_door", make)
+
+    # ==================================================================
     # PLACED OBJECTS
     # ==================================================================
     def generate_campfire(self, lit: bool = True) -> pygame.Surface:
@@ -728,6 +1265,134 @@ class TextureGenerator:
             return s
         return self._get("bed_placed", make)
 
+    def generate_wall_placed(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 32), pygame.SRCALPHA)
+            for y in range(4, 28):
+                for x in range(4, 28):
+                    c = 130 + int(25 * hash_noise(x, y, self.seed + 70))
+                    s.set_at((x, y), (c, int(c * 0.65), 30, 255))
+            # Plank dividers
+            for y in range(4, 28):
+                s.set_at((10, y), (90, 55, 20, 255))
+                s.set_at((16, y), (90, 55, 20, 255))
+                s.set_at((22, y), (90, 55, 20, 255))
+            return s
+        return self._get("wall_placed", make)
+
+    def generate_stone_wall_placed(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 32), pygame.SRCALPHA)
+            for y in range(4, 28):
+                for x in range(4, 28):
+                    c = 115 + int(30 * hash_noise(x // 4, y // 4, self.seed + 71))
+                    s.set_at((x, y), (c, c, c + 5, 255))
+            # Mortar lines (horizontal)
+            for x in range(4, 28):
+                s.set_at((x, 10), (85, 85, 90, 255))
+                s.set_at((x, 16), (85, 85, 90, 255))
+                s.set_at((x, 22), (85, 85, 90, 255))
+            # Mortar lines (vertical, offset per row)
+            for y in range(4, 10):
+                s.set_at((12, y), (85, 85, 90, 255))
+                s.set_at((20, y), (85, 85, 90, 255))
+            for y in range(11, 16):
+                s.set_at((8, y), (85, 85, 90, 255))
+                s.set_at((16, y), (85, 85, 90, 255))
+                s.set_at((24, y), (85, 85, 90, 255))
+            for y in range(17, 22):
+                s.set_at((12, y), (85, 85, 90, 255))
+                s.set_at((20, y), (85, 85, 90, 255))
+            return s
+        return self._get("stone_wall_placed", make)
+
+    def generate_turret_placed(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 32), pygame.SRCALPHA)
+            wood = (130, 85, 40, 255)
+            metal = (140, 140, 155, 255)
+            # Wooden platform
+            for y in range(20, 28):
+                for x in range(4, 28):
+                    c = 120 + int(20 * hash_noise(x, y, self.seed + 72))
+                    s.set_at((x, y), (c, int(c * 0.65), 30, 255))
+            # Crossbow on top
+            for y in range(10, 20):
+                for x in range(10, 22):
+                    s.set_at((x, y), metal)
+            # Barrel
+            for x in range(22, 28):
+                s.set_at((x, 14), (160, 160, 175, 255))
+                s.set_at((x, 15), (160, 160, 175, 255))
+            # Support post
+            for y in range(16, 28):
+                s.set_at((15, y), wood)
+                s.set_at((16, y), wood)
+            return s
+        return self._get("turret_placed", make)
+
+    def generate_chest_placed(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 24), pygame.SRCALPHA)
+            wood = (140, 90, 40, 255)
+            dark = (100, 60, 25, 255)
+            gold = (220, 190, 50, 255)
+            # Chest body
+            for y in range(6, 20):
+                for x in range(4, 28):
+                    c = 135 + int(20 * hash_noise(x, y, self.seed + 73))
+                    s.set_at((x, y), (c, int(c * 0.65), 30, 255))
+            # Lid
+            for x in range(4, 28):
+                s.set_at((x, 6), dark)
+                s.set_at((x, 7), dark)
+                s.set_at((x, 8), dark)
+            # Gold clasp
+            for y in range(11, 14):
+                for x in range(14, 18):
+                    s.set_at((x, y), gold)
+            # Bottom edge
+            for x in range(4, 28):
+                s.set_at((x, 19), dark)
+            # Metal bands
+            for y in range(6, 20):
+                s.set_at((10, y), (120, 120, 135, 255))
+                s.set_at((22, y), (120, 120, 135, 255))
+            return s
+        return self._get("chest_placed", make)
+
+    def generate_door_placed(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((24, 32), pygame.SRCALPHA)
+            wood = (140, 90, 45, 255)
+            dark = (100, 60, 25, 255)
+            # Door body
+            for y in range(2, 30):
+                for x in range(4, 20):
+                    c = 135 + int(20 * hash_noise(x, y, self.seed + 74))
+                    s.set_at((x, y), (c, int(c * 0.65), 30, 255))
+            # Frame
+            for y in range(2, 30):
+                s.set_at((4, y), dark)
+                s.set_at((5, y), dark)
+                s.set_at((19, y), dark)
+                s.set_at((18, y), dark)
+            for x in range(4, 20):
+                s.set_at((x, 2), dark)
+                s.set_at((x, 3), dark)
+                s.set_at((x, 29), dark)
+            # Handle
+            s.set_at((16, 15), (200, 180, 50, 255))
+            s.set_at((16, 16), (200, 180, 50, 255))
+            s.set_at((17, 15), (200, 180, 50, 255))
+            s.set_at((17, 16), (200, 180, 50, 255))
+            # Horizontal planks
+            for x in range(6, 18):
+                s.set_at((x, 10), dark)
+                s.set_at((x, 20), dark)
+            return s
+        return self._get("door_placed", make)
+
     # ==================================================================
     # PROJECTILES
     # ==================================================================
@@ -752,3 +1417,20 @@ class TextureGenerator:
                         s.set_at((x, y), (130, 130, 140, 255))
             return s
         return self._get("proj_rock", make)
+
+    def generate_projectile_bolt(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((8, 8), pygame.SRCALPHA)
+            # Short thick bolt shaft
+            for i in range(5):
+                s.set_at((1 + i, 3), (140, 100, 50, 255))
+                s.set_at((1 + i, 4), (140, 100, 50, 255))
+            # Metal tip
+            s.set_at((6, 3), (200, 200, 220, 255))
+            s.set_at((6, 4), (200, 200, 220, 255))
+            s.set_at((7, 3), (180, 180, 200, 255))
+            # Fletching
+            s.set_at((1, 2), (100, 100, 110, 255))
+            s.set_at((1, 5), (100, 100, 110, 255))
+            return s
+        return self._get("proj_bolt", make)
