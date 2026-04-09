@@ -1,4 +1,4 @@
-"""Entity Component System core."""
+"""Entity-Component-System core."""
 from typing import Dict, Set, List, Any, Type
 
 
@@ -45,3 +45,11 @@ class EntityManager:
         for s in sets[1:]:
             r = r.intersection(s)
         return list(r)
+
+    @property
+    def next_id(self) -> int:
+        return self._next_id
+
+    @next_id.setter
+    def next_id(self, value: int) -> None:
+        self._next_id = value

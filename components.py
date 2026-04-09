@@ -2,6 +2,8 @@
 import pygame
 from typing import Dict, Tuple, Optional
 
+from constants import INVENTORY_TOTAL_SLOTS, STAT_POINTS_PER_LEVEL
+
 
 class Component:
     pass
@@ -14,7 +16,8 @@ class Transform(Component):
 
 
 class Velocity(Component):
-    def __init__(self, vx: float = 0.0, vy: float = 0.0, friction: float = 0.85) -> None:
+    def __init__(self, vx: float = 0.0, vy: float = 0.0,
+                 friction: float = 0.85) -> None:
         self.vx = vx; self.vy = vy; self.friction = friction
 
 
@@ -45,7 +48,7 @@ class Health(Component):
 
 
 class Inventory(Component):
-    def __init__(self, capacity: int = 96) -> None:
+    def __init__(self, capacity: int = INVENTORY_TOTAL_SLOTS) -> None:
         self.capacity = capacity
         self.slots: Dict[int, Tuple[str, int]] = {}
         self.equipped_slot: int = 0
@@ -85,13 +88,15 @@ class Inventory(Component):
 
 
 class LightSource(Component):
-    def __init__(self, radius: int, color: Tuple[int, int, int] = (255, 200, 120),
+    def __init__(self, radius: int,
+                 color: Tuple[int, int, int] = (255, 200, 120),
                  intensity: float = 1.0) -> None:
         self.radius = radius; self.color = color; self.intensity = intensity
 
 
 class AI(Component):
-    def __init__(self, behavior: str = "wander", mob_type: str = "slime") -> None:
+    def __init__(self, behavior: str = "wander",
+                 mob_type: str = "slime") -> None:
         self.behavior = behavior; self.mob_type = mob_type
         self.state = "idle"; self.timer = 0.0
         self.target_id: Optional[int] = None
@@ -116,7 +121,7 @@ class PlayerStats(Component):
             self.xp -= self.xp_to_next
             self.level += 1
             self.xp_to_next = self.level * 50
-            self.stat_points += 3
+            self.stat_points += STAT_POINTS_PER_LEVEL
             return True
         return False
 
