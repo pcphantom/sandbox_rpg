@@ -41,6 +41,7 @@ class MovementSystem:
 class PhysicsSystem:
     def __init__(self, ww: int, wh: int) -> None:
         self.ww = ww; self.wh = wh
+        self._building_rects: list[tuple[int, float, float, int, int]] = []
 
     def _tile_solid(self, x: float, y: float, w: int, h: int,
                     world: Any) -> bool:
@@ -54,19 +55,51 @@ class PhysicsSystem:
                     return True
         return False
 
+    def _entity_blocked(self, eid: int, x: float, y: float,
+                        w: int, h: int) -> int:
+        """Check if rect (x, y, w, h) overlaps any solid building collider.
+        Returns the blocking entity id or 0."""
+        r = x + w
+        b = y + h
+        for bid, bx, by, bw, bh in self._building_rects:
+            if bid == eid:
+                continue
+            if x < bx + bw and r > bx and y < by + bh and b > by:
+                return bid
+        return 0
+
+    def _rebuild_building_rects(self, em: EntityManager) -> None:
+        """Cache solid building/placeable collider AABBs each frame."""
+        self._building_rects.clear()
+        for bid in em.get_entities_with(Transform, Collider):
+            # Only static solid colliders (buildings) — skip entities with Velocity
+            bc = em.get_component(bid, Collider)
+            if not bc.solid:
+                continue
+            if em.has_component(bid, Velocity):
+                continue
+            bt = em.get_component(bid, Transform)
+            self._building_rects.append(
+                (bid, bt.x, bt.y, bc.width, bc.height))
+
     def update(self, dt: float, em: EntityManager, world: Any) -> None:
+        self._rebuild_building_rects(em)
         for eid in em.get_entities_with(Transform, Collider, Velocity):
             t = em.get_component(eid, Transform)
             c = em.get_component(eid, Collider)
             v = em.get_component(eid, Velocity)
             if c.solid:
                 nx = t.x + v.vx * dt
-                if not self._tile_solid(nx, t.y, c.width, c.height, world):
+                if (not self._tile_solid(nx, t.y, c.width, c.height, world)
+                        and not self._entity_blocked(eid, nx, t.y,
+                                                     c.width, c.height)):
                     t.x = nx
                 else:
                     v.vx = 0
                 ny = t.y + v.vy * dt
-                if not self._tile_solid(t.x, ny, c.width, c.height, world):
+                if (not self._tile_solid(t.x, ny, c.width, c.height, world)
+                        and not self._entity_blocked(eid, t.x, ny,
+                                                     c.width, c.height)):
                     t.y = ny
                 else:
                     v.vy = 0
@@ -162,6 +195,39 @@ class DayNightCycle:
 # AI SYSTEM
 # ======================================================================
 class AISystem:
+    def __init__(self) -> None:
+        self._stuck_timers: dict[int, float] = {}
+
+    def _find_blocking_wall(self, eid: int, t: 'Transform',
+                            dx: float, dy: float, dist: float,
+                            em: EntityManager) -> int:
+        """Check if a solid building is between the mob and its target.
+        Returns the blocking entity id or 0."""
+        if dist < 1:
+            return 0
+        c = em.get_component(eid, Collider)
+        cw = c.width if c else 16
+        ch = c.height if c else 16
+        # Probe one step ahead in the direction of movement
+        step = max(cw, ch) * 0.75
+        probe_x = t.x + (dx / dist) * step
+        probe_y = t.y + (dy / dist) * step
+        for bid in em.get_entities_with(Transform, Collider):
+            if bid == eid:
+                continue
+            bc = em.get_component(bid, Collider)
+            if not bc.solid:
+                continue
+            if em.has_component(bid, Velocity):
+                continue
+            if not em.has_component(bid, Health):
+                continue
+            bt = em.get_component(bid, Transform)
+            if (probe_x < bt.x + bc.width and probe_x + cw > bt.x
+                    and probe_y < bt.y + bc.height and probe_y + ch > bt.y):
+                return bid
+        return 0
+
     def update(self, dt: float, em: EntityManager, player_id: int,
                on_ranged_fire: Any = None) -> None:
         pt = em.get_component(player_id, Transform)
@@ -237,6 +303,7 @@ class AISystem:
             if mob_ai.state == "chase":
                 if dist > mob_ai.detection_range * 2.0:
                     mob_ai.state = "idle"
+                    self._stuck_timers.pop(eid, None)
                 elif mob_ai.is_ranged and dist < mob_ai.ranged_range and dist > 60:
                     # Ranged enemy: keep distance and shoot
                     if mob_ai.ranged_timer <= 0 and on_ranged_fire:
@@ -254,6 +321,20 @@ class AISystem:
                 elif dist > 5:
                     v.vx = (dx / dist) * mob_ai.speed * 1.3
                     v.vy = (dy / dist) * mob_ai.speed * 1.3
+                    # Detect if stuck against a wall and attack it
+                    moved = math.hypot(t.x - t.prev_x, t.y - t.prev_y)
+                    wanted = mob_ai.speed * 1.3 * dt * 0.3
+                    if moved < wanted and dist > 30:
+                        self._stuck_timers[eid] = self._stuck_timers.get(eid, 0) + dt
+                        if self._stuck_timers[eid] > 0.3:
+                            wall_id = self._find_blocking_wall(
+                                eid, t, dx, dy, dist, em)
+                            if wall_id:
+                                mob_ai.state = "attack_structure"
+                                mob_ai.target_id = wall_id
+                                self._stuck_timers.pop(eid, None)
+                    else:
+                        self._stuck_timers.pop(eid, None)
 
 
 # ======================================================================
@@ -442,7 +523,7 @@ def calc_melee_damage(base_item_dmg: int, stats: PlayerStats,
 
 def calc_ranged_damage(ranged_base: int, ammo_bonus: int,
                        stats: PlayerStats) -> int:
-    return ranged_base + ammo_bonus + stats.dexterity * 2
+    return ranged_base + ammo_bonus + stats.agility * 2
 
 
 def calc_damage_reduction(equipment: Equipment | None) -> int:

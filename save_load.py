@@ -1,6 +1,7 @@
 """Multi-slot save / load with JSON serialisation."""
 import json
 import os
+import tempfile
 from typing import Dict, Any, Optional
 
 from constants import SAVE_DIR, SAVE_SLOTS
@@ -11,17 +12,37 @@ def _slot_path(slot: int) -> str:
     return os.path.join(SAVE_DIR, f"save_{slot}.json")
 
 
-def save_game(slot: int, data: Dict[str, Any]) -> None:
-    with open(_slot_path(slot), 'w') as f:
-        json.dump(data, f, indent=2)
+def save_game(slot: int, data: Dict[str, Any]) -> bool:
+    """Atomic save: write to temp file, fsync, then rename over target.
+    Returns True on success, False on failure."""
+    target = _slot_path(slot)
+    try:
+        fd, tmp = tempfile.mkstemp(dir=SAVE_DIR, suffix='.tmp')
+        with os.fdopen(fd, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        # Atomic replace (Windows: os.replace handles overwrite)
+        os.replace(tmp, target)
+        return True
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return False
 
 
 def load_game(slot: int) -> Optional[Dict[str, Any]]:
     path = _slot_path(slot)
     if not os.path.exists(path):
         return None
-    with open(path, 'r') as f:
-        return json.load(f)
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return None
 
 
 def delete_save(slot: int) -> None:

@@ -7,7 +7,7 @@ from typing import List, Tuple, Dict, Optional, Any, Callable
 import pygame
 
 from constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, GREEN,
-                       CYAN, GRAY, YELLOW, DARK_GRAY, ORANGE,
+                       CYAN, GRAY, YELLOW, DARK_GRAY, ORANGE, LIGHT_BLUE,
                        INVENTORY_SLOTS_PER_PAGE,
                        INVENTORY_PAGES, INVENTORY_COLS, SAVE_SLOTS,
                        QUICK_SAVE_SLOT, CHEST_CAPACITY)
@@ -324,7 +324,7 @@ class PauseMenu:
         ov.fill((0, 0, 0, 160))
         surface.blit(ov, (0, 0))
 
-        pw, ph = 360, 380
+        pw, ph = 360, 430
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
@@ -341,8 +341,12 @@ class PauseMenu:
         self._draw_button(surface, px + 40, py + 70, pw - 80, 36,
                           "Resume  [Esc]")
 
+        # Options button
+        self._draw_button(surface, px + 40, py + 116, pw - 80, 36,
+                          "Options")
+
         # Save slots
-        sy = py + 126
+        sy = py + 170
         surface.blit(self.font.render("Save Slots:", True, GRAY),
                      (px + 40, sy))
         sy += 26
@@ -391,7 +395,8 @@ class PauseMenu:
                      save_cb: Callable, load_cb: Callable,
                      delete_cb: Callable,
                      resume_cb: Callable,
-                     quit_cb: Callable) -> bool:
+                     quit_cb: Callable,
+                     options_cb: Callable = None) -> bool:
         """Returns True if the event was consumed."""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -403,7 +408,7 @@ class PauseMenu:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         mx, my = event.pos
-        pw, ph = 360, 380
+        pw, ph = 360, 430
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
 
@@ -412,8 +417,13 @@ class PauseMenu:
             resume_cb()
             return True
 
+        # Options
+        if options_cb and pygame.Rect(px + 40, py + 116, pw - 80, 36).collidepoint(mx, my):
+            options_cb()
+            return True
+
         # Slot selection
-        sy = py + 152
+        sy = py + 196
         for slot in range(1, SAVE_SLOTS):
             r = pygame.Rect(px + 40, sy, pw - 80, 32)
             if r.collidepoint(mx, my):
@@ -460,7 +470,7 @@ _SLOT_CATEGORIES: Dict[str, list[str]] = {
     'ammo':   ['ammo'],
 }
 
-_STAT_NAMES = ['strength', 'agility', 'vitality', 'dexterity']
+_STAT_NAMES = ['strength', 'agility', 'vitality', 'luck']
 
 
 class CharacterMenu:
@@ -524,14 +534,41 @@ class CharacterMenu:
         sy += 26
 
         # Derived stats
-        from systems import calc_damage_reduction
+        from systems import calc_damage_reduction, calc_melee_damage
+        from items_data import ITEM_DATA as _ID, RANGED_DATA as _RD
+
+        # Attack damage
+        weapon = equipment.weapon if equipment and equipment.weapon else inventory.get_equipped()
+        base_dmg = 5
+        if weapon and weapon in _ID and _ID[weapon][2] > 0:
+            base_dmg = _ID[weapon][2]
+        atk = calc_melee_damage(base_dmg, stats, equipment)
+        crit_pct = stats.luck * 2
+        surface.blit(self.font_sm.render(
+            f"Attack damage: {atk}   Crit: {crit_pct}%", True, ORANGE),
+            (sx, sy))
+        sy += 18
+
+        # Ranged damage (if ranged weapon equipped)
+        if equipment and equipment.ranged and equipment.ranged in _RD:
+            rd = _RD[equipment.ranged]
+            r_dmg = rd['damage'] + stats.agility * 2
+            surface.blit(self.font_sm.render(
+                f"Ranged damage: {r_dmg}", True, ORANGE), (sx, sy))
+            sy += 18
+
+        # Defense
         dr = calc_damage_reduction(equipment)
         surface.blit(self.font_sm.render(
-            f"Damage reduction: {dr}", True, GRAY), (sx, sy))
+            f"Defense: {dr}", True, LIGHT_BLUE), (sx, sy))
         sy += 18
         speed_bonus = stats.agility * 5
         surface.blit(self.font_sm.render(
             f"Speed bonus: +{speed_bonus}%", True, GRAY), (sx, sy))
+        sy += 18
+        luck_bonus = stats.luck * 10
+        surface.blit(self.font_sm.render(
+            f"Harvest luck: +{luck_bonus}%", True, GRAY), (sx, sy))
 
         # Right: Equipment
         ex = px + 270

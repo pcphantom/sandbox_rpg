@@ -121,7 +121,7 @@ class PlayerStats(Component):
         self.strength = 1
         self.agility = 1
         self.vitality = 1
-        self.dexterity = 1
+        self.luck = 1
 
     def add_xp(self, amount: int) -> bool:
         self.xp += amount
@@ -152,8 +152,9 @@ class Projectile(Component):
 
 
 class Placeable(Component):
-    def __init__(self, item_type: str) -> None:
+    def __init__(self, item_type: str, rotation: int = 0) -> None:
         self.item_type = item_type
+        self.rotation = rotation
 
 
 class Storage(Component):

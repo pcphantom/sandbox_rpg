@@ -1064,21 +1064,30 @@ class TextureGenerator:
         def make() -> pygame.Surface:
             s = pygame.Surface((16, 16), pygame.SRCALPHA)
             frame = (120, 80, 40, 255)
-            sheet = (200, 200, 220, 255)
-            pillow = (220, 220, 240, 255)
-            # Frame
-            for x in range(2, 14):
-                s.set_at((x, 12), frame)
+            red = (180, 35, 35, 255)
+            red_dk = (150, 25, 25, 255)
+            pillow = (230, 230, 240, 255)
+            pillow_dk = (200, 200, 215, 255)
+            # Wooden frame border (top-down view)
+            for x in range(1, 15):
+                s.set_at((x, 2), frame)
                 s.set_at((x, 13), frame)
-            s.set_at((2, 11), frame); s.set_at((13, 11), frame)
-            # Sheet
-            for y in range(7, 12):
+            for y in range(2, 14):
+                s.set_at((1, y), frame)
+                s.set_at((14, y), frame)
+            # Red blanket (lower 2/3)
+            for y in range(6, 13):
+                for x in range(2, 14):
+                    c = red if (x + y) % 3 != 0 else red_dk
+                    s.set_at((x, y), c)
+            # Pillow (top portion)
+            for y in range(3, 6):
                 for x in range(3, 13):
-                    s.set_at((x, y), sheet)
-            # Pillow
-            for y in range(5, 8):
-                for x in range(3, 7):
-                    s.set_at((x, y), pillow)
+                    c = pillow if y < 5 else pillow_dk
+                    s.set_at((x, y), c)
+            # Pillow center crease
+            for y in range(3, 6):
+                s.set_at((8, y), pillow_dk)
             return s
         return self._get("item_bed", make)
 
@@ -1537,26 +1546,51 @@ class TextureGenerator:
 
     def generate_bed_placed(self) -> pygame.Surface:
         def make() -> pygame.Surface:
-            s = pygame.Surface((48, 32), pygame.SRCALPHA)
+            # Top-down bed: 2 tiles wide (64px) x 1 tile tall (32px)
+            s = pygame.Surface((64, 32), pygame.SRCALPHA)
             frame = (120, 80, 40, 255)
-            sheet = (180, 180, 210, 255)
-            pillow = (210, 210, 230, 255)
-            # Frame
-            for x in range(4, 44):
-                for y in range(22, 28):
-                    s.set_at((x, y), frame)
-            # Mattress
-            for x in range(6, 42):
-                for y in range(14, 22):
-                    s.set_at((x, y), sheet)
-            # Pillow
-            for x in range(6, 16):
-                for y in range(12, 16):
-                    s.set_at((x, y), pillow)
-            # Headboard
-            for y in range(8, 22):
-                s.set_at((4, y), frame)
-                s.set_at((5, y), frame)
+            frame_dk = (90, 60, 30, 255)
+            red = (180, 35, 35, 255)
+            red_dk = (150, 25, 25, 255)
+            red_lt = (200, 50, 50, 255)
+            pillow = (230, 230, 240, 255)
+            pillow_dk = (200, 200, 215, 255)
+            # Wooden frame border
+            for x in range(0, 64):
+                s.set_at((x, 0), frame)
+                s.set_at((x, 1), frame)
+                s.set_at((x, 30), frame)
+                s.set_at((x, 31), frame)
+            for y in range(0, 32):
+                s.set_at((0, y), frame)
+                s.set_at((1, y), frame)
+                s.set_at((62, y), frame)
+                s.set_at((63, y), frame)
+            # Headboard (thicker left edge)
+            for y in range(0, 32):
+                s.set_at((2, y), frame_dk)
+                s.set_at((3, y), frame_dk)
+            # Red blanket (right 2/3)
+            for y in range(2, 30):
+                for x in range(22, 62):
+                    c = red if (x + y) % 4 != 0 else red_dk
+                    s.set_at((x, y), c)
+            # Blanket fold line
+            for y in range(3, 29):
+                s.set_at((22, y), red_lt)
+                s.set_at((23, y), red_lt)
+            # Pillow area (left portion)
+            for y in range(4, 28):
+                for x in range(5, 21):
+                    c = pillow if y < 16 else pillow_dk
+                    s.set_at((x, y), c)
+            # Pillow divider (two pillows)
+            for y in range(4, 28):
+                s.set_at((13, y), pillow_dk)
+            # Pillow outlines
+            for x in range(5, 21):
+                s.set_at((x, 4), pillow_dk)
+                s.set_at((x, 27), pillow_dk)
             return s
         return self._get("bed_placed", make)
 

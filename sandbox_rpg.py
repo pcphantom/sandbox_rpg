@@ -53,7 +53,14 @@ from gui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
     CharacterMenu, ChestUI,
 )
+from settings import (
+    load_settings, save_settings,
+    INTERNAL_WIDTH, INTERNAL_HEIGHT,
+    DISPLAY_WINDOWED, DISPLAY_FULLSCREEN, DISPLAY_BORDERLESS,
+    DISPLAY_MODE_NAMES, RESOLUTION_PRESETS,
+)
 import save_load
+from music import MusicManager
 
 # ==========================================================================
 # GAME
@@ -61,15 +68,39 @@ import save_load
 
 class Game:
     def __init__(self, difficulty: int = DIFFICULTY_EASY) -> None:
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # Load persisted settings
+        self.settings = load_settings()
+
+        # Display setup — render at fixed internal res, scale to window
+        self.display_mode: int = self.settings.get(
+            'display_mode', DISPLAY_WINDOWED)
+        self.window_w: int = self.settings.get('resolution_w', SCREEN_WIDTH)
+        self.window_h: int = self.settings.get('resolution_h', SCREEN_HEIGHT)
+        self._display = self._create_display()
+        # Internal render surface (all game code draws here)
+        self.screen = pygame.Surface((INTERNAL_WIDTH, INTERNAL_HEIGHT))
         pygame.display.set_caption("Sandbox Survival RPG")
+
+        # Override pygame.mouse.get_pos to return internal coordinates
+        self._original_mouse_get_pos = pygame.mouse.get_pos
+        _game_ref = self
+        def _scaled_mouse_get_pos() -> Tuple[int, int]:
+            wx, wy = _game_ref._original_mouse_get_pos()
+            sw = max(1, _game_ref.window_w)
+            sh = max(1, _game_ref.window_h)
+            return (int(wx * INTERNAL_WIDTH / sw),
+                    int(wy * INTERNAL_HEIGHT / sh))
+        pygame.mouse.get_pos = _scaled_mouse_get_pos
+
         self.clock = pygame.time.Clock()
         self.running = True
         self.dead = False
         self.paused = False
-        self.seed = 42
-        self.difficulty = difficulty
+        self.seed = random.randint(0, 2**31 - 1)
+        self.difficulty = self.settings.get('difficulty', difficulty)
         self.in_main_menu = True
+        self.in_options_menu = False
+        self.options_source: str = 'main'  # 'main' or 'pause'
 
         # Fonts
         self.font = pygame.font.SysFont('consolas', 16)
@@ -115,6 +146,7 @@ class Game:
         self.placement_mode = False
         self.placement_item: Optional[str] = None
         self.placement_valid = True
+        self.placement_rotation = 0  # 0=right, 1=down, 2=left, 3=up (90° CW per step)
 
         # Spell targeting mode
         self.spell_targeting = False
@@ -155,10 +187,68 @@ class Game:
         self.notification: str = ""
         self.notification_timer: float = 0.0
 
+        # Music
+        self.music_manager = MusicManager(self.settings)
+
     # -- helpers -----------------------------------------------------------
     def _notify(self, msg: str, duration: float = 2.5) -> None:
         self.notification = msg
         self.notification_timer = duration
+
+    def _create_display(self) -> pygame.Surface:
+        """Create or recreate the pygame display for current settings."""
+        if self.display_mode == DISPLAY_FULLSCREEN:
+            return pygame.display.set_mode(
+                (self.window_w, self.window_h), pygame.FULLSCREEN)
+        elif self.display_mode == DISPLAY_BORDERLESS:
+            info = pygame.display.Info()
+            self.window_w = info.current_w
+            self.window_h = info.current_h
+            return pygame.display.set_mode(
+                (self.window_w, self.window_h), pygame.NOFRAME)
+        else:
+            return pygame.display.set_mode(
+                (self.window_w, self.window_h), pygame.RESIZABLE)
+
+    def _apply_display_settings(self) -> None:
+        """Recreate display and persist settings."""
+        self._display = self._create_display()
+        self.settings['display_mode'] = self.display_mode
+        self.settings['resolution_w'] = self.window_w
+        self.settings['resolution_h'] = self.window_h
+        save_settings(self.settings)
+
+    def _toggle_fullscreen(self) -> None:
+        """Toggle between windowed and fullscreen (Alt+Enter)."""
+        if self.display_mode == DISPLAY_FULLSCREEN:
+            self.display_mode = DISPLAY_WINDOWED
+            self.window_w = self.settings.get('resolution_w', SCREEN_WIDTH)
+            self.window_h = self.settings.get('resolution_h', SCREEN_HEIGHT)
+        else:
+            self.display_mode = DISPLAY_FULLSCREEN
+            info = pygame.display.Info()
+            self.window_w = info.current_w
+            self.window_h = info.current_h
+        self._apply_display_settings()
+
+    def _scale_mouse_pos(self, pos: Tuple[int, int]) -> Tuple[int, int]:
+        """Convert actual window mouse pos to internal surface coords."""
+        wx, wy = pos
+        ix = int(wx * INTERNAL_WIDTH / max(1, self.window_w))
+        iy = int(wy * INTERNAL_HEIGHT / max(1, self.window_h))
+        return (int(clamp(ix, 0, INTERNAL_WIDTH - 1)),
+                int(clamp(iy, 0, INTERNAL_HEIGHT - 1)))
+
+    def _present(self) -> None:
+        """Scale internal surface to window and flip."""
+        if (self.window_w == INTERNAL_WIDTH
+                and self.window_h == INTERNAL_HEIGHT):
+            self._display.blit(self.screen, (0, 0))
+        else:
+            scaled = pygame.transform.scale(
+                self.screen, (self.window_w, self.window_h))
+            self._display.blit(scaled, (0, 0))
+        pygame.display.flip()
 
     # ======================================================================
     # ENTITY CREATION
@@ -220,10 +310,11 @@ class Game:
         return eid
 
     def _populate_world(self) -> None:
+        rng = random.Random(self.seed + 12345)
         # Trees — denser in forest/grass biomes
         for _ in range(350):
-            x = random.randint(5, WORLD_WIDTH - 5)
-            y = random.randint(5, WORLD_HEIGHT - 5)
+            x = rng.randint(5, WORLD_WIDTH - 5)
+            y = rng.randint(5, WORLD_HEIGHT - 5)
             tile = self.world.get_tile(x, y)
             if tile in (TILE_GRASS, TILE_FOREST):
                 eid = self.em.create_entity()
@@ -234,8 +325,8 @@ class Game:
                 self.em.add_component(eid, Collider(24, 32, True))
         # Extra trees in forest
         for _ in range(150):
-            x = random.randint(5, WORLD_WIDTH - 5)
-            y = random.randint(5, WORLD_HEIGHT - 5)
+            x = rng.randint(5, WORLD_WIDTH - 5)
+            y = rng.randint(5, WORLD_HEIGHT - 5)
             if self.world.get_tile(x, y) == TILE_FOREST:
                 eid = self.em.create_entity()
                 self.em.add_component(eid, Transform(
@@ -245,8 +336,8 @@ class Game:
                 self.em.add_component(eid, Collider(24, 32, True))
         # Rocks
         for _ in range(200):
-            x = random.randint(5, WORLD_WIDTH - 5)
-            y = random.randint(5, WORLD_HEIGHT - 5)
+            x = rng.randint(5, WORLD_WIDTH - 5)
+            y = rng.randint(5, WORLD_HEIGHT - 5)
             if self.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
                                               TILE_STONE_FLOOR, TILE_FOREST):
                 eid = self.em.create_entity()
@@ -264,8 +355,8 @@ class Game:
         ]
         for mob_type, biome, count in mob_spawns:
             for _ in range(count):
-                x = random.randint(5, WORLD_WIDTH - 5)
-                y = random.randint(5, WORLD_HEIGHT - 5)
+                x = rng.randint(5, WORLD_WIDTH - 5)
+                y = rng.randint(5, WORLD_HEIGHT - 5)
                 tile = self.world.get_tile(x, y)
                 if tile == biome or (biome == TILE_GRASS and tile == TILE_FOREST):
                     self._create_mob(x * TILE_SIZE + 8, y * TILE_SIZE + 8,
@@ -338,7 +429,12 @@ class Game:
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
-            if self.in_main_menu:
+            # Handle global display events
+            self._process_display_events()
+            if self.in_options_menu:
+                self._handle_options_events()
+                self._draw_options_menu()
+            elif self.in_main_menu:
                 self._handle_main_menu_events()
                 self._draw_main_menu()
             elif not self.dead and not self.paused:
@@ -357,75 +453,365 @@ class Game:
         pygame.quit()
         sys.exit()
 
+    def _process_display_events(self) -> None:
+        """Peek at event queue for resize / Alt+Enter without consuming."""
+        for event in pygame.event.get(
+                [pygame.VIDEORESIZE, pygame.VIDEOEXPOSE]):
+            if event.type == pygame.VIDEORESIZE:
+                if self.display_mode == DISPLAY_WINDOWED:
+                    self.window_w = max(640, event.w)
+                    self.window_h = max(480, event.h)
+                    self._display = pygame.display.set_mode(
+                        (self.window_w, self.window_h), pygame.RESIZABLE)
+
     def _handle_main_menu_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 continue
+            # Alt+Enter fullscreen toggle
+            if (event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_RETURN
+                    and (event.mod & pygame.KMOD_ALT)):
+                self._toggle_fullscreen()
+                continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                     self.in_main_menu = False
+                    self.music_manager.start(self.daynight.is_night())
                 elif event.key == pygame.K_q:
                     self.running = False
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
-                # Difficulty buttons
-                btn_w, btn_h = 200, 40
+                mx, my = self._scale_mouse_pos(event.pos)
+                btn_w, btn_h = 220, 44
                 bx = SCREEN_WIDTH // 2 - btn_w // 2
-                for i, name in enumerate(DIFFICULTY_NAMES):
-                    by = 340 + i * 55
-                    if pygame.Rect(bx, by, btn_w, btn_h).collidepoint(mx, my):
-                        self.difficulty = i
-                        self.wave_system.difficulty = i
-                # Start button
-                start_y = 340 + len(DIFFICULTY_NAMES) * 55 + 20
-                start_r = pygame.Rect(bx, start_y, btn_w, btn_h)
-                if start_r.collidepoint(mx, my):
+                # Start Game button
+                start_y = 300
+                if pygame.Rect(bx, start_y, btn_w, btn_h).collidepoint(mx, my):
                     self.in_main_menu = False
+                    self.music_manager.start(self.daynight.is_night())
+                # Load Game button — auto-load quick save if available
+                load_y = start_y + 60
+                if pygame.Rect(bx, load_y, btn_w, btn_h).collidepoint(mx, my):
+                    data = save_load.load_game(QUICK_SAVE_SLOT)
+                    if data:
+                        self.in_main_menu = False
+                        self._apply_save_data(data)
+                        self._notify("Loaded quick save!")
+                        self.music_manager.start(self.daynight.is_night())
+                    else:
+                        self._notify("No saved game found!")
+                # Options button
+                opts_y = load_y + 60
+                if pygame.Rect(bx, opts_y, btn_w, btn_h).collidepoint(mx, my):
+                    self.in_options_menu = True
+                    self.options_source = 'main'
+                # Quit button
+                quit_y = opts_y + 60
+                if pygame.Rect(bx, quit_y, btn_w, btn_h).collidepoint(mx, my):
+                    self.running = False
 
     def _draw_main_menu(self) -> None:
         self.screen.fill((15, 15, 30))
         title = self.font_xl.render("Sandbox Survival RPG", True, WHITE)
         self.screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 120))
-        sub = self.font_lg.render("Select Difficulty", True, GRAY)
-        self.screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, 260))
+
+        diff_name = DIFFICULTY_NAMES[self.difficulty]
+        diff_colors = [GREEN, YELLOW, ORANGE, RED]
+        sub = self.font.render(f"Difficulty: {diff_name}", True,
+                               diff_colors[self.difficulty])
+        self.screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, 240))
 
         mx, my = pygame.mouse.get_pos()
-        btn_w, btn_h = 200, 40
+        btn_w, btn_h = 220, 44
         bx = SCREEN_WIDTH // 2 - btn_w // 2
-        diff_colors = [GREEN, YELLOW, ORANGE, RED]
-        for i, name in enumerate(DIFFICULTY_NAMES):
-            by = 340 + i * 55
+
+        buttons = [
+            (300, "Start Game", GREEN),
+            (360, "Load Game", CYAN),
+            (420, "Options", GRAY),
+            (480, "Quit", RED),
+        ]
+        for by, label, color in buttons:
             r = pygame.Rect(bx, by, btn_w, btn_h)
-            sel = i == self.difficulty
             hov = r.collidepoint(mx, my)
-            if sel:
-                bc = (80, 80, 120)
-            elif hov:
-                bc = (50, 50, 75)
-            else:
-                bc = (30, 30, 50)
+            bc = (50, 50, 75) if hov else (30, 30, 50)
             pygame.draw.rect(self.screen, bc, r, border_radius=6)
-            bd = diff_colors[i] if sel else (100, 100, 130)
+            bd = color if hov else (100, 100, 130)
             pygame.draw.rect(self.screen, bd, r, 2, border_radius=6)
-            lt = self.font.render(name, True, diff_colors[i] if sel else WHITE)
+            lt = self.font_lg.render(label, True, WHITE if hov else GRAY)
             self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
                                   r.centery - lt.get_height() // 2))
-
-        start_y = 340 + len(DIFFICULTY_NAMES) * 55 + 20
-        start_r = pygame.Rect(bx, start_y, btn_w, btn_h)
-        hov = start_r.collidepoint(mx, my)
-        pygame.draw.rect(self.screen, (40, 80, 40) if hov else (30, 60, 30),
-                         start_r, border_radius=6)
-        pygame.draw.rect(self.screen, GREEN, start_r, 2, border_radius=6)
-        st = self.font_lg.render("Start Game", True, WHITE)
-        self.screen.blit(st, (start_r.centerx - st.get_width() // 2,
-                              start_r.centery - st.get_height() // 2))
 
         hint = self.font_sm.render("Press ENTER to start  |  Q to quit", True, GRAY)
         self.screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2,
                                 SCREEN_HEIGHT - 60))
-        pygame.display.flip()
+        self._present()
+
+    # ======================================================================
+    # OPTIONS MENU
+    # ======================================================================
+    def _handle_options_events(self) -> None:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                continue
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self._close_options()
+                    continue
+                if (event.key == pygame.K_RETURN
+                        and (event.mod & pygame.KMOD_ALT)):
+                    self._toggle_fullscreen()
+                    continue
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = self._scale_mouse_pos(event.pos)
+                pw, ph = 450, 560
+                px = SCREEN_WIDTH // 2 - pw // 2
+                py = SCREEN_HEIGHT // 2 - ph // 2
+
+                # Difficulty buttons
+                diff_y = py + 60
+                btn_w, btn_h = 100, 32
+                total_w = len(DIFFICULTY_NAMES) * (btn_w + 8) - 8
+                diff_bx = px + pw // 2 - total_w // 2
+                for i, name in enumerate(DIFFICULTY_NAMES):
+                    r = pygame.Rect(
+                        diff_bx + i * (btn_w + 8), diff_y, btn_w, btn_h)
+                    if r.collidepoint(mx, my):
+                        self.difficulty = i
+                        self.wave_system.difficulty = i
+                        self.settings['difficulty'] = i
+                        save_settings(self.settings)
+
+                # Display mode buttons
+                mode_y = diff_y + 70
+                modes = [
+                    (DISPLAY_WINDOWED, "Windowed"),
+                    (DISPLAY_FULLSCREEN, "Fullscreen"),
+                    (DISPLAY_BORDERLESS, "Borderless"),
+                ]
+                mode_bw = 130
+                mode_total = len(modes) * (mode_bw + 8) - 8
+                mode_bx = px + pw // 2 - mode_total // 2
+                for i, (mode_id, label) in enumerate(modes):
+                    r = pygame.Rect(
+                        mode_bx + i * (mode_bw + 8), mode_y, mode_bw, btn_h)
+                    if r.collidepoint(mx, my):
+                        self.display_mode = mode_id
+                        if mode_id == DISPLAY_BORDERLESS:
+                            info = pygame.display.Info()
+                            self.window_w = info.current_w
+                            self.window_h = info.current_h
+                        elif mode_id == DISPLAY_FULLSCREEN:
+                            info = pygame.display.Info()
+                            self.window_w = info.current_w
+                            self.window_h = info.current_h
+                        self._apply_display_settings()
+
+                # Resolution presets
+                res_y = mode_y + 70
+                res_bw = 120
+                for i, (rw, rh) in enumerate(RESOLUTION_PRESETS):
+                    row = i // 3
+                    col = i % 3
+                    rx = px + 30 + col * (res_bw + 12)
+                    ry = res_y + row * 38
+                    r = pygame.Rect(rx, ry, res_bw, 30)
+                    if r.collidepoint(mx, my):
+                        self.window_w = rw
+                        self.window_h = rh
+                        if self.display_mode != DISPLAY_BORDERLESS:
+                            self._apply_display_settings()
+
+                # Music toggle
+                music_y = res_y + 90
+                btn_h = 32
+                for i, (enabled, label) in enumerate(
+                        [(True, "On"), (False, "Off")]):
+                    r = pygame.Rect(
+                        px + 100 + i * 78, music_y, 70, btn_h)
+                    if r.collidepoint(mx, my):
+                        self.music_manager.set_enabled(enabled)
+                        self.settings['music_enabled'] = enabled
+                        save_settings(self.settings)
+
+                # Volume slider
+                vol_y = music_y + 40
+                slider_x = px + 100
+                slider_w = 300
+                slider_r = pygame.Rect(
+                    slider_x, vol_y + 8, slider_w, 16)
+                if slider_r.collidepoint(mx, my):
+                    vol = (mx - slider_x) / slider_w
+                    vol = max(0.0, min(1.0, vol))
+                    self.music_manager.set_volume(vol)
+                    self.settings['music_volume'] = round(vol, 2)
+                    save_settings(self.settings)
+
+                # Back button
+                back_y = py + ph - 60
+                back_r = pygame.Rect(px + pw // 2 - 80, back_y, 160, 40)
+                if back_r.collidepoint(mx, my):
+                    self._close_options()
+
+    def _close_options(self) -> None:
+        self.in_options_menu = False
+        if self.options_source == 'pause':
+            self.paused = True
+
+    def _open_options_from_pause(self) -> None:
+        self.paused = False
+        self.in_options_menu = True
+        self.options_source = 'pause'
+
+    def _draw_options_menu(self) -> None:
+        self.screen.fill((15, 15, 30))
+        mx, my = pygame.mouse.get_pos()
+        pw, ph = 450, 560
+        px = SCREEN_WIDTH // 2 - pw // 2
+        py = SCREEN_HEIGHT // 2 - ph // 2
+        bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        bg.fill((20, 20, 35, 240))
+        self.screen.blit(bg, (px, py))
+        pygame.draw.rect(self.screen, (140, 140, 170),
+                         (px, py, pw, ph), 2, border_radius=10)
+
+        title = self.font_lg.render("Options", True, WHITE)
+        self.screen.blit(title,
+                         (px + pw // 2 - title.get_width() // 2, py + 16))
+
+        # --- Difficulty ---
+        diff_label = self.font.render("Difficulty:", True, GRAY)
+        self.screen.blit(diff_label, (px + 20, py + 46))
+        diff_y = py + 60
+        diff_colors = [GREEN, YELLOW, ORANGE, RED]
+        btn_w, btn_h = 100, 32
+        total_w = len(DIFFICULTY_NAMES) * (btn_w + 8) - 8
+        diff_bx = px + pw // 2 - total_w // 2
+        for i, name in enumerate(DIFFICULTY_NAMES):
+            r = pygame.Rect(diff_bx + i * (btn_w + 8), diff_y, btn_w, btn_h)
+            sel = i == self.difficulty
+            hov = r.collidepoint(mx, my)
+            bc = (80, 80, 120) if sel else (50, 50, 75) if hov else (30, 30, 50)
+            pygame.draw.rect(self.screen, bc, r, border_radius=5)
+            bd = diff_colors[i] if sel else (100, 100, 130)
+            pygame.draw.rect(self.screen, bd, r, 2, border_radius=5)
+            lt = self.font_sm.render(name, True,
+                                     diff_colors[i] if sel else WHITE)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        # --- Display Mode ---
+        mode_label = self.font.render("Display Mode:", True, GRAY)
+        self.screen.blit(mode_label, (px + 20, py + 106))
+        mode_y = diff_y + 70
+        modes = [
+            (DISPLAY_WINDOWED, "Windowed"),
+            (DISPLAY_FULLSCREEN, "Fullscreen"),
+            (DISPLAY_BORDERLESS, "Borderless"),
+        ]
+        mode_bw = 130
+        mode_total = len(modes) * (mode_bw + 8) - 8
+        mode_bx = px + pw // 2 - mode_total // 2
+        for i, (mode_id, label) in enumerate(modes):
+            r = pygame.Rect(mode_bx + i * (mode_bw + 8), mode_y,
+                            mode_bw, btn_h)
+            sel = mode_id == self.display_mode
+            hov = r.collidepoint(mx, my)
+            bc = (80, 80, 120) if sel else (50, 50, 75) if hov else (30, 30, 50)
+            pygame.draw.rect(self.screen, bc, r, border_radius=5)
+            bd = CYAN if sel else (100, 100, 130)
+            pygame.draw.rect(self.screen, bd, r, 2, border_radius=5)
+            lt = self.font_sm.render(label, True, WHITE if sel else GRAY)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        # --- Resolution ---
+        res_label = self.font.render("Resolution:", True, GRAY)
+        self.screen.blit(res_label, (px + 20, py + 176))
+        res_y = mode_y + 70
+        res_bw = 120
+        for i, (rw, rh) in enumerate(RESOLUTION_PRESETS):
+            row = i // 3
+            col = i % 3
+            rx = px + 30 + col * (res_bw + 12)
+            ry = res_y + row * 38
+            r = pygame.Rect(rx, ry, res_bw, 30)
+            sel = (rw == self.window_w and rh == self.window_h)
+            hov = r.collidepoint(mx, my)
+            bc = (80, 80, 120) if sel else (50, 50, 75) if hov else (30, 30, 50)
+            pygame.draw.rect(self.screen, bc, r, border_radius=4)
+            bd = GREEN if sel else (100, 100, 130)
+            pygame.draw.rect(self.screen, bd, r, 2, border_radius=4)
+            lt = self.font_sm.render(f"{rw}x{rh}", True,
+                                     WHITE if sel else GRAY)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        # --- Music ---
+        music_y = res_y + 90
+        music_label = self.font.render("Music:", True, GRAY)
+        self.screen.blit(music_label, (px + 20, music_y + 4))
+        for i, (enabled, label) in enumerate([(True, "On"), (False, "Off")]):
+            r = pygame.Rect(px + 100 + i * 78, music_y, 70, btn_h)
+            sel = self.music_manager.enabled == enabled
+            hov = r.collidepoint(mx, my)
+            bc = (80, 80, 120) if sel else (50, 50, 75) if hov else (30, 30, 50)
+            pygame.draw.rect(self.screen, bc, r, border_radius=5)
+            bd = GREEN if sel and enabled else RED if sel else (100, 100, 130)
+            pygame.draw.rect(self.screen, bd, r, 2, border_radius=5)
+            lt = self.font_sm.render(label, True, WHITE if sel else GRAY)
+            self.screen.blit(lt, (r.centerx - lt.get_width() // 2,
+                                  r.centery - lt.get_height() // 2))
+
+        # Volume slider
+        vol_y = music_y + 40
+        vol_label = self.font.render("Volume:", True, GRAY)
+        self.screen.blit(vol_label, (px + 20, vol_y + 4))
+        slider_x = px + 100
+        slider_w = 300
+        pygame.draw.rect(self.screen, (30, 30, 50),
+                         (slider_x, vol_y + 8, slider_w, 16),
+                         border_radius=4)
+        fill_w = int(slider_w * self.music_manager.volume)
+        if fill_w > 0:
+            pygame.draw.rect(self.screen, (70, 160, 255),
+                             (slider_x, vol_y + 8, fill_w, 16),
+                             border_radius=4)
+        pygame.draw.rect(self.screen, (100, 100, 130),
+                         (slider_x, vol_y + 8, slider_w, 16), 2,
+                         border_radius=4)
+        pct = self.font_sm.render(
+            f"{int(self.music_manager.volume * 100)}%", True, WHITE)
+        self.screen.blit(pct, (slider_x + slider_w + 10, vol_y + 8))
+
+        # Current info
+        cur_info = self.font_sm.render(
+            f"Current: {self.window_w}x{self.window_h}  "
+            f"{DISPLAY_MODE_NAMES.get(self.display_mode, '?')}",
+            True, (160, 160, 190))
+        self.screen.blit(cur_info,
+                         (px + pw // 2 - cur_info.get_width() // 2,
+                          py + ph - 100))
+
+        # --- Back Button ---
+        back_y = py + ph - 60
+        back_r = pygame.Rect(px + pw // 2 - 80, back_y, 160, 40)
+        hov = back_r.collidepoint(mx, my)
+        bc = (60, 70, 100) if hov else (40, 45, 65)
+        pygame.draw.rect(self.screen, bc, back_r, border_radius=6)
+        pygame.draw.rect(self.screen, (130, 130, 160), back_r, 2,
+                         border_radius=6)
+        bt = self.font.render("Back  [Esc]", True, WHITE)
+        self.screen.blit(bt, (back_r.centerx - bt.get_width() // 2,
+                              back_r.centery - bt.get_height() // 2))
+
+        hint = self.font_sm.render("Alt+Enter toggles fullscreen", True,
+                                   DARK_GRAY)
+        self.screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2,
+                                SCREEN_HEIGHT - 40))
+        self._present()
 
     # ======================================================================
     # EVENTS
@@ -435,6 +821,17 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
                 continue
+
+            # Alt+Enter fullscreen toggle (works in all states)
+            if (event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_RETURN
+                    and (event.mod & pygame.KMOD_ALT)):
+                self._toggle_fullscreen()
+                continue
+
+            # Scale mouse positions from window coords to internal coords
+            if hasattr(event, 'pos'):
+                event.pos = self._scale_mouse_pos(event.pos)
 
             # --- Dead state ---
             if self.dead:
@@ -469,6 +866,7 @@ class Game:
                     delete_cb=self._delete_slot,
                     resume_cb=self._resume,
                     quit_cb=self._quit,
+                    options_cb=self._open_options_from_pause,
                 )
                 continue
 
@@ -533,6 +931,12 @@ class Game:
                 if not self.placement_mode and not self.spell_targeting:
                     inv = self.em.get_component(self.player_id, Inventory)
                     inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+
+            # Placement mode rotation
+            if self.placement_mode and event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    self.placement_rotation = (self.placement_rotation + 1) % 4
+                    continue
 
             # Placement mode click
             if self.placement_mode and event.type == pygame.MOUSEBUTTONDOWN:
@@ -610,6 +1014,7 @@ class Game:
         self.trap_system.update(dt, self.em, on_hit=self._on_trap_hit)
         self.turret_system.update(dt, self.em, on_fire=self._on_turret_fire)
         self.daynight.update(dt)
+        self.music_manager.update(self.daynight.is_night())
         self.camera.follow(pt.x, pt.y)
         self.camera.update(dt)
         self.particles.update(dt)
@@ -745,6 +1150,10 @@ class Game:
         px, py = pt.x + 10, pt.y + 14
         rng = self._get_attack_range()
         dmg = self._get_attack_damage()
+        ps: PlayerStats = self.em.get_component(self.player_id, PlayerStats)
+        is_crit = random.random() < ps.luck * 0.02
+        if is_crit:
+            dmg = int(dmg * 1.5)
         for eid in self.em.get_entities_with(Transform, Health, AI):
             t: Transform = self.em.get_component(eid, Transform)
             dist = math.hypot(t.x - px, t.y - py)
@@ -756,8 +1165,16 @@ class Game:
                     dx, dy = t.x - px, t.y - py
                     v_mob.vx += (dx / dist) * 200
                     v_mob.vy += (dy / dist) * 200
-                self.dmg_numbers.append((t.x, t.y - 16, str(dmg), YELLOW, 0.8))
-                self.particles.emit(t.x + 12, t.y + 10, 6, YELLOW, 50, 0.3)
+                if is_crit:
+                    self.dmg_numbers.append(
+                        (t.x, t.y - 16, f'{dmg} CRIT!', ORANGE, 1.0))
+                    self.particles.emit(
+                        t.x + 12, t.y + 10, 10, ORANGE, 60, 0.4)
+                else:
+                    self.dmg_numbers.append(
+                        (t.x, t.y - 16, str(dmg), YELLOW, 0.8))
+                    self.particles.emit(
+                        t.x + 12, t.y + 10, 6, YELLOW, 50, 0.3)
 
     def _ranged_attack(self) -> None:
         eq: Equipment = self.em.get_component(self.player_id, Equipment)
@@ -821,7 +1238,7 @@ class Game:
         self.em.add_component(pid, Projectile(
             dmg, self.player_id, rdata['speed'], rdata['range']))
 
-        cd = max(0.2, rdata['cooldown'] - ps.dexterity * 0.02)
+        cd = max(0.2, rdata['cooldown'] - ps.agility * 0.02)
         self.ranged_cd = cd
 
     def _on_proj_hit(self, target_eid: int, damage: int,
@@ -869,6 +1286,42 @@ class Game:
         self.em.add_component(pid, proj)
         self.particles.emit(mob_t.x + 12, mob_t.y + 10, 3, RED, 40, 0.2)
 
+    def _get_placement_tiles(self, tx: int, ty: int) -> List[Tuple[int, int]]:
+        """Return list of (tile_x, tile_y) occupied by the current placement."""
+        if self.placement_item == 'bed':
+            # Bed is 2 tiles: rotation 0=right, 1=down, 2=left, 3=up
+            offsets = [(0, 0)]
+            r = self.placement_rotation % 4
+            if r == 0:
+                offsets.append((1, 0))
+            elif r == 1:
+                offsets.append((0, 1))
+            elif r == 2:
+                offsets.append((-1, 0))
+            else:
+                offsets.append((0, -1))
+            return [(tx + dx, ty + dy) for dx, dy in offsets]
+        return [(tx, ty)]
+
+    # Wall-type item ids that support upgrade/replace
+    _WALL_ITEM_IDS = {'wall', 'stone_wall_b'}
+
+    def _find_building_at_tiles(self, tiles: list) -> int:
+        """Return entity id of a Building occupying any of the given tiles, or 0."""
+        for bid in self.em.get_entities_with(Transform, Building, Health):
+            bt: Transform = self.em.get_component(bid, Transform)
+            bc = self.em.get_component(bid, Collider) if self.em.has_component(bid, Collider) else None
+            bw = bc.width if bc else TILE_SIZE
+            bh = bc.height if bc else TILE_SIZE
+            btx = int(bt.x // TILE_SIZE)
+            bty = int(bt.y // TILE_SIZE)
+            btx2 = int((bt.x + bw - 1) // TILE_SIZE)
+            bty2 = int((bt.y + bh - 1) // TILE_SIZE)
+            for ttx, tty in tiles:
+                if btx <= ttx <= btx2 and bty <= tty <= bty2:
+                    return bid
+        return 0
+
     def _placement_confirm(self) -> None:
         """Place the item at the mouse cursor position in the world."""
         if not self.placement_mode or not self.placement_item:
@@ -879,12 +1332,60 @@ class Game:
         # Snap to tile grid
         tx = int(world_x // TILE_SIZE)
         ty = int(world_y // TILE_SIZE)
-        place_x = tx * TILE_SIZE
-        place_y = ty * TILE_SIZE
-        # Check if valid
-        if self.world.is_solid(tx, ty):
-            self._notify("Can't place here!")
-            return
+        # Check all tiles for multi-tile items
+        tiles = self._get_placement_tiles(tx, ty)
+        for ttx, tty in tiles:
+            if self.world.is_solid(ttx, tty):
+                self._notify("Can't place here!")
+                return
+
+        # Check for existing building at target tiles
+        existing_bid = self._find_building_at_tiles(tiles)
+        if existing_bid:
+            # Allow wall upgrades: replacing one wall type with another
+            existing_placeable = self.em.get_component(existing_bid, Placeable)
+            if (self.placement_item in self._WALL_ITEM_IDS
+                    and existing_placeable
+                    and existing_placeable.item_type in self._WALL_ITEM_IDS):
+                if existing_placeable.item_type == self.placement_item:
+                    self._notify("Same wall type already here!")
+                    return
+                # Return old wall to inventory and destroy old entity
+                inv_check: Inventory = self.em.get_component(
+                    self.player_id, Inventory)
+                if not inv_check.has(self.placement_item):
+                    self.placement_mode = False
+                    self.placement_item = None
+                    self._notify("No more items to place!")
+                    return
+                inv_check.add_item(existing_placeable.item_type, 1)
+                old_name = ITEM_DATA[existing_placeable.item_type][0]
+                td = self.em.get_component(existing_bid, Transform)
+                self.particles.emit(td.x + 10, td.y + 10, 6, GRAY, 40, 0.3)
+                self.em.destroy_entity(existing_bid)
+                inv_check.remove_item(self.placement_item, 1)
+                # Use top-left tile as anchor
+                min_tx = min(t[0] for t in tiles)
+                min_ty = min(t[1] for t in tiles)
+                place_x = min_tx * TILE_SIZE
+                place_y = min_ty * TILE_SIZE
+                self._place_item(self.placement_item, place_x, place_y,
+                                 rotation=self.placement_rotation)
+                new_name = ITEM_DATA[self.placement_item][0]
+                self._notify(f"Replaced {old_name} with {new_name}")
+                if not inv_check.has(self.placement_item):
+                    self.placement_mode = False
+                    self.placement_item = None
+                return
+            else:
+                self._notify("Can't place here!")
+                return
+
+        # Use top-left tile as anchor
+        min_tx = min(t[0] for t in tiles)
+        min_ty = min(t[1] for t in tiles)
+        place_x = min_tx * TILE_SIZE
+        place_y = min_ty * TILE_SIZE
         inv: Inventory = self.em.get_component(self.player_id, Inventory)
         if not inv.has(self.placement_item):
             self.placement_mode = False
@@ -892,7 +1393,8 @@ class Game:
             self._notify("No more items to place!")
             return
         inv.remove_item(self.placement_item, 1)
-        self._place_item(self.placement_item, place_x, place_y)
+        self._place_item(self.placement_item, place_x, place_y,
+                         rotation=self.placement_rotation)
         self._notify(f"Placed {ITEM_DATA[self.placement_item][0]}")
         # If player has more of this item, stay in placement mode
         if not inv.has(self.placement_item):
@@ -939,9 +1441,11 @@ class Game:
     def _full_restart(self) -> None:
         """Reset game completely for death restart."""
         # Remove all entities
-        for eid in list(self.em._components.keys()):
+        for eid in list(self.em._entities):
             self.em.destroy_entity(eid)
-        # Regenerate
+        # New seed for fresh map
+        self.seed = random.randint(0, 2**31 - 1)
+        self.world_gen = WorldGenerator(seed=self.seed)
         self.world = self.world_gen.generate(WORLD_WIDTH, WORLD_HEIGHT)
         self.player_id = self._create_player()
         self._populate_world()
@@ -970,6 +1474,7 @@ class Game:
         ps = self.em.get_component(self.player_id, PlayerStats)
         self.xp_bar.max_value = ps.xp_to_next
         self.xp_bar.set_value(ps.xp)
+        self.music_manager.start(self.daynight.is_night())
         self._notify("New game started.")
 
     def _interact(self) -> None:
@@ -1005,17 +1510,20 @@ class Game:
                     nearest_dist = d
         if nearest is not None:
             r = self.em.get_component(nearest, Renderable)
-            eq_item = inv.get_equipped()
+            eq: Equipment = self.em.get_component(self.player_id, Equipment)
+            eq_item = eq.weapon if eq and eq.weapon else inv.get_equipped()
             bonus = (ITEM_DATA[eq_item][3]
                      if eq_item and eq_item in ITEM_DATA else 0)
+            ps: PlayerStats = self.em.get_component(self.player_id, PlayerStats)
+            luck_bonus = 1 if random.random() < ps.luck * 0.10 else 0
             if r.surface == self.textures.get('tree'):
-                inv.add_item('wood', random.randint(2, 4) + bonus)
+                inv.add_item('wood', random.randint(2, 4) + bonus + luck_bonus)
                 inv.add_item('stick', 1)
                 th = self.em.get_component(nearest, Transform)
                 self.particles.emit(th.x + 20, th.y + 30, 8,
                                     (80, 50, 30), 40, 0.3)
             else:
-                inv.add_item('stone', random.randint(2, 3) + bonus)
+                inv.add_item('stone', random.randint(2, 3) + bonus + luck_bonus)
                 th = self.em.get_component(nearest, Transform)
                 self.particles.emit(th.x + 14, th.y + 10, 8,
                                     GRAY, 40, 0.3)
@@ -1065,11 +1573,17 @@ class Game:
             # Enter placement preview mode
             self.placement_mode = True
             self.placement_item = eq_id
-            self._notify(f"Click to place {data[0]}. ESC/Right-click to cancel.")
+            self.placement_rotation = 0
+            hint = f"Click to place {data[0]}."
+            if eq_id == 'bed':
+                hint += " R to rotate."
+            hint += " ESC/Right-click to cancel."
+            self._notify(hint)
 
     def _place_item(self, item_id: str,
                     px: Optional[float] = None,
-                    py: Optional[float] = None) -> None:
+                    py: Optional[float] = None,
+                    rotation: int = 0) -> None:
         if px is None or py is None:
             pt: Transform = self.em.get_component(self.player_id, Transform)
             pr: Renderable = self.em.get_component(self.player_id, Renderable)
@@ -1077,7 +1591,7 @@ class Game:
             px, py = pt.x + offset_x, pt.y + 20
         eid = self.em.create_entity()
         self.em.add_component(eid, Transform(px, py))
-        self.em.add_component(eid, Placeable(item_id))
+        self.em.add_component(eid, Placeable(item_id, rotation=rotation))
 
         if item_id == 'campfire':
             self.em.add_component(eid, Renderable(
@@ -1094,8 +1608,10 @@ class Game:
                 self.textures.get('trap_placed'), layer=1))
             self.em.add_component(eid, Health(40))
         elif item_id == 'bed':
-            self.em.add_component(eid, Renderable(
-                self.textures.get('bed_placed'), layer=1))
+            tex = self.textures.get('bed_placed')
+            if rotation % 4 != 0:
+                tex = pygame.transform.rotate(tex, -90 * (rotation % 4))
+            self.em.add_component(eid, Renderable(tex, layer=1))
             self.em.add_component(eid, Health(80))
         elif item_id == 'wall':
             self.em.add_component(eid, Renderable(
@@ -1357,6 +1873,7 @@ class Game:
                 'x': t.x, 'y': t.y,
                 'hp': h.current if h else 0,
                 'max_hp': h.maximum if h else 0,
+                'rotation': pl.rotation,
             }
             stor = self.em.get_component(eid, Storage)
             if stor:
@@ -1372,19 +1889,33 @@ class Game:
             'xp_to_next': ps.xp_to_next,
             'stat_points': ps.stat_points,
             'strength': ps.strength, 'agility': ps.agility,
-            'vitality': ps.vitality, 'dexterity': ps.dexterity,
+            'vitality': ps.vitality, 'luck': ps.luck,
             'inventory': inv_data, 'equipped': inv.equipped_slot,
             'eq_weapon': eq.weapon, 'eq_armor': eq.armor,
             'eq_shield': eq.shield, 'eq_ranged': eq.ranged,
             'eq_ammo': eq.ammo,
             'day_time': self.daynight.time,
             'day_number': self.daynight.day_number,
+            'was_day': self.daynight._was_day,
             'night_count': self.wave_system.night_count,
             'difficulty': self.difficulty,
             'structures': structures,
         }
 
     def _apply_save_data(self, data: Dict[str, Any]) -> None:
+        # Restore seed and regenerate world from it
+        saved_seed = data.get('seed', self.seed)
+        if saved_seed != self.seed:
+            self.seed = saved_seed
+            self.world_gen = WorldGenerator(seed=self.seed)
+        self.world = self.world_gen.generate(WORLD_WIDTH, WORLD_HEIGHT)
+
+        # Destroy all entities except player, then repopulate world
+        for eid in list(self.em._entities):
+            if eid != self.player_id:
+                self.em.destroy_entity(eid)
+        self._populate_world()
+
         pt: Transform = self.em.get_component(self.player_id, Transform)
         ph: Health = self.em.get_component(self.player_id, Health)
         ps: PlayerStats = self.em.get_component(self.player_id, PlayerStats)
@@ -1398,7 +1929,7 @@ class Game:
         ps.strength = data.get('strength', 1)
         ps.agility = data.get('agility', 1)
         ps.vitality = data.get('vitality', 1)
-        ps.dexterity = data.get('dexterity', 1)
+        ps.luck = data.get('luck', data.get('dexterity', 1))
         inv.slots.clear()
         for s_str, (iid, c) in data['inventory'].items():
             inv.slots[int(s_str)] = (iid, c)
@@ -1410,7 +1941,13 @@ class Game:
         eq.ammo = data.get('eq_ammo')
         self.daynight.time = data.get('day_time', 0.3)
         self.daynight.day_number = data.get('day_number', 1)
+        # Restore _was_day to prevent spurious day/night transitions on load
+        is_day_now = 0.30 <= self.daynight.time < 0.70
+        self.daynight._was_day = data.get('was_day', is_day_now)
+        self.daynight._day_flash_timer = 0.0
+        self.daynight._night_flash_timer = 0.0
         self.wave_system.night_count = data.get('night_count', 0)
+        self.wave_system.was_night = not is_day_now
         self.difficulty = data.get('difficulty', DIFFICULTY_EASY)
         self.wave_system.difficulty = self.difficulty
         self.health_bar.max_value = ph.maximum
@@ -1418,20 +1955,22 @@ class Game:
         self.xp_bar.max_value = ps.xp_to_next
         self.xp_bar.set_value(ps.xp)
         self.dead = False
+        # Reset sleeping state
+        self.sleeping = False
+        self.sleep_timer = 0.0
+        self.daynight.reset_speed()
 
-        # Restore structures
-        for eid in list(self.em.get_entities_with(Placeable)):
-            if not self.em.has_component(eid, AI):
-                self.em.destroy_entity(eid)
+        # Restore saved structures
         for struct in data.get('structures', []):
             self._restore_structure(struct)
 
     def _restore_structure(self, struct: Dict[str, Any]) -> None:
         """Recreate a placed structure from save data."""
         item_id = struct['type']
+        rotation = struct.get('rotation', 0)
         eid = self.em.create_entity()
         self.em.add_component(eid, Transform(struct['x'], struct['y']))
-        self.em.add_component(eid, Placeable(item_id))
+        self.em.add_component(eid, Placeable(item_id, rotation=rotation))
 
         if item_id == 'campfire':
             self.em.add_component(eid, Renderable(
@@ -1454,8 +1993,10 @@ class Game:
             h.current = struct.get('hp', h.maximum)
             self.em.add_component(eid, h)
         elif item_id == 'bed':
-            self.em.add_component(eid, Renderable(
-                self.textures.get('bed_placed'), layer=1))
+            tex = self.textures.get('bed_placed')
+            if rotation % 4 != 0:
+                tex = pygame.transform.rotate(tex, -90 * (rotation % 4))
+            self.em.add_component(eid, Renderable(tex, layer=1))
             h = Health(struct.get('max_hp', 80))
             h.current = struct.get('hp', h.maximum)
             self.em.add_component(eid, h)
@@ -1505,8 +2046,10 @@ class Game:
             self.em.add_component(eid, Building('door'))
 
     def _quick_save(self) -> None:
-        save_load.save_game(QUICK_SAVE_SLOT, self._build_save_data())
-        self._notify("Quick Saved!")
+        if save_load.save_game(QUICK_SAVE_SLOT, self._build_save_data()):
+            self._notify("Quick Saved!")
+        else:
+            self._notify("Save failed!")
 
     def _quick_load(self) -> None:
         data = save_load.load_game(QUICK_SAVE_SLOT)
@@ -1517,8 +2060,10 @@ class Game:
         self._notify("Quick Loaded!")
 
     def _save_to_slot(self, slot: int) -> None:
-        save_load.save_game(slot, self._build_save_data())
-        self._notify(f"Saved to slot {slot}!")
+        if save_load.save_game(slot, self._build_save_data()):
+            self._notify(f"Saved to slot {slot}!")
+        else:
+            self._notify("Save failed!")
 
     def _load_from_slot(self, slot: int) -> None:
         data = save_load.load_game(slot)
@@ -1652,7 +2197,7 @@ class Game:
                              (SCREEN_WIDTH // 2 - nt.get_width() // 2,
                               SCREEN_HEIGHT // 4 + 60))
 
-        pygame.display.flip()
+        self._present()
 
     # -- world tiles -------------------------------------------------------
     def _draw_world(self) -> None:
@@ -1894,21 +2439,52 @@ class Game:
             self.screen.blit(
                 et, (SCREEN_WIDTH // 2 - et.get_width() // 2, 94))
 
-        # Controls hint — only show when no overlays are open
+        # Controls hint — bottom-left vertical list
         if not (self.show_inventory or self.show_crafting
                 or self.show_character or self.show_chest
                 or self.paused):
-            ctrl = ("WASD:Move  Space:Atk  R:Ranged  E:Harvest  F:Use  "
-                    "I:Inv  C:Craft  P:Stats  Esc:Menu")
-            ctrl_surf = self.font_sm.render(ctrl, True, (120, 120, 140))
-            ctrl_bg = pygame.Surface(
-                (ctrl_surf.get_width() + 10, 18), pygame.SRCALPHA)
-            ctrl_bg.fill((10, 10, 20, 100))
-            # Position at top center, below wave info area
-            ctrl_x = SCREEN_WIDTH // 2 - ctrl_surf.get_width() // 2
-            ctrl_y = SCREEN_HEIGHT - 28
-            self.screen.blit(ctrl_bg, (ctrl_x - 5, ctrl_y - 2))
-            self.screen.blit(ctrl_surf, (ctrl_x, ctrl_y))
+            controls = [
+                "WASD  Move",
+                "Space Attack",
+                "R     Ranged",
+                "E     Harvest",
+                "F     Use Item",
+                "I     Inventory",
+                "C     Crafting",
+                "P     Stats",
+                "Esc   Menu",
+            ]
+            line_h = 15
+            ctrl_x = 14
+            ctrl_y = SCREEN_HEIGHT - len(controls) * line_h - 80
+            bg_w = 120
+            bg_h = len(controls) * line_h + 6
+            ctrl_bg = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+            ctrl_bg.fill((10, 10, 20, 120))
+            self.screen.blit(ctrl_bg, (ctrl_x - 4, ctrl_y - 3))
+            for i, line in enumerate(controls):
+                cs = self.font_sm.render(line, True, (130, 130, 150))
+                self.screen.blit(cs, (ctrl_x, ctrl_y + i * line_h))
+
+        # Contextual bed prompt
+        if not self.sleeping and self.daynight.is_night():
+            pt_bed: Transform = self.em.get_component(self.player_id, Transform)
+            for eid in self.em.get_entities_with(Transform, Placeable):
+                pl = self.em.get_component(eid, Placeable)
+                if pl.item_type == 'bed':
+                    bt = self.em.get_component(eid, Transform)
+                    if math.hypot(bt.x - pt_bed.x, bt.y - pt_bed.y) < 50:
+                        bed_txt = self.font.render(
+                            "Press F to Sleep", True, (180, 180, 255))
+                        bed_bg = pygame.Surface(
+                            (bed_txt.get_width() + 16,
+                             bed_txt.get_height() + 8), pygame.SRCALPHA)
+                        bed_bg.fill((10, 10, 30, 160))
+                        bx = SCREEN_WIDTH // 2 - bed_txt.get_width() // 2
+                        by = SCREEN_HEIGHT // 2 + 60
+                        self.screen.blit(bed_bg, (bx - 8, by - 4))
+                        self.screen.blit(bed_txt, (bx, by))
+                        break
 
     # -- death screen ------------------------------------------------------
     def _draw_death_screen(self) -> None:
@@ -1958,35 +2534,78 @@ class Game:
         world_y = my + self.camera.y
         tx = int(world_x // TILE_SIZE)
         ty = int(world_y // TILE_SIZE)
-        sx = int(tx * TILE_SIZE - self.camera.x)
-        sy = int(ty * TILE_SIZE - self.camera.y)
-        valid = not self.world.is_solid(tx, ty)
-        color = PLACEMENT_PREVIEW_COLOR if valid else PLACEMENT_INVALID_COLOR
-        # Ghost preview
-        ghost = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        ghost.fill(color)
-        # Try to get item texture
-        tex_key = None
+
+        # Get all tiles this placement occupies
+        tiles = self._get_placement_tiles(tx, ty)
+        terrain_ok = all(
+            not self.world.is_solid(ttx, tty) for ttx, tty in tiles)
+
+        # Check for existing building — allow wall upgrades
+        existing_bid = self._find_building_at_tiles(tiles) if terrain_ok else 0
+        is_upgrade = False
+        if existing_bid and terrain_ok:
+            ep = self.em.get_component(existing_bid, Placeable)
+            if (self.placement_item in self._WALL_ITEM_IDS
+                    and ep and ep.item_type in self._WALL_ITEM_IDS
+                    and ep.item_type != self.placement_item):
+                is_upgrade = True
+
+        all_valid = terrain_ok and (not existing_bid or is_upgrade)
+
+        # Draw ghost for each occupied tile
+        for ttx, tty in tiles:
+            tsx = int(ttx * TILE_SIZE - self.camera.x)
+            tsy = int(tty * TILE_SIZE - self.camera.y)
+            if is_upgrade:
+                color = (255, 200, 60, 120)  # yellow-ish for upgrade
+                bd_color = (255, 200, 60)
+            elif all_valid:
+                color = PLACEMENT_PREVIEW_COLOR
+                bd_color = (60, 220, 80)
+            else:
+                color = PLACEMENT_INVALID_COLOR
+                bd_color = (220, 60, 60)
+            ghost = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+            ghost.fill(color)
+            self.screen.blit(ghost, (tsx, tsy))
+            pygame.draw.rect(self.screen, bd_color,
+                             (tsx, tsy, TILE_SIZE, TILE_SIZE), 2)
+
+        # Draw the actual item texture over the ghost tiles
         if self.placement_item:
+            tex_key = None
             for k in [f'{self.placement_item}_placed',
                       f'campfire_True',
                       f'item_{self.placement_item}']:
                 if k in self.textures.cache:
                     tex_key = k
                     break
-        if tex_key:
-            icon = self.textures.get(tex_key)
-            scaled = pygame.transform.scale(icon, (TILE_SIZE, TILE_SIZE))
-            scaled.set_alpha(140)
-            self.screen.blit(scaled, (sx, sy))
-        self.screen.blit(ghost, (sx, sy))
-        # Border
-        bd_color = (60, 220, 80) if valid else (220, 60, 60)
-        pygame.draw.rect(self.screen, bd_color,
-                         (sx, sy, TILE_SIZE, TILE_SIZE), 2)
+            if tex_key:
+                icon = self.textures.get(tex_key)
+                # Compute bounding box of all tiles
+                min_tx = min(t[0] for t in tiles)
+                min_ty = min(t[1] for t in tiles)
+                max_tx = max(t[0] for t in tiles)
+                max_ty = max(t[1] for t in tiles)
+                pw = (max_tx - min_tx + 1) * TILE_SIZE
+                ph = (max_ty - min_ty + 1) * TILE_SIZE
+                bsx = int(min_tx * TILE_SIZE - self.camera.x)
+                bsy = int(min_ty * TILE_SIZE - self.camera.y)
+                # Rotate texture for multi-tile items
+                rot = self.placement_rotation % 4
+                if rot != 0 and self.placement_item == 'bed':
+                    icon = pygame.transform.rotate(icon, -90 * rot)
+                scaled = pygame.transform.scale(icon, (pw, ph))
+                scaled.set_alpha(140)
+                self.screen.blit(scaled, (bsx, bsy))
+
         # Hint text
+        hint_parts = ["Click to place"]
+        if self.placement_item == 'bed':
+            hint_parts.append("R to rotate")
+        hint_parts.append("ESC/Right-click to cancel")
         hint = self.font_sm.render(
-            "Click to place | ESC/Right-click to cancel", True, WHITE)
+            " | ".join(hint_parts), True, WHITE)
         self.screen.blit(hint,
                          (SCREEN_WIDTH // 2 - hint.get_width() // 2, 40))
 

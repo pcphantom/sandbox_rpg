@@ -80,8 +80,9 @@ class WorldGenerator:
         return world
 
     def _caves(self, w: int, h: int) -> List[List[int]]:
+        rng = random.Random(self.seed + 9999)
         g: List[List[int]] = [
-            [1 if random.random() < 0.45 else 0 for _ in range(h)]
+            [1 if rng.random() < 0.45 else 0 for _ in range(h)]
             for _ in range(w)
         ]
         for _ in range(4):
