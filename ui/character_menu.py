@@ -7,7 +7,12 @@ import pygame
 
 from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, CYAN, GREEN,
                             GRAY, YELLOW, ORANGE, LIGHT_BLUE,
-                            AGI_SPEED_BONUS, AGI_SPEED_BONUS_CAP)
+                            AGI_SPEED_BONUS, AGI_SPEED_BONUS_CAP,
+                            UI_BORDER_PANEL, UI_STAT_BUTTON_HOVER,
+                            UI_STAT_BUTTON_NORMAL, UI_UNEQUIP_HOVER,
+                            UI_UNEQUIP_NORMAL, UI_EQUIP_HOVER, UI_EQUIP_NORMAL,
+                            UI_BORDER_DIALOG, UI_DROPDOWN_HOVER,
+                            UI_DROPDOWN_NORMAL)
 from core.components import Inventory, Health, PlayerStats, Equipment
 from data import ITEM_DATA, ITEM_CATEGORIES
 from ui.elements import Tooltip
@@ -58,7 +63,7 @@ class CharacterMenu:
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 20, 35, 240))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, (140, 140, 170),
+        pygame.draw.rect(surface, UI_BORDER_PANEL,
                          (px, py, pw, ph), 2, border_radius=10)
 
         title = self.title_font.render("Character  [P]", True, WHITE)
@@ -88,7 +93,7 @@ class CharacterMenu:
             if stats.stat_points > 0:
                 btn = pygame.Rect(sx + 180, sy, 24, 20)
                 hov = btn.collidepoint(mx, my)
-                bc = (70, 110, 70) if hov else (50, 80, 50)
+                bc = UI_STAT_BUTTON_HOVER if hov else UI_STAT_BUTTON_NORMAL
                 pygame.draw.rect(surface, bc, btn, border_radius=3)
                 pygame.draw.rect(surface, GREEN, btn, 1, border_radius=3)
                 t = self.font_sm.render("+", True, WHITE)
@@ -193,13 +198,13 @@ class CharacterMenu:
             if item_id:
                 # Unequip
                 pygame.draw.rect(surface,
-                                 (110, 50, 50) if hov else (80, 40, 40),
+                                 UI_UNEQUIP_HOVER if hov else UI_UNEQUIP_NORMAL,
                                  btn, border_radius=3)
                 t = self.font_sm.render("x", True, WHITE)
             else:
                 # Equip
                 pygame.draw.rect(surface,
-                                 (50, 80, 50) if hov else (40, 60, 40),
+                                 UI_EQUIP_HOVER if hov else UI_EQUIP_NORMAL,
                                  btn, border_radius=3)
                 t = self.font_sm.render("E", True, WHITE)
             surface.blit(t, (btn.centerx - t.get_width() // 2,
@@ -224,7 +229,7 @@ class CharacterMenu:
         bg = pygame.Surface((dr.width, dr.height), pygame.SRCALPHA)
         bg.fill((25, 25, 45, 245))
         surface.blit(bg, (dr.x, dr.y))
-        pygame.draw.rect(surface, (160, 160, 200), dr, 1, border_radius=3)
+        pygame.draw.rect(surface, UI_BORDER_DIALOG, dr, 1, border_radius=3)
         # Title
         title_t = self.font_sm.render(
             f"Select {self._dropdown_attr.capitalize()}:", True, YELLOW)
@@ -238,7 +243,7 @@ class CharacterMenu:
             _inv_slot, iid, ench, rar = self._dropdown_items[idx]
             row_r = pygame.Rect(dr.x + 2, iy, dr.width - 4, rh)
             hov = row_r.collidepoint(mx, my)
-            rc = (55, 65, 95) if hov else (35, 35, 55)
+            rc = UI_DROPDOWN_HOVER if hov else UI_DROPDOWN_NORMAL
             pygame.draw.rect(surface, rc, row_r, border_radius=2)
             # Icon
             icon = self.textures.cache.get(f'item_{iid}')

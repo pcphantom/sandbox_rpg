@@ -5,7 +5,9 @@ from typing import List, Tuple, Optional
 
 import pygame
 
-from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE
+from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE,
+                            UI_PROGRESS_FG, UI_PROGRESS_BG, UI_TEXT_NORMAL,
+                            UI_TEXT_MUTED)
 
 
 class UIElement:
@@ -37,8 +39,8 @@ class UIElement:
 
 class ProgressBar(UIElement):
     def __init__(self, rect: pygame.Rect, max_value: float,
-                 fg: Tuple[int, int, int] = (200, 60, 60),
-                 bg: Tuple[int, int, int] = (40, 20, 20)) -> None:
+                 fg: Tuple[int, int, int] = UI_PROGRESS_FG,
+                 bg: Tuple[int, int, int] = UI_PROGRESS_BG) -> None:
         super().__init__(rect)
         self.value = max_value; self.max_value = max_value
         self.color_fg = fg; self.color_bg = bg
@@ -57,7 +59,7 @@ class ProgressBar(UIElement):
             surface, self.color_fg,
             pygame.Rect(self.rect.x, self.rect.y, fw, self.rect.height),
             border_radius=4)
-        pygame.draw.rect(surface, (200, 200, 220), self.rect, 2,
+        pygame.draw.rect(surface, UI_TEXT_NORMAL, self.rect, 2,
                          border_radius=4)
 
 
@@ -90,7 +92,7 @@ class Tooltip:
         bg = pygame.Surface((mw + 16, th), pygame.SRCALPHA)
         bg.fill((12, 12, 22, 230))
         surface.blit(bg, (x, y))
-        pygame.draw.rect(surface, (130, 130, 160),
+        pygame.draw.rect(surface, UI_TEXT_MUTED,
                          (x, y, mw + 16, th), 1, border_radius=3)
         for i, s in enumerate(surfs):
             surface.blit(s, (x + 8, y + 5 + i * 17))

@@ -5,7 +5,11 @@ from typing import Any, Callable, Dict
 
 import pygame
 
-from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, GRAY, SAVE_SLOTS
+from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, GRAY, SAVE_SLOTS,
+                            UI_BORDER_PANEL, UI_SAVE_SLOT_SELECTED,
+                            UI_SLOT_BG_NORMAL, UI_TEXT_HIGHLIGHT,
+                            UI_SLOT_BORDER_NORMAL, OPTIONS_BACK_HOVER,
+                            OPTIONS_BACK_NORMAL, UI_TEXT_MUTED)
 
 
 class PauseMenu:
@@ -27,7 +31,7 @@ class PauseMenu:
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 20, 35, 240))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, (140, 140, 170),
+        pygame.draw.rect(surface, UI_BORDER_PANEL,
                          (px, py, pw, ph), 2, border_radius=10)
 
         title = self.title_font.render("PAUSED", True, WHITE)
@@ -57,9 +61,9 @@ class PauseMenu:
                 label += f"Day {day_num}  Lv.{info.get('level', '?')}  Kills:{info.get('kills', 0)}"
             else:
                 label += "Empty"
-            bc = (70, 70, 110) if sel else (45, 45, 60)
+            bc = UI_SAVE_SLOT_SELECTED if sel else UI_SLOT_BG_NORMAL
             pygame.draw.rect(surface, bc, r, border_radius=4)
-            bd = (200, 200, 240) if sel else (100, 100, 120)
+            bd = UI_TEXT_HIGHLIGHT if sel else UI_SLOT_BORDER_NORMAL
             pygame.draw.rect(surface, bd, r, 1, border_radius=4)
             surface.blit(self.font.render(label, True, WHITE),
                          (r.x + 8, r.y + 7))
@@ -81,9 +85,9 @@ class PauseMenu:
         mx, my = pygame.mouse.get_pos()
         r = pygame.Rect(x, y, w, h)
         hov = r.collidepoint(mx, my)
-        bc = (60, 70, 100) if hov else (40, 45, 65)
+        bc = OPTIONS_BACK_HOVER if hov else OPTIONS_BACK_NORMAL
         pygame.draw.rect(surface, bc, r, border_radius=5)
-        pygame.draw.rect(surface, (130, 130, 160), r, 1, border_radius=5)
+        pygame.draw.rect(surface, UI_TEXT_MUTED, r, 1, border_radius=5)
         lt = self.font.render(label, True, WHITE)
         surface.blit(lt, (r.centerx - lt.get_width() // 2,
                           r.centery - lt.get_height() // 2))

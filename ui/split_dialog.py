@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import pygame
 
-from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, YELLOW, GRAY
+from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, YELLOW, GRAY,
+                            UI_BORDER_DIALOG, UI_SLOT_BG_SELECTED,
+                            UI_SPLIT_BUTTON_NORMAL, UI_TEXT_MUTED,
+                            UI_CONFIRM_BUTTON, UI_CANCEL_BUTTON,
+                            UI_BORDER_BUTTON)
 from core.components import Inventory
 from core.item_stack import normalize_rarity
 
@@ -48,7 +52,7 @@ class SplitDialog:
         bg = pygame.Surface((r.w, r.h), pygame.SRCALPHA)
         bg.fill((25, 25, 40, 240))
         surface.blit(bg, r.topleft)
-        pygame.draw.rect(surface, (160, 160, 200), r, 2, border_radius=6)
+        pygame.draw.rect(surface, UI_BORDER_DIALOG, r, 2, border_radius=6)
 
         mx, my = pygame.mouse.get_pos()
 
@@ -69,9 +73,9 @@ class SplitDialog:
         for br, label in [(minus_r, "-"), (plus_r, "+")]:
             hov = br.collidepoint(mx, my)
             pygame.draw.rect(surface,
-                             (80, 80, 110) if hov else (55, 55, 75),
+                             UI_SLOT_BG_SELECTED if hov else UI_SPLIT_BUTTON_NORMAL,
                              br, border_radius=4)
-            pygame.draw.rect(surface, (130, 130, 160), br, 1, border_radius=4)
+            pygame.draw.rect(surface, UI_TEXT_MUTED, br, 1, border_radius=4)
             lt = self.font.render(label, True, WHITE)
             surface.blit(lt, (br.centerx - lt.get_width() // 2,
                               br.centery - lt.get_height() // 2))
@@ -85,13 +89,13 @@ class SplitDialog:
         conf_r = pygame.Rect(r.x + 10, r.bottom - 28, 75, 22)
         canc_r = pygame.Rect(r.right - 85, r.bottom - 28, 75, 22)
         for br, label, color in [
-            (conf_r, "Confirm", (60, 120, 60)),
-            (canc_r, "Cancel",  (120, 60, 60)),
+            (conf_r, "Confirm", UI_CONFIRM_BUTTON),
+            (canc_r, "Cancel",  UI_CANCEL_BUTTON),
         ]:
             hov = br.collidepoint(mx, my)
             c = tuple(min(255, ch + 30) for ch in color) if hov else color
             pygame.draw.rect(surface, c, br, border_radius=4)
-            pygame.draw.rect(surface, (160, 160, 180), br, 1, border_radius=4)
+            pygame.draw.rect(surface, UI_BORDER_BUTTON, br, 1, border_radius=4)
             lt = self.font_sm.render(label, True, WHITE)
             surface.blit(lt, (br.centerx - lt.get_width() // 2,
                               br.centery - lt.get_height() // 2))

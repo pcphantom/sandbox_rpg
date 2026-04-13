@@ -6,7 +6,12 @@ from typing import Any
 import pygame
 
 from core.constants import (WHITE, GRAY, CYAN, INVENTORY_SLOTS_PER_PAGE,
-                            HOTBAR_CAPACITY, INVENTORY_PAGES, INVENTORY_COLS)
+                            HOTBAR_CAPACITY, INVENTORY_PAGES, INVENTORY_COLS,
+                            UI_BORDER_LIGHT, UI_SLOT_BG_SELECTED,
+                            UI_SLOT_BG_NORMAL, UI_TEXT_HIGHLIGHT,
+                            UI_SLOT_BORDER_NORMAL, HOTBAR_SLOT_NUMBER_COLOR,
+                            UI_SLOT_SEPARATOR, UI_NAV_HOVER, UI_NAV_NORMAL,
+                            UI_TEXT_MUTED, UI_ENCHANT_FALLBACK)
 from core.components import Inventory
 from data import ITEM_DATA, get_item_color
 from ui.elements import UIElement, Tooltip
@@ -51,7 +56,7 @@ class InventoryGrid(UIElement):
                             pygame.SRCALPHA)
         bg.fill((20, 20, 32, 235))
         surface.blit(bg, self.rect.topleft)
-        pygame.draw.rect(surface, (130, 130, 155), self.rect, 2,
+        pygame.draw.rect(surface, UI_BORDER_LIGHT, self.rect, 2,
                          border_radius=8)
 
         # Title
@@ -67,12 +72,12 @@ class InventoryGrid(UIElement):
         for i in range(HOTBAR_CAPACITY):
             sr = self._hotbar_slot_rect(i)
             sel = i == self.inventory.equipped_slot
-            bg_c = (80, 80, 110) if sel else (45, 45, 60)
+            bg_c = UI_SLOT_BG_SELECTED if sel else UI_SLOT_BG_NORMAL
             pygame.draw.rect(surface, bg_c, sr, border_radius=4)
-            bd = (200, 200, 240) if sel else (100, 100, 120)
+            bd = UI_TEXT_HIGHLIGHT if sel else UI_SLOT_BORDER_NORMAL
             pygame.draw.rect(surface, bd, sr, 1, border_radius=4)
             # Slot number
-            ns = self.font.render(str(i + 1), True, (170, 170, 190))
+            ns = self.font.render(str(i + 1), True, HOTBAR_SLOT_NUMBER_COLOR)
             surface.blit(ns, (sr.x + 3, sr.y + 2))
             if i in self.inventory.hotbar:
                 item_id, count = self.inventory.hotbar[i]
@@ -83,7 +88,7 @@ class InventoryGrid(UIElement):
         # -- Separator + page indicator --
         hotbar_h = self.slot_size + 14
         sep_y = self.rect.y + 38 + self.slot_size + 4
-        pygame.draw.line(surface, (80, 80, 100),
+        pygame.draw.line(surface, UI_SLOT_SEPARATOR,
                          (self.rect.x + 12, sep_y),
                          (self.rect.right - 12, sep_y), 1)
         page_label = self.font.render(
@@ -96,9 +101,9 @@ class InventoryGrid(UIElement):
         for i in range(INVENTORY_SLOTS_PER_PAGE):
             slot_idx = off + i
             sr = self._inv_slot_rect(i)
-            bg_c = (45, 45, 60)
+            bg_c = UI_SLOT_BG_NORMAL
             pygame.draw.rect(surface, bg_c, sr, border_radius=4)
-            pygame.draw.rect(surface, (100, 100, 120), sr, 1, border_radius=4)
+            pygame.draw.rect(surface, UI_SLOT_BORDER_NORMAL, sr, 1, border_radius=4)
             if slot_idx in self.inventory.slots:
                 item_id, count = self.inventory.slots[slot_idx]
                 sl_ench = self.inventory.slot_enchantments.get(slot_idx)
@@ -112,9 +117,9 @@ class InventoryGrid(UIElement):
         next_r = pygame.Rect(self.rect.right - 72, nav_y, 60, 28)
         for r, label in [(prev_r, "< Prev"), (next_r, "Next >")]:
             hov = r.collidepoint(mx, my)
-            pygame.draw.rect(surface, (70, 70, 100) if hov else (50, 50, 70),
+            pygame.draw.rect(surface, UI_NAV_HOVER if hov else UI_NAV_NORMAL,
                              r, border_radius=4)
-            pygame.draw.rect(surface, (130, 130, 160), r, 1, border_radius=4)
+            pygame.draw.rect(surface, UI_TEXT_MUTED, r, 1, border_radius=4)
             lt = self.font.render(label, True, WHITE)
             surface.blit(lt, (r.centerx - lt.get_width() // 2,
                               r.centery - lt.get_height() // 2))
@@ -129,7 +134,7 @@ class InventoryGrid(UIElement):
             if self.inventory.held_enchant:
                 from enchantments.effects import ENCHANT_COLORS
                 ec = ENCHANT_COLORS.get(self.inventory.held_enchant['type'],
-                                        (200, 200, 200))
+                                        UI_ENCHANT_FALLBACK)
                 pygame.draw.rect(surface, ec,
                                  (mx - 19, my - 19, 38, 38), 2,
                                  border_radius=4)
@@ -151,7 +156,7 @@ class InventoryGrid(UIElement):
             draw_rarity_border(surface, sr, rarity)
         elif enchant:
             from enchantments.effects import ENCHANT_COLORS
-            ec = ENCHANT_COLORS.get(enchant['type'], (200, 200, 200))
+            ec = ENCHANT_COLORS.get(enchant['type'], UI_ENCHANT_FALLBACK)
             pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
         from ui.rarity_display import draw_enhancement_border
         draw_enhancement_border(surface, sr, item_id)
