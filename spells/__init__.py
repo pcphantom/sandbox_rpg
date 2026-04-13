@@ -12,6 +12,7 @@ from spells.ice import ICE_SPELLS
 from spells.protection import PROTECTION_SPELLS
 from spells.regen import REGEN_SPELLS
 from spells.strength import STRENGTH_SPELLS
+from game_controller import SPELL_RECHARGE                           # noqa: F401
 
 # -- All spells (offensive, heal, and buff) ------------------------------------
 SPELL_DATA: Dict[str, Dict[str, Any]] = {}
@@ -22,10 +23,6 @@ SPELL_DATA.update(ICE_SPELLS)
 SPELL_DATA.update(PROTECTION_SPELLS)
 SPELL_DATA.update(REGEN_SPELLS)
 SPELL_DATA.update(STRENGTH_SPELLS)
-
-# Global recharge is no longer used — each spell has its own cooldown.
-# Kept for backward compatibility with any code that references it.
-SPELL_RECHARGE: float = 3.0
 
 __all__ = [
     'SPELL_DATA', 'SPELL_RECHARGE',

@@ -104,6 +104,14 @@ BOSS_GLOW_DRAGON: Tuple[int, int, int] = (255, 140, 30)
 BOSS_GLOW_NECROMANCER: Tuple[int, int, int] = (80, 255, 80)
 BOSS_GLOW_TROLL_KING: Tuple[int, int, int] = (100, 180, 60)
 BOSS_GLOW_DEFAULT: Tuple[int, int, int] = (255, 60, 60)
+# Built from the individual boss glow constants above.
+BOSS_GLOW_COLORS: Dict[str, Tuple[int, int, int]] = {
+    'boss_golem':       BOSS_GLOW_GOLEM,
+    'boss_lich':        BOSS_GLOW_LICH,
+    'boss_dragon':      BOSS_GLOW_DRAGON,
+    'boss_necromancer': BOSS_GLOW_NECROMANCER,
+    'boss_troll_king':  BOSS_GLOW_TROLL_KING,
+}
 
 # --- Light source colors ---
 LIGHT_COLOR_DEFAULT: Tuple[int, int, int] = (255, 200, 120)
@@ -702,20 +710,42 @@ DEFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_OFFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
 PROTECTION_DR_PER_LEVEL: int = 2
+# Built from the individual color constants above.
+ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
+    1: ENHANCEMENT_COLOR_1,
+    2: ENHANCEMENT_COLOR_2,
+    3: ENHANCEMENT_COLOR_3,
+    4: ENHANCEMENT_COLOR_4,
+    5: ENHANCEMENT_COLOR_5,
+}
 
 # --- Weapon base damages ---
 WEAPON_BASE_IRON_SWORD: Tuple[int, int] = (30, 0)
 WEAPON_BASE_IRON_AXE: Tuple[int, int] = (22, 4)
 WEAPON_BASE_MACE: Tuple[int, int] = (26, 0)
+WEAPON_BASES: Dict[str, Tuple[int, int]] = {
+    'iron_sword': WEAPON_BASE_IRON_SWORD,
+    'iron_axe':   WEAPON_BASE_IRON_AXE,
+    'mace':       WEAPON_BASE_MACE,
+}
 
 # --- Ranged base damages ---
 RANGED_BASE_BOW: int = 18
 RANGED_BASE_CROSSBOW: int = 28
 RANGED_BASE_SLING: int = 12
+RANGED_BASES: Dict[str, int] = {
+    'bow':      RANGED_BASE_BOW,
+    'crossbow': RANGED_BASE_CROSSBOW,
+    'sling':    RANGED_BASE_SLING,
+}
 
 # --- Armor base DR ---
 ARMOR_BASE_IRON_ARMOR: int = 6
 ARMOR_BASE_IRON_SHIELD: int = 4
+ARMOR_BASES: Dict[str, int] = {
+    'iron_armor':  ARMOR_BASE_IRON_ARMOR,
+    'iron_shield': ARMOR_BASE_IRON_SHIELD,
+}
 
 # --- Turret base ---
 TURRET_BASE_DAMAGE: int = 8
@@ -745,6 +775,36 @@ REGEN_HP_PER_SEC: Dict[int, int] = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 STRENGTH_BONUS_DAMAGE: Dict[int, int] = {1: 3, 2: 6, 3: 10, 4: 15, 5: 20}
 ELEMENTAL_RESISTANCE: Dict[int, float] = {1: 0.15, 2: 0.25, 3: 0.40, 4: 0.55, 5: 0.70}
 
+# Built from the individual color constants above.
+ENCHANT_COLORS: Dict[str, Tuple[int, int, int]] = {
+    'fire':       ENCHANT_COLOR_FIRE,
+    'ice':        ENCHANT_COLOR_ICE,
+    'lightning':  ENCHANT_COLOR_LIGHTNING,
+    'protection': ENCHANT_COLOR_PROTECTION,
+    'regen':      ENCHANT_COLOR_REGEN,
+    'strength':   ENCHANT_COLOR_STRENGTH,
+}
+
+# Display name prefixes for enchanted items.
+ENCHANT_PREFIX: Dict[str, str] = {
+    'fire': 'Flaming',
+    'ice': 'Frozen',
+    'lightning': 'Shocking',
+    'protection': 'Warded',
+    'regen': 'Regenerating',
+    'strength': 'Mighty',
+}
+
+# Maps spell book item_id prefix -> enchant type.
+SPELL_TO_ENCHANT: Dict[str, str] = {
+    'spell_fireball': 'fire',
+    'spell_ice': 'ice',
+    'spell_lightning': 'lightning',
+    'spell_protection': 'protection',
+    'spell_regen': 'regen',
+    'spell_strength': 'strength',
+}
+
 
 # ######################################################################
 #                        RARITY CONTROLS
@@ -756,6 +816,14 @@ RARITY_MULTIPLIERS: Dict[str, float] = {
 RARITY_ELIGIBLE_CATEGORIES: frozenset = frozenset({
     'weapon', 'armor', 'shield', 'tool', 'placeable', 'ranged',
 })
+# Built from the individual color constants above — single source of truth.
+RARITY_COLORS: Dict[str, Tuple[int, int, int]] = {
+    'common':    RARITY_COLOR_COMMON,
+    'rare':      RARITY_COLOR_RARE,
+    'epic':      RARITY_COLOR_EPIC,
+    'legendary': RARITY_COLOR_LEGENDARY,
+    'mythic':    RARITY_COLOR_MYTHIC,
+}
 
 
 # ######################################################################

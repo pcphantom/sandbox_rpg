@@ -1,13 +1,12 @@
 """Music manager — day/night tracks with crossfade transitions."""
 import os
 import pygame
+from game_controller import CROSSFADE_MS
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOUNDS_DIR = os.path.join(_PROJECT_ROOT, "sounds")
 DAY_TRACK = os.path.join(SOUNDS_DIR, "little town - orchestral midi.ogg")
 NIGHT_TRACK = os.path.join(SOUNDS_DIR, "Night of the Streets.ogg")
-
-CROSSFADE_MS = 2000
 
 
 class MusicManager:

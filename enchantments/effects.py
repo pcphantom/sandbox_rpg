@@ -6,70 +6,22 @@ Enchantments are stored as overlay data on inventory/equipment slots:
 
 Only ONE enchantment per item (mutually exclusive). Applying a new one
 replaces the previous.
+
+All tuning constants are sourced from game_controller.py.
 """
 from typing import Dict, Any, Optional
 
-# ======================================================================
-# CONTROL VARIABLES — tune these for balancing
-# ======================================================================
+from game_controller import (
+    FIRE_BONUS_DAMAGE, ICE_BONUS_DAMAGE, LIGHTNING_BONUS_DAMAGE,
+    FIRE_LIGHT_RADIUS,
+    ICE_SLOW_FACTOR, ICE_SLOW_DURATION,
+    LIGHTNING_ARC_RADIUS, LIGHTNING_ARC_DAMAGE_FRAC,
+    REGEN_HP_PER_SEC, STRENGTH_BONUS_DAMAGE, ELEMENTAL_RESISTANCE,
+    ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT,
+)
 
-# Bonus flat damage added to melee/ranged attacks when weapon has this enchant.
-FIRE_BONUS_DAMAGE = {1: 5, 2: 10, 3: 18, 4: 28, 5: 40}
-ICE_BONUS_DAMAGE = {1: 3, 2: 7, 3: 12, 4: 19, 5: 28}
-LIGHTNING_BONUS_DAMAGE = {1: 6, 2: 12, 3: 20, 4: 30, 5: 42}
-
-# Fire enchant emits light (acts as torch). Radius per level.
-FIRE_LIGHT_RADIUS = {1: 90, 2: 110, 3: 140, 4: 175, 5: 220}
-
-# Ice enchant slows enemies on hit.
-ICE_SLOW_FACTOR = {1: 0.5, 2: 0.35, 3: 0.2, 4: 0.12, 5: 0.05}
-ICE_SLOW_DURATION = {1: 2.0, 2: 3.0, 3: 4.5, 4: 6.0, 5: 8.0}
-
-# Lightning enchant arcs to nearby enemies.
-LIGHTNING_ARC_RADIUS = {1: 60.0, 2: 80.0, 3: 100.0, 4: 125.0, 5: 150.0}
-LIGHTNING_ARC_DAMAGE_FRAC = {1: 0.3, 2: 0.4, 3: 0.5, 4: 0.6, 5: 0.7}
-
-# Protection enchant on armor — flat DR bonus (from centralized enhancement module).
+# Protection enchant DR bonus (derived from centralized enhancement module).
 from core.enhancement import PROTECTION_DR_BONUS
-
-# Regen enchant on armor — passive HP regen per second while equipped.
-REGEN_HP_PER_SEC = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
-
-# Strength enchant on weapons — bonus flat damage while equipped.
-STRENGTH_BONUS_DAMAGE = {1: 3, 2: 6, 3: 10, 4: 15, 5: 20}
-
-# Elemental resistance on armor — fraction of elemental damage absorbed.
-ELEMENTAL_RESISTANCE = {1: 0.15, 2: 0.25, 3: 0.40, 4: 0.55, 5: 0.70}
-
-# Display name prefixes for enchanted items.
-ENCHANT_PREFIX = {
-    'fire': 'Flaming',
-    'ice': 'Frozen',
-    'lightning': 'Shocking',
-    'protection': 'Warded',
-    'regen': 'Regenerating',
-    'strength': 'Mighty',
-}
-
-# Particle/glow colors per enchant type.
-ENCHANT_COLORS = {
-    'fire': (255, 120, 30),
-    'ice': (100, 200, 255),
-    'lightning': (180, 200, 255),
-    'protection': (80, 255, 120),
-    'regen': (50, 255, 50),
-    'strength': (255, 80, 80),
-}
-
-# Maps spell book item_id prefix → enchant type.
-SPELL_TO_ENCHANT = {
-    'spell_fireball': 'fire',
-    'spell_ice': 'ice',
-    'spell_lightning': 'lightning',
-    'spell_protection': 'protection',
-    'spell_regen': 'regen',
-    'spell_strength': 'strength',
-}
 
 # Combined lookup dict for UI/tooltips.
 ENCHANT_EFFECTS: Dict[str, Dict[int, Dict[str, Any]]] = {

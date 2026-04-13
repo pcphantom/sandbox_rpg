@@ -1,5 +1,12 @@
-"""Mob definitions and wave composition data."""
+"""Mob definitions and wave composition data.
+
+Boss glow colors are sourced from game_controller.py.
+"""
 from typing import Dict, List, Any
+from game_controller import (
+    BOSS_GLOW_GOLEM, BOSS_GLOW_LICH, BOSS_GLOW_DRAGON,
+    BOSS_GLOW_NECROMANCER, BOSS_GLOW_TROLL_KING,
+)
 
 MOB_DATA: Dict[str, Dict[str, Any]] = {
     'slime': {
@@ -64,33 +71,33 @@ MOB_DATA: Dict[str, Dict[str, Any]] = {
     'boss_golem': {
         'hp': 400, 'speed': 22, 'detection': 300, 'damage': 35, 'xp': 250,
         'solid': True, 'ranged': False, 'boss': True,
-        'glow_color': (255, 60, 60),
+        'glow_color': BOSS_GLOW_GOLEM,
     },
     'boss_lich': {
         'hp': 300, 'speed': 35, 'detection': 350, 'damage': 28, 'xp': 300,
         'solid': True, 'ranged': True, 'boss': True,
-        'glow_color': (200, 60, 255),
+        'glow_color': BOSS_GLOW_LICH,
         'ranged_damage': 25, 'ranged_range': 300.0, 'ranged_cooldown': 1.8,
         'ranged_speed': 400.0,
     },
     'boss_dragon': {
         'hp': 500, 'speed': 30, 'detection': 350, 'damage': 40, 'xp': 350,
         'solid': True, 'ranged': True, 'boss': True,
-        'glow_color': (255, 140, 30),
+        'glow_color': BOSS_GLOW_DRAGON,
         'ranged_damage': 30, 'ranged_range': 280.0, 'ranged_cooldown': 1.5,
         'ranged_speed': 380.0,
     },
     'boss_necromancer': {
         'hp': 280, 'speed': 40, 'detection': 380, 'damage': 22, 'xp': 280,
         'solid': True, 'ranged': True, 'boss': True,
-        'glow_color': (80, 255, 80),
+        'glow_color': BOSS_GLOW_NECROMANCER,
         'ranged_damage': 20, 'ranged_range': 320.0, 'ranged_cooldown': 2.0,
         'ranged_speed': 320.0,
     },
     'boss_troll_king': {
         'hp': 600, 'speed': 20, 'detection': 280, 'damage': 50, 'xp': 400,
         'solid': True, 'ranged': False, 'boss': True,
-        'glow_color': (100, 180, 60),
+        'glow_color': BOSS_GLOW_TROLL_KING,
     },
 }
 

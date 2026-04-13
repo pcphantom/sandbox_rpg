@@ -6,77 +6,20 @@ turret-specific tuning.
 
 Turrets are hybrid structures: they deal damage AND take damage, so they
 receive BOTH offense (damage) and defense (DR) scaling per enhancement level.
+
+Control variables are sourced from game_controller.py.
 """
 from typing import Dict, Tuple
 
-# ======================================================================
-# CONTROL VARIABLES — adjust these to tune scaling
-# ======================================================================
-
-# Offense: bonus damage per enhancement level for melee weapons.
-OFFENSE_BONUS_PER_LEVEL: int = 2
-
-# Ranged offense: bonus damage per enhancement level for ranged weapons.
-RANGED_OFFENSE_BONUS_PER_LEVEL: int = 2
-
-# Defense: bonus damage reduction per enhancement level for armor/shields.
-DEFENSE_BONUS_PER_LEVEL: int = 2
-
-# Turret offense: bonus damage per enhancement level.
-TURRET_OFFENSE_BONUS_PER_LEVEL: int = 2
-
-# Turret defense: bonus DR per enhancement level (applied when mobs attack).
-TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
-
-# Protection enchant: DR per enchant level (stacks with armor/turret DR).
-PROTECTION_DR_PER_LEVEL: int = 2
-
-# Enhancement level display colors: +1=green, +2=blue, +3=purple, +4=gold, +5=red
-ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
-    1: (0, 200, 0),
-    2: (80, 140, 255),
-    3: (180, 60, 255),
-    4: (255, 215, 0),
-    5: (255, 50, 50),
-}
-
-# ======================================================================
-# BASE VALUES — the unenhanced stats for each item type
-# ======================================================================
-
-# Weapon bases: item_id -> (base_damage, harvest_bonus)
-WEAPON_BASES: Dict[str, Tuple[int, int]] = {
-    'iron_sword': (30, 0),
-    'iron_axe':   (22, 4),
-    'mace':       (26, 0),
-}
-
-# Ranged bases: item_id -> base_damage (actual damage via RANGED_DATA lookup)
-RANGED_BASES: Dict[str, int] = {
-    'bow':      18,
-    'crossbow': 28,
-    'sling':    12,
-}
-
-# Armor bases: item_id -> base_DR
-ARMOR_BASES: Dict[str, int] = {
-    'iron_armor':  6,
-    'iron_shield': 4,
-}
-
-# Turret base stats (enhancement level 0)
-TURRET_BASE_DAMAGE: int = 8
-TURRET_BASE_HP: int = 80
-
-# Turret HP per enhancement level (non-linear, kept as explicit table).
-TURRET_HP_TABLE: Dict[int, int] = {
-    0: 80,
-    1: 96,
-    2: 112,
-    3: 136,
-    4: 160,
-    5: 192,
-}
+from game_controller import (
+    OFFENSE_BONUS_PER_LEVEL, RANGED_OFFENSE_BONUS_PER_LEVEL,
+    DEFENSE_BONUS_PER_LEVEL,
+    TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL,
+    PROTECTION_DR_PER_LEVEL,
+    ENHANCEMENT_COLORS,
+    WEAPON_BASES, RANGED_BASES, ARMOR_BASES,
+    TURRET_BASE_DAMAGE, TURRET_BASE_HP, TURRET_HP_TABLE,
+)
 
 # ======================================================================
 # DERIVED LOOKUPS — computed from control variables + bases

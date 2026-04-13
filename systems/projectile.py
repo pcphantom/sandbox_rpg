@@ -4,8 +4,7 @@ from typing import Any
 
 from core.ecs import EntityManager
 from core.components import Transform, Velocity, Health, AI, Projectile
-
-PROJ_MOB_HIT_RADIUS: float = 20.0
+from game_controller import PROJ_MOB_HIT_RADIUS
 
 
 class ProjectileSystem:
