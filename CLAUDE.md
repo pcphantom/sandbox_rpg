@@ -24,6 +24,7 @@
 - Liskov Substitution Principle (LSP): Subtypes must be substitutable for their base types without altering program correctness.
 - Interface Segregation Principle (ISP): Clients should not be forced to depend on methods they do not use.
 - Dependency Inversion Principle (DIP): Depend upon abstractions (interfaces) rather than concretions (classes).
+- **Variables**: As a part of DRY, variables should not need to be declared in more than one place, they should be centralized so that they are read from their appropriate modules. It is NEVER acceptable to take re-usable variables and declare them in multiple places, this is what modular code is for, so that you do not need to keep repeating the same declarations!
 
 ## Godot 4 Architecture & Scaling
 - **Extreme Modularity**: Treat all distinct functions and behaviors as their own modules. Favor composition (Component pattern) over deep inheritance hierarchies.
