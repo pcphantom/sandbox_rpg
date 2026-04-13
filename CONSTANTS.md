@@ -66,16 +66,20 @@ This document tracks all global constants, key variables, and data structures us
 | **world/** | World generation | |
 | `world/generator.py` | Overworld terrain | World, WorldGenerator |
 | `world/cave.py` | Cave interiors, daily regeneration | CaveData, generate_cave_interior, CaveData.regenerate() |
-| **gui.py** | Main GUI panels (root) | InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI |
-| **ui/** | Modular GUI (mirrors gui.py) | |
+| **gui.py** | **DELETED** — replaced by ui/ package | *(see ui/ modules below)* |
+| **ui/** | All GUI panels (modular) | |
+| `ui/__init__.py` | Re-exports all UI classes | UIElement, ProgressBar, Tooltip, SplitDialog, DropConfirmDialog, InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI, Minimap |
 | `ui/elements.py` | UIElement, ProgressBar, Tooltip | Base widgets |
 | `ui/split_dialog.py` | SplitDialog | Stack splitting |
-| `gui.py` | DropConfirmDialog | Drop item confirmation prompt |
+| `ui/drop_confirm.py` | DropConfirmDialog | Drop item confirmation prompt |
 | `ui/inventory.py` | InventoryGrid | Inventory panel |
 | `ui/crafting.py` | CraftingPanel | Crafting panel |
 | `ui/pause_menu.py` | PauseMenu | Pause/save/load |
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown |
+| `ui/chest.py` | ChestUI | Chest storage with stacking rules (see note below) |
+| `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
 | `ui/minimap.py` | Minimap | Minimap drawing |
+| `ui/rarity_display.py` | Rarity/enhancement UI & slot helpers | draw_rarity_border, draw_enhancement_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
 | **enchantments/** | Enchantment system | |
 | `enchantments/effects.py` | Enchant types, prefixes, colours — imports from `game_controller.py` | ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT, get_enchant_display_prefix |
 | `enchantments/recipes.py` | Enchant combine logic | try_combine |
@@ -83,8 +87,6 @@ This document tracks all global constants, key variables, and data structures us
 | **systems/** | Centralized game systems | |
 | `systems/rarity.py` | Rarity stat application & drop rolling | apply_rarity, roll_rarity |
 | `systems/damage_calc.py` | Damage/DR formulas | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
-| **ui/** | Modular GUI panels | |
-| `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
 | **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE |
 | **rendering/** | Rendering utilities | |
 | `rendering/particles.py` | Particle effects | ParticleSystem |
@@ -141,7 +143,7 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `WORLD_HEIGHT` | 150 | World height in tiles |
 | `FPS` | 60 | Target frames per second |
 
-## Colour Constants (`core/constants.py`)
+## Colour Constants (`game_controller.py`)
 
 | Constant | RGB Value | Usage |
 |----------|-----------|-------|
@@ -158,6 +160,107 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `DARK_BROWN` | (60, 35, 15) | Wood textures |
 | `LIGHT_BLUE` | (140, 200, 255) | Water accents |
 | `DARK_GREEN` | (30, 80, 30) | Forest textures |
+
+### UI Theme Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_BG_MAIN_MENU` | (15, 15, 30) | Main menu background |
+| `UI_BG_PANEL` | (25, 25, 40, 230) | Standard panel background |
+| `UI_BG_BUTTON_NORMAL` | (30, 30, 50) | Button normal state |
+| `UI_BG_BUTTON_HOVER` | (50, 50, 75) | Button hover state |
+| `UI_BG_BUTTON_SELECTED` | (80, 80, 120) | Button selected state |
+| `UI_BORDER_NORMAL` | (100, 100, 130) | Standard border |
+| `UI_BORDER_PANEL` | (140, 140, 170) | Panel border |
+| `UI_BORDER_LIGHT` | (130, 130, 155) | Light panel border (inventory, crafting) |
+| `UI_BORDER_DIALOG` | (160, 160, 200) | Dialog border (character menu, split dialog) |
+| `UI_BORDER_BUTTON` | (160, 160, 180) | Action button border (split dialog) |
+| `UI_TEXT_NORMAL` | (200, 200, 220) | Standard text |
+| `UI_TEXT_MUTED` | (130, 130, 160) | Muted/secondary text |
+| `UI_TEXT_HIGHLIGHT` | (200, 200, 240) | Highlighted text, selected borders |
+| `UI_NOTIFICATION_TEXT` | (220, 220, 240) | Notification/item name text |
+
+### UI Slot/Grid Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_SLOT_BG_NORMAL` | (45, 45, 60) | Inventory/pause slot background |
+| `UI_SLOT_BG_SELECTED` | (80, 80, 110) | Selected slot background |
+| `UI_SLOT_BG_HOVER` | (70, 70, 95) | Hovered slot in chest/enchant grids |
+| `UI_SLOT_BORDER_NORMAL` | (100, 100, 120) | Slot border |
+| `UI_SLOT_SEPARATOR` | (80, 80, 100) | Separator line (inventory hotbar/grid) |
+| `UI_NAV_HOVER` | (70, 70, 100) | Nav button hover |
+| `UI_NAV_NORMAL` | (50, 50, 70) | Nav button normal |
+| `UI_SAVE_SLOT_SELECTED` | (70, 70, 110) | Save slot selected |
+| `UI_SPLIT_BUTTON_NORMAL` | (55, 55, 75) | Split dialog button normal |
+| `UI_ENCHANT_FALLBACK` | (200, 200, 200) | Fallback for unknown enchant/enhancement levels |
+
+### UI Action Button Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_CONFIRM_BUTTON` | (60, 120, 60) | Confirm action |
+| `UI_CANCEL_BUTTON` | (120, 60, 60) | Cancel action |
+| `UI_STAT_BUTTON_HOVER` | (70, 110, 70) | Stat+ button hover |
+| `UI_STAT_BUTTON_NORMAL` | (50, 80, 50) | Stat+ button normal |
+| `UI_UNEQUIP_HOVER` | (110, 50, 50) | Unequip button hover |
+| `UI_UNEQUIP_NORMAL` | (80, 40, 40) | Unequip button normal |
+| `UI_EQUIP_HOVER` | (50, 80, 50) | Equip button hover |
+| `UI_EQUIP_NORMAL` | (40, 60, 40) | Equip button normal |
+| `UI_DROPDOWN_HOVER` | (55, 65, 95) | Dropdown row hover |
+| `UI_DROPDOWN_NORMAL` | (35, 35, 55) | Dropdown row normal |
+
+### Crafting Panel Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_CRAFT_CAN_NORMAL` | (60, 90, 60) | Craftable recipe normal |
+| `UI_CRAFT_CAN_HOVER` | (80, 120, 80) | Craftable recipe hover |
+| `UI_CRAFT_CAN_BORDER` | (100, 180, 100) | Craftable recipe border |
+| `UI_CRAFT_CANNOT_NORMAL` | (55, 35, 35) | Non-craftable recipe normal |
+| `UI_CRAFT_CANNOT_HOVER` | (75, 50, 50) | Non-craftable recipe hover |
+| `UI_CRAFT_CANNOT_BORDER` | (140, 60, 60) | Non-craftable recipe border |
+
+### Chest UI Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_CHEST_PANEL_BG` | (20, 20, 35, 240) | Chest panel background |
+| `UI_CHEST_SLOT_BG_NORMAL` | (50, 50, 65) | Chest slot normal |
+| `UI_CHEST_SLOT_BG_HOVER` | (70, 70, 95) | Chest slot hover |
+| `UI_CHEST_SORT_HOVER` | (70, 100, 70) | Sort button hover |
+| `UI_CHEST_SORT_NORMAL` | (50, 70, 50) | Sort button normal |
+| `UI_CHEST_SORT_BORDER` | (100, 160, 100) | Sort button border |
+| `UI_CHEST_MOVE_HOVER` | (100, 70, 70) | Move-all button hover |
+| `UI_CHEST_MOVE_NORMAL` | (70, 50, 50) | Move-all button normal |
+| `UI_CHEST_MOVE_BORDER` | (160, 100, 100) | Move-all button border |
+
+### Enchantment Table UI Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_ENCHANT_PANEL_BG` | (20, 15, 30, 240) | Enchant panel background |
+| `UI_ENCHANT_PANEL_BORDER` | (140, 100, 170) | Enchant panel border |
+| `UI_ENCHANT_SLOT_BG_NORMAL` | (40, 30, 55) | Enchant grid slot normal |
+| `UI_ENCHANT_SLOT_BG_HOVER` | (60, 45, 80) | Enchant grid slot hover |
+| `UI_ENCHANT_SLOT_BORDER` | (120, 80, 160) | Enchant grid slot border |
+| `UI_ENCHANT_COMBINE_ACTIVE` | (55, 95, 55) | Combine button active normal |
+| `UI_ENCHANT_COMBINE_ACTIVE_HOVER` | (75, 130, 75) | Combine button active hover |
+| `UI_ENCHANT_COMBINE_ACTIVE_BORDER` | (100, 200, 100) | Combine button active border |
+| `UI_ENCHANT_COMBINE_INACTIVE` | (40, 40, 50) | Combine button inactive |
+| `UI_ENCHANT_COMBINE_INACTIVE_BORDER` | (75, 75, 90) | Combine button inactive border |
+| `UI_ENCHANT_DIVIDER` | (120, 80, 150) | Enchant panel divider |
+
+### Death Screen / HUD Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `DEATH_BUTTON_HOVER` | (60, 60, 90) | Death screen respawn button hover |
+| `DEATH_BUTTON_NORMAL` | (40, 40, 60) | Death screen respawn button normal |
+| `HUD_STATUS_TEXT` | (180, 210, 255) | HUD status line text |
+| `HUD_RESOURCE_TEXT` | (200, 200, 210) | HUD resource counters |
+| `SPELL_HELP_TEXT` | (255, 180, 80) | Spell targeting help text |
+| `PLACEMENT_UPGRADE_BORDER` | (255, 200, 60) | Placement upgrade preview border |
 
 ## Tile Types (`core/constants.py`)
 
@@ -239,6 +342,26 @@ Caves regenerate on a schedule controlled by `CAVE_RESET_DAYS` in `game_controll
 | `INVENTORY_PAGES` | 4 | Number of inventory pages |
 | `INVENTORY_COLS` | 6 | Columns in inventory grid |
 | `INVENTORY_TOTAL_SLOTS` | 96 | Total main inventory capacity (24×4) |
+
+### Chest vs Inventory Stacking Rules
+
+**THIS IS INTENTIONAL — DO NOT "FIX" IT:**
+
+Items that do **NOT** stack in the player inventory (books, weapons, armor, etc.) **DO** stack inside chests, as long as the items are *identical* — same `item_id`, same enchant dict, same enhancement level, and same rarity tier.
+
+This lets the player compact their storage while the inventory keeps items separate for quick equip/swap.
+
+- **Player inventory** (`core/components.py: Inventory`): Non-stackable items (weapons, armor, books, tomes) occupy one slot each, even if identical.
+- **Chest storage** (`core/components.py: Storage`): Identical non-stackable items can stack. Identity is checked via `core/item_stack.items_match(id_a, enchant_a, rarity_a, id_b, enchant_b, rarity_b)`.
+- **ChestUI** (`ui/chest.py`): Simply delegates to `Storage` component. Does not enforce stacking rules itself.
+- **EnchantmentTableUI** (`ui/enchantment_table.py`): Always places exactly 1 item per table slot (NEVER stacks on the enchant table).
+
+| Storage Type | Stacks Identical Non-Stackables? | Enforced By |
+|-------------|--------------------------------|-------------|
+| Player inventory | No | `Inventory.add_item_enchanted()` |
+| Crafted chests | Yes (if items_match) | `Storage` component + `transfer_slot()` |
+| Cave chests | Yes (loot drops) | `Storage` component |
+| Enchant table | Never (always qty=1) | `EnchantmentTableUI.handle_event()` |
 
 ## Stat Scaling (`game_controller.py` → `data/stats.py` → `core/constants.py`)
 

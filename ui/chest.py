@@ -208,6 +208,8 @@ class ChestUI:
                 draw_rarity_border(surface, sr, rar)
             if i in slots:
                 item_id, count = slots[i]
+                # Enhancement inner border — unified across all menus
+                draw_enhancement_border(surface, sr, item_id)
                 icon = self.textures.cache.get(f'item_{item_id}')
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (30, 30)),

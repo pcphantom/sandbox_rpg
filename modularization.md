@@ -259,16 +259,16 @@ game_controller.py          ← ALL declared variables (the one source of truth)
 
 | Step | Scope | Difficulty | Files Affected |
 |------|-------|-----------|----------------|
-| **1** | Foundation (core/constants re-export) | Easy | 2 |
-| **2** | Day/Night + Day Events | Easy | 3 |
-| **3** | Difficulty + Stats | Easy | 2 |
-| **4** | Combat Data + Rarity + Mob Colors | Easy | 3 |
-| **5** | Systems (AI, trap, movement, etc.) | Easy | 5 |
-| **6** | Enchantments + Drops + Spells | Easy | 3 |
-| **7** | Enhancement + Components + Music + Camera | Easy | 4 |
-| **8** | Game module inline colors | Medium | 6 |
-| **9** | UI module inline colors | Medium | 8 |
-| **10** | Delete legacy `gui.py` | Medium | 1+ |
+| **1** | Foundation (core/constants re-export) | Easy | 2 | ✅ |
+| **2** | Day/Night + Day Events | Easy | 3 | ✅ |
+| **3** | Difficulty + Stats | Easy | 2 | ✅ |
+| **4** | Combat Data + Rarity + Mob Colors | Easy | 3 | ✅ |
+| **5** | Systems (AI, trap, movement, etc.) | Easy | 5 | ✅ |
+| **6** | Enchantments + Drops + Spells | Easy | 3 | ✅ |
+| **7** | Enhancement + Components + Music + Camera | Easy | 4 | ✅ |
+| **8** | Game module inline colors | Medium | 6 | ✅ |
+| **9** | UI module inline colors | Medium | 8 | ✅ |
+| **10** | Delete legacy `gui.py` | Medium | 1+ | ✅ |
 | **11** | Split `textures.py` → package | High | 7+ new files |
 | **12** | Trim `sandbox_rpg.py` < 1000 lines | Medium | 2-3 |
 | **13** | Verification pass | Easy | All |
