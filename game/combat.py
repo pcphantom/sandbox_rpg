@@ -629,7 +629,16 @@ def night_damage(g: 'Game', dt: float, pt: Transform) -> None:
     day = max(1, g.daynight.day_number)
     dmg = NIGHT_DAMAGE_BASE + NIGHT_DAMAGE_INCREASE * ((day - 1) // max(1, NIGHT_DAMAGE_INCREASE_FREQ))
     from data.difficulty import get_profile
-    dmg = int(dmg * get_profile(g.difficulty)['night_dmg_mult'])
+    prof = get_profile(g.difficulty)
+    dmg = int(dmg * prof['night_dmg_mult'])
+    # Per-day flat bonus
+    dmg += int((day - 1) * prof.get('night_dmg_per_day', 0.0))
+    # Enforce min/max bounds from difficulty profile
+    tick_min = int(prof.get('night_dmg_tick_min', 1))
+    tick_max = int(prof.get('night_dmg_tick_max', 0))
+    dmg = max(dmg, tick_min)
+    if tick_max > 0:
+        dmg = min(dmg, tick_max)
     ph.damage(dmg)
     g.health_bar.set_value(ph.current)
     g.damage_flash = 0.1

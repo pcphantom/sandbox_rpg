@@ -74,6 +74,7 @@ from data import (
     FOREST_MOB_SPAWN_CHANCE, DIRT_MOB_SPAWN_CHANCE, ORC_SPAWN_CHANCE,
     GRASS_MOB_SPAWN_CHANCE, WAVE_SPAWN_RADIUS_VARIANCE, WAVE_RANGED_MOB_CHANCE,
     INITIAL_MOB_SPAWNS,
+    RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS,
 )
 from world import World, WorldGenerator
 from world.cave import CaveData
@@ -252,6 +253,10 @@ class Game:
         self.survival_timer = 0.0
         self.sleeping = False
         self.sleep_timer = 0.0
+
+        # Day-based respawn tracking
+        self._last_resource_respawn_day: int = 1
+        self._last_cave_reset_day: int = 1
 
         self.dmg_numbers: List[Tuple[float, float, str,
                                      Tuple[int, int, int], float]] = []
@@ -742,11 +747,21 @@ class Game:
         self.turret_system.update(dt, self.em, on_fire=self._on_turret_fire)
         self.daynight.update(dt)
 
-        # Cave daily regeneration — rebuild caves when a new day starts
+        # Day change — cave regeneration and resource respawn (per difficulty)
         if self.daynight.day_changed:
-            if self.in_cave >= 0:
-                self._exit_cave()
-            self.caves.regenerate(self.daynight.day_number)
+            day = self.daynight.day_number
+            # Cave regeneration (controlled by CAVE_RESET_DAYS per difficulty)
+            cave_interval = CAVE_RESET_DAYS.get(self.difficulty, 1)
+            if cave_interval > 0 and (day - self._last_cave_reset_day) >= cave_interval:
+                if self.in_cave >= 0:
+                    self._exit_cave()
+                self.caves.regenerate(day)
+                self._last_cave_reset_day = day
+            # Resource respawn (controlled by RESOURCE_RESPAWN_DAYS per difficulty)
+            res_interval = RESOURCE_RESPAWN_DAYS.get(self.difficulty, 0)
+            if res_interval > 0 and (day - self._last_resource_respawn_day) >= res_interval:
+                game_entities.respawn_resources(self)
+                self._last_resource_respawn_day = day
 
         self.music_manager.update(self.daynight.is_night())
         self.camera.follow(pt.x, pt.y)

@@ -87,9 +87,11 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
     prof = get_profile(g.difficulty)
     hp_mult = prof['enemy_hp_mult']
     dmg_mult = prof['enemy_dmg_mult']
-    day_scale = 1.0 + max(0, (g.daynight.day_number - 1)) * PER_DAY_SCALE_FACTOR
-    scaled_hp = int(data['hp'] * hp_mult * day_scale)
-    scaled_dmg = int(data['damage'] * dmg_mult * day_scale)
+    days_elapsed = max(0, g.daynight.day_number - 1)
+    hp_day_scale = 1.0 + days_elapsed * prof.get('enemy_hp_per_day', PER_DAY_SCALE_FACTOR)
+    dmg_day_scale = 1.0 + days_elapsed * prof.get('enemy_dmg_per_day', PER_DAY_SCALE_FACTOR)
+    scaled_hp = int(data['hp'] * hp_mult * hp_day_scale)
+    scaled_dmg = int(data['damage'] * dmg_mult * dmg_day_scale)
     g.em.add_component(eid, Health(scaled_hp))
     mob_ai = AI('wander', mob_type)
     mob_ai.speed = data['speed']
@@ -99,7 +101,7 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
     if data.get('ranged', False):
         mob_ai.is_ranged = True
         mob_ai.ranged_damage = int(
-            data.get('ranged_damage', 10) * dmg_mult * day_scale)
+            data.get('ranged_damage', 10) * dmg_mult * dmg_day_scale)
         mob_ai.ranged_range = data.get('ranged_range', 200.0)
         mob_ai.ranged_cooldown = data.get('ranged_cooldown', 2.0)
         mob_ai.ranged_speed = data.get('ranged_speed', 350.0)
@@ -107,8 +109,10 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
         mob_ai.is_boss = True
         mob_ai.glow_color = data.get('glow_color', (255, 60, 60))
         # Boss-specific scaling (stacks with enemy multipliers)
-        boss_hp_m = prof['boss_hp_mult']
-        boss_dmg_m = prof['boss_dmg_mult']
+        boss_hp_day = 1.0 + days_elapsed * prof.get('boss_hp_per_day', 0.0)
+        boss_dmg_day = 1.0 + days_elapsed * prof.get('boss_dmg_per_day', 0.0)
+        boss_hp_m = prof['boss_hp_mult'] * boss_hp_day
+        boss_dmg_m = prof['boss_dmg_mult'] * boss_dmg_day
         h = g.em.get_component(eid, Health)
         h.maximum = int(h.maximum * boss_hp_m)
         h.current = h.maximum
@@ -481,3 +485,59 @@ def destroy_non_player_entities(g: 'Game') -> None:
     for eid in list(g.em._entities):
         if eid != g.player_id:
             g.em.destroy_entity(eid)
+
+
+def respawn_resources(g: 'Game') -> None:
+    """Replenish overworld trees and rocks that have been harvested.
+
+    Uses the same seed-based placement as populate_world so resources reappear
+    in consistent positions.  Skips tiles that already have an entity (tree,
+    rock, or player structure) to avoid overlaps.
+    """
+    rng = random.Random(g.seed + 12345 + g.daynight.day_number)
+    occupied = set()
+    for eid in g.em.get_entities_with(Transform, Collider):
+        t = g.em.get_component(eid, Transform)
+        occupied.add((int(t.x // TILE_SIZE), int(t.y // TILE_SIZE)))
+
+    for _ in range(TREE_COUNT):
+        x = rng.randint(5, WORLD_WIDTH - 5)
+        y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in occupied:
+            continue
+        tile = g.world.get_tile(x, y)
+        if tile in (TILE_GRASS, TILE_FOREST):
+            eid = g.em.create_entity()
+            g.em.add_component(eid, Transform(
+                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            g.em.add_component(eid, Renderable(
+                g.textures.get('tree'), layer=2))
+            g.em.add_component(eid, Collider(24, 32, True))
+            occupied.add((x, y))
+    for _ in range(FOREST_TREE_COUNT):
+        x = rng.randint(5, WORLD_WIDTH - 5)
+        y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in occupied:
+            continue
+        if g.world.get_tile(x, y) == TILE_FOREST:
+            eid = g.em.create_entity()
+            g.em.add_component(eid, Transform(
+                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            g.em.add_component(eid, Renderable(
+                g.textures.get('tree'), layer=2))
+            g.em.add_component(eid, Collider(24, 32, True))
+            occupied.add((x, y))
+    for _ in range(ROCK_COUNT):
+        x = rng.randint(5, WORLD_WIDTH - 5)
+        y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in occupied:
+            continue
+        if g.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
+                                       TILE_STONE_FLOOR, TILE_FOREST):
+            eid = g.em.create_entity()
+            g.em.add_component(eid, Transform(
+                x * TILE_SIZE + 4, y * TILE_SIZE + 6))
+            g.em.add_component(eid, Renderable(
+                g.textures.get('rock'), layer=1))
+            g.em.add_component(eid, Collider(26, 18, True))
+            occupied.add((x, y))

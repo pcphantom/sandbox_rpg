@@ -18,6 +18,7 @@ from core.constants import (
     CHEST_CAPACITY, STONE_WALL_HP_MULT,
     ENCHANT_TABLE_CAPACITY, ENCHANT_TABLE_HP,
     DIFFICULTY_EASY,
+    TIME_DAY_START, TIME_DAY_END,
     DOOR_COLLIDER_W, DOOR_COLLIDER_H,
 )
 from core.components import (
@@ -109,6 +110,8 @@ def build_save_data(g: 'Game') -> Dict[str, Any]:
         'in_cave': g.in_cave,
         'cave_boss_alive': g.caves.boss_alive,
         'cave_chest_looted': g.caves.chest_looted,
+        'last_resource_respawn_day': g._last_resource_respawn_day,
+        'last_cave_reset_day': g._last_cave_reset_day,
     }
 
 
@@ -205,7 +208,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     inv._equipment_ref = eq
     g.daynight.time = data.get('day_time', 0.3)
     g.daynight.day_number = data.get('day_number', 1)
-    is_day_now = 0.30 <= g.daynight.time < 0.70
+    is_day_now = TIME_DAY_START <= g.daynight.time < TIME_DAY_END
     g.daynight._was_day = data.get('was_day', is_day_now)
     g.daynight._day_flash_timer = 0.0
     g.daynight._night_flash_timer = 0.0
@@ -221,6 +224,8 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     g.sleeping = False
     g.sleep_timer = 0.0
     g.daynight.reset_speed()
+    g._last_resource_respawn_day = data.get('last_resource_respawn_day', 1)
+    g._last_cave_reset_day = data.get('last_cave_reset_day', 1)
 
     # Reset camera bounds & position for the loaded world
     if g.in_cave >= 0:
