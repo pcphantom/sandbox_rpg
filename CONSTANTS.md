@@ -8,7 +8,7 @@ This document tracks all global constants, key variables, and data structures us
 
 | Module | Purpose | Key Contents |
 |--------|---------|-----------|
-| `game_controller.py` | **Single source of truth** for ALL game tuning variables | ~410 symbols, every constant in the game |
+| `game_controller.py` | **Single source of truth** for ALL game tuning variables | ~450+ symbols, every constant in the game |
 | `sandbox_rpg.py` | Game class, main loop, event/update routing | Game class (entry point) |
 | **core/** | Core engine modules | |
 | `core/constants.py` | Re-exports from `game_controller.py` + data modules | ~240 re-exported constants |
@@ -28,28 +28,28 @@ This document tracks all global constants, key variables, and data structures us
 | `game/persistence.py` | Save/load orchestration | 8 functions |
 | `game/save_load.py` | Low-level save file I/O | File operations |
 | **systems/** | ECS systems | |
-| `systems/movement.py` | Movement | MovementSystem |
+| `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
 | `systems/physics.py` | Physics / collision | PhysicsSystem |
-| `systems/render.py` | Render | RenderSystem |
+| `systems/render.py` | Render — imports from `game_controller.py` | RenderSystem |
 | `systems/day_night.py` | Day/night cycle | DayNightCycle |
-| `systems/ai.py` | AI behaviour | AISystem |
-| `systems/projectile.py` | Projectiles | ProjectileSystem |
-| `systems/trap.py` | Traps | TrapSystem |
+| `systems/ai.py` | AI behaviour — imports from `game_controller.py` | AISystem |
+| `systems/projectile.py` | Projectiles — imports from `game_controller.py` | ProjectileSystem |
+| `systems/trap.py` | Traps — imports from `game_controller.py` | TrapSystem |
 | `systems/turret.py` | Turrets | TurretSystem |
 | `systems/wave.py` | Enemy waves | WaveSystem |
 | `systems/damage_calc.py` | Damage formulas (imports from data/stats) | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
 | **core/** | Core ECS, components, constants, enhancement | |
-| `core/enhancement.py` | Centralized enhancement scaling (single source of truth) | OFFENSE_BONUS_PER_LEVEL, RANGED_OFFENSE_BONUS_PER_LEVEL, DEFENSE_BONUS_PER_LEVEL, TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL, PROTECTION_DR_PER_LEVEL, ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
+| `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
 | **data/** | Centralised game data/tuning | |
 | `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
-| `data/combat.py` | Combat data | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
-| `data/mobs.py` | Mob definitions | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
+| `data/combat.py` | Combat data — re-exports from `game_controller.py` | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
+| `data/mobs.py` | Mob definitions — boss glow colors from `game_controller.py` | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
 | `data/day_night.py` | Day/night timing — re-exports from `game_controller.py` | DAWN_BEGINS, DAY_BEGINS, DUSK_BEGINS, NIGHT_BEGINS, TIME_*, flash/banner vars, sleep vars, night damage vars |
 | `data/stats.py` | Player stat tuning — re-exports from `game_controller.py` | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
 | `data/day_events.py` | Spawn/wave tuning — re-exports from `game_controller.py` | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS, RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS |
 | `data/difficulty.py` | Difficulty profiles — re-exports from `game_controller.py` + helpers | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
-| `data/quality.py` | Item quality/rarity | QUALITY_COLORS, get_item_quality, get_item_color |
+| `data/quality.py` | Item quality/rarity — re-exports from `game_controller.py` + helpers | RARITY_TIERS, RARITY_COLORS, RARITY_MULTIPLIERS, RARITY_ELIGIBLE_CATEGORIES, QUALITY_COLORS, get_item_quality, get_item_color |
 | **items/** | Modular item definitions with control flags | |
 | `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
 | `items/materials.py` | Material items (wood, stone, iron, etc.) | ITEMS list |
@@ -77,7 +77,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown |
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | **enchantments/** | Enchantment system | |
-| `enchantments/effects.py` | Enchant types, prefixes, colours | ENCHANT_PREFIX, ENCHANT_COLORS, get_enchant_display_prefix |
+| `enchantments/effects.py` | Enchant types, prefixes, colours — imports from `game_controller.py` | ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT, get_enchant_display_prefix |
 | `enchantments/recipes.py` | Enchant combine logic | try_combine |
 | **drops/** | Loot tables | LOOT_TABLES, roll_loot, CAVE_CHEST_LOOT |
 | **systems/** | Centralized game systems | |
@@ -340,9 +340,9 @@ Single source of truth for ALL stat effects. Change `game_controller.py` to tune
 | `CAMPFIRE_LIGHT_RADIUS` | 180 | Campfire light radius in px |
 | `TORCH_LIGHT_RADIUS` | 120 | Placed torch light radius in px |
 
-## Enhancement Scaling (`core/enhancement.py`)
+## Enhancement Scaling (`game_controller.py` → `core/enhancement.py`)
 
-Single source of truth for all enhancement-level scaling. Turrets get BOTH offense (damage) AND defense (DR) bonuses.
+Single source of truth for all enhancement-level scaling. Control variables declared in `game_controller.py`, builder functions in `core/enhancement.py`. Turrets get BOTH offense (damage) AND defense (DR) bonuses.
 
 ### Control Variables
 
@@ -966,27 +966,29 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 |----|--------|--------|-------|-------|------|
 | bomb | 50 | 80.0 | 300.0 | 250.0 | 0.0 |
 
-## Quality / Rarity System (`data/quality.py`)
+## Quality / Rarity System (`game_controller.py` → `data/quality.py`)
 
 ### Rarity Tiers
 
-Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and enchantment. It multiplies base stats of equipment items.
+Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and enchantment. It multiplies base stats of equipment items. All tier constants are declared in `game_controller.py`.
 
-**CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps `None` → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
+**CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps falsy values → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
 
-| Tier | Color Name | RGB | Stat Multiplier |
-|------|-----------|-----|-----------------|
-| common | White | (255, 255, 255) | 1.0× (100%) |
-| rare | Blue | (100, 150, 255) | 1.5× (150%) |
-| epic | Purple | (180, 80, 255) | 2.0× (200%) |
-| legendary | Gold | (255, 215, 0) | 2.5× (250%) |
-| mythic | Red | (255, 60, 60) | 3.0× (300%) |
+| Tier | Color Constant | RGB | Stat Multiplier |
+|------|---------------|-----|-----------------|
+| common | `RARITY_COLOR_COMMON` | (255, 255, 255) | 1.0× (100%) |
+| rare | `RARITY_COLOR_RARE` | (80, 140, 255) | 1.5× (150%) |
+| epic | `RARITY_COLOR_EPIC` | (180, 60, 255) | 2.0× (200%) |
+| legendary | `RARITY_COLOR_LEGENDARY` | (255, 215, 0) | 2.5× (250%) |
+| mythic | `RARITY_COLOR_MYTHIC` | (255, 50, 50) | 3.0× (300%) |
 
-### Rarity-Eligible Categories (`data/quality.py: RARITY_ELIGIBLE_CATEGORIES`)
+### Derived Dicts (game_controller.py)
 
-> **Note**: `RARITY_ELIGIBLE_CATEGORIES` is retained for backward compat but `HAS_RARITY` (from `items/` package) is now the primary source of truth used by `roll_rarity()` and `_is_rarity_eligible()`.
-
-`weapon`, `armor`, `shield`, `tool`, `placeable`, `ranged`
+| Dict | Purpose |
+|------|---------|
+| `RARITY_COLORS` | Maps tier string → RGB tuple, built from individual color constants |
+| `RARITY_MULTIPLIERS` | Maps tier string → stat multiplier |
+| `RARITY_ELIGIBLE_CATEGORIES` | frozenset of categories that can bear rarity |
 
 ### Rarity Functions (`data/quality.py`)
 
@@ -995,7 +997,7 @@ Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and encha
 | `get_rarity_color(rarity)` | Returns RGB tuple for tier (default White) |
 | `get_rarity_multiplier(rarity)` | Returns float multiplier (default 1.0) |
 | `next_rarity(rarity)` | Returns next tier or None if mythic |
-| `get_item_color(item_id, rarity=None)` | Returns display color; rarity overrides intrinsic quality |
+| `get_item_color(item_id, rarity='common')` | Returns display color; rarity overrides intrinsic quality |
 
 ### Rarity Stat Effects
 
@@ -1003,8 +1005,8 @@ All stat applications centralised in `systems/rarity.py`:
 
 | Function | Purpose |
 |----------|---------|
-| `apply_rarity(base, rarity)` | Returns `int(base * multiplier)`, no-op for None/common |
-| `roll_rarity(item_id, is_boss, rng, luck_bonus=0.0)` | Rolls rarity tier for eligible items, None for non-eligible |
+| `apply_rarity(base, rarity)` | Returns `int(base * multiplier)`, no-op for common |
+| `roll_rarity(item_id, is_boss, rng, luck_bonus=0.0)` | Rolls rarity tier for eligible items, `'common'` for non-eligible |
 
 | System | Usage |
 |--------|-------|
@@ -1363,7 +1365,9 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 |--------|------|
 | Enchantment Table | iron×6, diamond×2, wood×4 |
 
-### Enchantment Types (`enchantments/effects.py`)
+### Enchantment Types (`game_controller.py` → `enchantments/effects.py`)
+
+All enchantment tuning constants are declared in `game_controller.py`, imported by `enchantments/effects.py`.
 
 | Type | Applies To | Source | Effect |
 |------|-----------|--------|--------|
@@ -1372,7 +1376,40 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 | `lightning` | weapon | spell_lightning + equipment | Bonus lightning damage + arc to nearby mob on hit |
 | `protection` | armor/shield | any spell + armor/shield | Bonus damage reduction |
 
-### Enchantment Bonus Damage (`enchantments/effects.py: FIRE/ICE/LIGHTNING_BONUS_DAMAGE`)
+### Enchantment Color Dict (`game_controller.py: ENCHANT_COLORS`)
+
+| Key | Color Constant | RGB |
+|-----|---------------|-----|
+| `fire` | `ENCHANT_COLOR_FIRE` | (255, 120, 30) |
+| `ice` | `ENCHANT_COLOR_ICE` | (100, 200, 255) |
+| `lightning` | `ENCHANT_COLOR_LIGHTNING` | (180, 200, 255) |
+| `protection` | `ENCHANT_COLOR_PROTECTION` | (80, 255, 120) |
+| `regen` | `ENCHANT_COLOR_REGEN` | (50, 255, 50) |
+| `strength` | `ENCHANT_COLOR_STRENGTH` | (255, 80, 80) |
+
+### Enchantment Prefix Dict (`game_controller.py: ENCHANT_PREFIX`)
+
+| Key | Prefix |
+|-----|--------|
+| `fire` | Flaming |
+| `ice` | Frozen |
+| `lightning` | Shocking |
+| `protection` | Warded |
+| `regen` | Regenerating |
+| `strength` | Mighty |
+
+### Spell-to-Enchant Mapping (`game_controller.py: SPELL_TO_ENCHANT`)
+
+| Spell Prefix | Enchant Type |
+|-------------|-------------|
+| `spell_fireball` | fire |
+| `spell_ice` | ice |
+| `spell_lightning` | lightning |
+| `spell_protection` | protection |
+| `spell_regen` | regen |
+| `spell_strength` | strength |
+
+### Enchantment Bonus Damage (`game_controller.py: FIRE/ICE/LIGHTNING_BONUS_DAMAGE`)
 
 | Level | Fire | Ice | Lightning |
 |-------|------|-----|-----------|
