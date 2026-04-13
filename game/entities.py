@@ -88,8 +88,8 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
     hp_mult = prof['enemy_hp_mult']
     dmg_mult = prof['enemy_dmg_mult']
     days_elapsed = max(0, g.daynight.day_number - 1)
-    hp_day_scale = 1.0 + days_elapsed * prof.get('enemy_hp_per_day', PER_DAY_SCALE_FACTOR)
-    dmg_day_scale = 1.0 + days_elapsed * prof.get('enemy_dmg_per_day', PER_DAY_SCALE_FACTOR)
+    hp_day_scale = 1.0 + days_elapsed * prof['enemy_hp_per_day']
+    dmg_day_scale = 1.0 + days_elapsed * prof['enemy_dmg_per_day']
     scaled_hp = int(data['hp'] * hp_mult * hp_day_scale)
     scaled_dmg = int(data['damage'] * dmg_mult * dmg_day_scale)
     g.em.add_component(eid, Health(scaled_hp))
@@ -109,8 +109,8 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
         mob_ai.is_boss = True
         mob_ai.glow_color = data.get('glow_color', (255, 60, 60))
         # Boss-specific scaling (stacks with enemy multipliers)
-        boss_hp_day = 1.0 + days_elapsed * prof.get('boss_hp_per_day', 0.0)
-        boss_dmg_day = 1.0 + days_elapsed * prof.get('boss_dmg_per_day', 0.0)
+        boss_hp_day = 1.0 + days_elapsed * prof['boss_hp_per_day']
+        boss_dmg_day = 1.0 + days_elapsed * prof['boss_dmg_per_day']
         boss_hp_m = prof['boss_hp_mult'] * boss_hp_day
         boss_dmg_m = prof['boss_dmg_mult'] * boss_dmg_day
         h = g.em.get_component(eid, Health)
