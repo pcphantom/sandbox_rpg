@@ -16,6 +16,9 @@ from typing import Dict, Tuple
 # Offense: bonus damage per enhancement level for melee weapons.
 OFFENSE_BONUS_PER_LEVEL: int = 2
 
+# Ranged offense: bonus damage per enhancement level for ranged weapons.
+RANGED_OFFENSE_BONUS_PER_LEVEL: int = 2
+
 # Defense: bonus damage reduction per enhancement level for armor/shields.
 DEFENSE_BONUS_PER_LEVEL: int = 2
 
@@ -28,6 +31,15 @@ TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
 # Protection enchant: DR per enchant level (stacks with armor/turret DR).
 PROTECTION_DR_PER_LEVEL: int = 2
 
+# Enhancement level display colors: +1=green, +2=blue, +3=purple, +4=gold, +5=red
+ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
+    1: (0, 200, 0),
+    2: (80, 140, 255),
+    3: (180, 60, 255),
+    4: (255, 215, 0),
+    5: (255, 50, 50),
+}
+
 # ======================================================================
 # BASE VALUES — the unenhanced stats for each item type
 # ======================================================================
@@ -37,6 +49,13 @@ WEAPON_BASES: Dict[str, Tuple[int, int]] = {
     'iron_sword': (30, 0),
     'iron_axe':   (22, 4),
     'mace':       (26, 0),
+}
+
+# Ranged bases: item_id -> base_damage (actual damage via RANGED_DATA lookup)
+RANGED_BASES: Dict[str, int] = {
+    'bow':      18,
+    'crossbow': 28,
+    'sling':    12,
 }
 
 # Armor bases: item_id -> base_DR
@@ -73,6 +92,42 @@ def enhanced_weapon_harvest(base_id: str) -> int:
     """Return harvest bonus for a weapon (unchanged by enhancement)."""
     _, harvest = WEAPON_BASES[base_id]
     return harvest
+
+
+def enhanced_ranged_damage(base_id: str, level: int) -> int:
+    """Return total damage for a ranged weapon at a given enhancement level."""
+    base_dmg = RANGED_BASES[base_id]
+    return base_dmg + level * RANGED_OFFENSE_BONUS_PER_LEVEL
+
+
+def get_base_item_id(item_id: str) -> str:
+    """Strip enhancement suffix (_1.._5) to get base item id.
+
+    Returns *item_id* unchanged if it is not an enhanced variant.
+    """
+    for base_id in WEAPON_BASES:
+        if item_id.startswith(base_id + '_') and item_id[len(base_id) + 1:].isdigit():
+            return base_id
+    for base_id in RANGED_BASES:
+        if item_id.startswith(base_id + '_') and item_id[len(base_id) + 1:].isdigit():
+            return base_id
+    for base_id in ARMOR_BASES:
+        if item_id.startswith(base_id + '_') and item_id[len(base_id) + 1:].isdigit():
+            return base_id
+    if item_id.startswith('turret_') and item_id[len('turret_'):].isdigit():
+        return 'turret'
+    return item_id
+
+
+def get_enhancement_level(item_id: str) -> int:
+    """Return enhancement level (0-5) from item_id suffix."""
+    base = get_base_item_id(item_id)
+    if base == item_id:
+        return 0
+    suffix = item_id[len(base) + 1:]
+    if suffix.isdigit():
+        return int(suffix)
+    return 0
 
 
 def enhanced_armor_dr(base_id: str, level: int) -> int:
@@ -197,8 +252,33 @@ def build_enhanced_turret_items() -> Dict[str, Tuple[str, str, int, int, int, bo
     return items
 
 
+def build_enhanced_ranged_items() -> Dict[str, Tuple[str, str, int, int, int, bool]]:
+    """Generate ITEM_DATA entries for all enhanced ranged weapon variants (+1 to +5).
+
+    Ranged damage is stored in RANGED_DATA, not ITEM_DATA, so damage=0 here.
+    The enhancement bonus is applied at fire-time in game/combat.py.
+    """
+    names = {
+        'bow':      'Bow',
+        'crossbow': 'Crossbow',
+        'sling':    'Sling',
+    }
+    tier_labels = {1: 'Enhanced', 2: 'Enhanced', 3: 'Fine', 4: 'Superior', 5: 'Masterwork'}
+
+    items: Dict[str, Tuple[str, str, int, int, int, bool]] = {}
+    for base_id in RANGED_BASES:
+        name = names[base_id]
+        for lvl in range(1, 6):
+            bonus = lvl * RANGED_OFFENSE_BONUS_PER_LEVEL
+            item_id = f'{base_id}_{lvl}'
+            display = f'{name} +{lvl}'
+            desc = f'{tier_labels[lvl]} {name.lower()}. +{bonus} damage.'
+            items[item_id] = (display, desc, 0, 0, 0, False)
+    return items
+
+
 def build_enhanced_categories() -> Dict[str, str]:
-    """Generate ITEM_CATEGORIES entries for all enhanced weapon/armor/turret variants."""
+    """Generate ITEM_CATEGORIES entries for all enhanced weapon/armor/ranged/turret variants."""
     cats: Dict[str, str] = {}
     for base_id in WEAPON_BASES:
         for lvl in range(1, 6):
@@ -207,6 +287,9 @@ def build_enhanced_categories() -> Dict[str, str]:
         category = 'shield' if 'shield' in base_id else 'armor'
         for lvl in range(1, 6):
             cats[f'{base_id}_{lvl}'] = category
+    for base_id in RANGED_BASES:
+        for lvl in range(1, 6):
+            cats[f'{base_id}_{lvl}'] = 'ranged'
     for lvl in range(1, 6):
         cats[f'turret_{lvl}'] = 'placeable'
     return cats

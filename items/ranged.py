@@ -7,7 +7,7 @@ ITEMS = [
         'desc': 'Fires arrows at range.',
         'category': 'ranged',
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
-        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
     },
     {
         'id': 'crossbow',
@@ -15,7 +15,7 @@ ITEMS = [
         'desc': 'Powerful, slow ranged weapon.',
         'category': 'ranged',
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
-        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
     },
     {
         'id': 'sling',
@@ -23,6 +23,6 @@ ITEMS = [
         'desc': 'Fires rocks at range.',
         'category': 'ranged',
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
-        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
     },
 ]

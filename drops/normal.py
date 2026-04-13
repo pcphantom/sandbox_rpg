@@ -157,9 +157,9 @@ NORMAL_LOOT: Dict[str, Dict[str, Any]] = {
             ('spell_strength_2',  2, 1, 1),
             ('spell_fireball',    2, 1, 1),
             ('spell_heal',        2, 1, 1),
-            ('enchant_tome_1',   3, 1, 1),
-            ('enchant_tome_2',   2, 1, 1),
-            ('enchant_tome_3',   1, 1, 1),
+            ('enchant_tome_1',   4, 1, 1),
+            ('enchant_tome_2',   3, 1, 1),
+            ('enchant_tome_3',   2, 1, 1),
         ],
     },
     'troll': {
@@ -179,8 +179,8 @@ NORMAL_LOOT: Dict[str, Dict[str, Any]] = {
             ('iron_ore',        5, 1, 2),
             ('spell_regen_1',   2, 1, 1),
             ('spell_strength_1', 2, 1, 1),
-            ('enchant_tome_1',  3, 1, 1),
-            ('enchant_tome_2',  2, 1, 1),
+            ('enchant_tome_1',  4, 1, 1),
+            ('enchant_tome_2',  3, 1, 1),
         ],
     },
 }

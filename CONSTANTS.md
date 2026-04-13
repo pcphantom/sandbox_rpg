@@ -38,7 +38,7 @@ This document tracks all global constants, key variables, and data structures us
 | `systems/wave.py` | Enemy waves | WaveSystem |
 | `systems/damage_calc.py` | Damage formulas (imports from data/stats) | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
 | **core/** | Core ECS, components, constants, enhancement | |
-| `core/enhancement.py` | Centralized enhancement scaling (single source of truth) | OFFENSE_BONUS_PER_LEVEL, DEFENSE_BONUS_PER_LEVEL, TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL, PROTECTION_DR_PER_LEVEL, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
+| `core/enhancement.py` | Centralized enhancement scaling (single source of truth) | OFFENSE_BONUS_PER_LEVEL, RANGED_OFFENSE_BONUS_PER_LEVEL, DEFENSE_BONUS_PER_LEVEL, TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL, PROTECTION_DR_PER_LEVEL, ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
 | **data/** | Centralised game data/tuning | |
 | `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
@@ -339,10 +339,20 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 | Variable | Value | Purpose |
 |----------|-------|---------|
 | `OFFENSE_BONUS_PER_LEVEL` | 2 | +damage per enhancement level for melee weapons |
+| `RANGED_OFFENSE_BONUS_PER_LEVEL` | 2 | +damage per enhancement level for ranged weapons |
 | `DEFENSE_BONUS_PER_LEVEL` | 2 | +DR per enhancement level for armor/shields |
 | `TURRET_OFFENSE_BONUS_PER_LEVEL` | 2 | +damage per enhancement level for turrets |
 | `TURRET_DEFENSE_BONUS_PER_LEVEL` | 2 | +DR per enhancement level for turrets (mobs attacking) |
 | `PROTECTION_DR_PER_LEVEL` | 2 | +DR per protection enchant level (stacks with above) |
+| `ENHANCEMENT_COLORS` | {1:green,2:blue,3:purple,4:gold,5:red} | Color-coded borders for enhancement levels |
+
+### Ranged Enhancement Damage
+
+| Weapon | Base | +1 | +2 | +3 | +4 | +5 |
+|--------|------|----|----|----|----|---- |
+| Bow | 18 | 20 | 22 | 24 | 26 | 28 |
+| Crossbow | 28 | 30 | 32 | 34 | 36 | 38 |
+| Sling | 12 | 14 | 16 | 18 | 20 | 22 |
 
 ### Turret Enhancement Damage (`TURRET_ENHANCE_DAMAGE`)
 
@@ -974,6 +984,15 @@ All stat applications centralised in `systems/rarity.py`:
 | `pick_up_rarity(inv, src, slot)` | Moves rarity from slot dict to held_rarity |
 | `place_rarity(inv, dst, slot)` | Moves held_rarity into target dict |
 | `swap_rarity(inv, target, slot)` | Swaps held_rarity with target dict entry |
+
+### Enhancement Utility Functions (`core/enhancement.py`)
+
+| Function | Purpose |
+|----------|---------|
+| `get_base_item_id(item_id)` | Strips _N suffix to get base item id (returns unchanged if not enhanced) |
+| `get_enhancement_level(item_id)` | Returns enhancement level 0-5 from item_id suffix |
+| `enhanced_ranged_damage(base_id, level)` | Returns total ranged weapon damage at enhancement level |
+| `build_enhanced_ranged_items()` | Generates ITEM_DATA entries for ranged weapon +1..+5 variants |
 
 ### Centralised Item Stack Module (`core/item_stack.py`)
 

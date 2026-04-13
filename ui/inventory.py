@@ -154,6 +154,13 @@ class InventoryGrid(UIElement):
             from enchantments.effects import ENCHANT_COLORS
             ec = ENCHANT_COLORS.get(enchant['type'], (200, 200, 200))
             pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
+        # Enhancement level inner border
+        from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
+        enh_lvl = get_enhancement_level(item_id)
+        if enh_lvl > 0:
+            enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
+            inner = sr.inflate(-4, -4)
+            pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (34, 34)),

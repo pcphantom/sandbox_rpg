@@ -179,6 +179,11 @@ def ranged_attack(g: 'Game') -> None:
         return
     rdata = RANGED_DATA.get(eq.ranged)
     if not rdata:
+        # Enhanced variant (e.g. 'bow_5') — look up base weapon
+        from core.enhancement import get_base_item_id
+        base_ranged_id = get_base_item_id(eq.ranged)
+        rdata = RANGED_DATA.get(base_ranged_id)
+    if not rdata:
         return
     ammo_id = eq.ammo
     if ammo_id and eq.ammo_count > 0:
@@ -206,6 +211,11 @@ def ranged_attack(g: 'Game') -> None:
 
     bonus = AMMO_BONUS_DAMAGE.get(ammo_id, 0)
     base_ranged = rdata['damage']
+    # Apply enhancement bonus before rarity
+    from core.enhancement import get_enhancement_level, RANGED_OFFENSE_BONUS_PER_LEVEL
+    enh_level = get_enhancement_level(eq.ranged)
+    if enh_level > 0:
+        base_ranged += enh_level * RANGED_OFFENSE_BONUS_PER_LEVEL
     # Apply rarity multiplier to ranged weapon damage
     ranged_rarity = normalize_rarity(eq.rarities.get('ranged', 'common'))
     from systems.rarity import apply_rarity
@@ -242,8 +252,8 @@ def ranged_attack(g: 'Game') -> None:
     g.em.add_component(pid, Transform(pt.x + 10, pt.y + 14))
     g.em.add_component(pid, Velocity(
         dx * rdata['speed'], dy * rdata['speed'], 1.0))
-    proj_tex = ('proj_arrow' if eq.ranged == 'bow'
-                else 'proj_bolt' if eq.ranged == 'crossbow'
+    proj_tex = ('proj_arrow' if eq.ranged.startswith('bow')
+                else 'proj_bolt' if eq.ranged.startswith('crossbow')
                 else 'proj_rock')
     g.em.add_component(pid, Renderable(
         g.textures.get(proj_tex), layer=4))

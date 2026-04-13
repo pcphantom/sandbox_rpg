@@ -574,6 +574,13 @@ class InventoryGrid(UIElement):
             pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
         else:
             draw_rarity_border(surface, sr, rarity)
+        # Enhancement level inner border
+        from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
+        enh_lvl = get_enhancement_level(item_id)
+        if enh_lvl > 0:
+            enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
+            inner = sr.inflate(-4, -4)
+            pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (34, 34)),
@@ -1158,9 +1165,20 @@ class CharacterMenu:
             # Icon
             if item_id:
                 icon = self.textures.cache.get(f'item_{item_id}')
+                icon_rect = pygame.Rect(ex + 439, ey - 1, 22, 22)
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (20, 20)),
                                  (ex + 440, ey))
+                # Rarity border around icon
+                if eq_rar != 'common':
+                    draw_rarity_border(surface, icon_rect, eq_rar)
+                # Enhancement level border (inner)
+                from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
+                enh_lvl = get_enhancement_level(item_id)
+                if enh_lvl > 0:
+                    enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
+                    inner = icon_rect.inflate(-4, -4)
+                    pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
             # Equip / Unequip button
             btn = pygame.Rect(ex + 465, ey, 20, 20)
             hov = btn.collidepoint(mx, my)

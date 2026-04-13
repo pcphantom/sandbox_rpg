@@ -57,6 +57,7 @@ from core.enhancement import (
     build_enhanced_weapon_items,
     build_enhanced_armor_items,
     build_enhanced_turret_items,
+    build_enhanced_ranged_items,
     build_enhanced_categories,
 )
 
@@ -64,6 +65,7 @@ from core.enhancement import (
 ITEM_DATA.update(build_enhanced_weapon_items())
 ITEM_DATA.update(build_enhanced_armor_items())
 ITEM_DATA.update(build_enhanced_turret_items())
+ITEM_DATA.update(build_enhanced_ranged_items())
 ITEM_CATEGORIES.update(build_enhanced_categories())
 
 # Propagate flags for enhanced variants: inherit from base item
