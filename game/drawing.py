@@ -21,11 +21,27 @@ from core.constants import (
     TILE_STONE_WALL, TILE_FOREST, TILE_CAVE_FLOOR, TILE_CAVE_ENTRANCE,
     DIFFICULTY_NAMES,
     PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
+    PLACEMENT_UPGRADE_PREVIEW_COLOR,
     ATTACK_ANIM_DURATION, DAMAGE_FLASH_DURATION,
     MOB_HP_BAR_W, MOB_HP_BAR_H, PLACEABLE_HP_BAR_W, PLACEABLE_HP_BAR_H,
     HOTBAR_SLOTS, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP,
     PLAYER_TORCH_LIGHT_RADIUS,
     REPAIR_RANGE,
+    UI_NOTIFICATION_TEXT, UI_ENCHANT_FALLBACK,
+    STONE_WALL_OVERLAY, STONE_WALL_BORDER,
+    LIGHT_COLOR_TORCH, LIGHT_COLOR_FIRE_ENCHANT,
+    MOB_HP_BAR_BG, MOB_HP_BAR_FILL,
+    PLACEABLE_HP_BAR_BG, PLACEABLE_HP_BAR_FILL,
+    HOTBAR_BORDER, HOTBAR_SLOT_SELECTED_BG, HOTBAR_SLOT_NORMAL_BG,
+    HOTBAR_SELECTED_BORDER, HOTBAR_NORMAL_BORDER, HOTBAR_SLOT_NUMBER_COLOR,
+    HUD_STATUS_TEXT, HUD_RESOURCE_TEXT,
+    PERIOD_COLOR_DAY, PERIOD_COLOR_DAWN, PERIOD_COLOR_DUSK, PERIOD_COLOR_NIGHT,
+    HUD_DUSK_WARNING, HUD_WORLD_EDGE_WARNING, HUD_CONTROL_HINT,
+    HUD_BED_PROMPT_TEXT,
+    HUD_REPAIR_DAMAGED_TEXT, HUD_REPAIR_NORMAL_TEXT,
+    DEATH_BUTTON_HOVER, DEATH_BUTTON_NORMAL,
+    PLACEMENT_UPGRADE_BORDER, PLACEMENT_VALID_BORDER, PLACEMENT_INVALID_BORDER,
+    SPELL_TARGET_RETICLE, SPELL_HELP_TEXT,
 )
 from data.day_night import (
     DAY_FLASH_FADE_DIVISOR, DAY_FLASH_TEXT, DAY_FLASH_COLOR,
@@ -116,7 +132,7 @@ def render(g: 'Game') -> None:
         g.pause_menu.draw(g.screen, save_load.list_slots())
     if g.notification_timer > 0:
         alpha = min(1.0, g.notification_timer / 0.5)
-        ns = g.font.render(g.notification, True, (220, 220, 240))
+        ns = g.font.render(g.notification, True, UI_NOTIFICATION_TEXT)
         nbg = pygame.Surface((ns.get_width() + 20, ns.get_height() + 8),
                              pygame.SRCALPHA)
         nbg.fill((10, 10, 20, int(180 * alpha)))
@@ -189,9 +205,9 @@ def draw_world(g: 'Game') -> None:
             scy = int(y * TILE_SIZE - g.camera.y)
             g.screen.blit(tile_surfs.get(tile, default_surf), (scx, scy))
             if tile == TILE_STONE_WALL:
-                pygame.draw.rect(g.screen, (50, 50, 60),
+                pygame.draw.rect(g.screen, STONE_WALL_OVERLAY,
                                  (scx, scy, TILE_SIZE, TILE_SIZE))
-                pygame.draw.rect(g.screen, (30, 30, 40),
+                pygame.draw.rect(g.screen, STONE_WALL_BORDER,
                                  (scx, scy, TILE_SIZE, TILE_SIZE), 2)
 
 
@@ -242,13 +258,13 @@ def draw_lighting(g: 'Game') -> None:
         pt: Transform = g.em.get_component(g.player_id, Transform)
         lx = int(pt.x - g.camera.x + 10)
         ly = int(pt.y - g.camera.y + 14)
-        punch_light(lx, ly, PLAYER_TORCH_LIGHT_RADIUS, (255, 180, 60))
+        punch_light(lx, ly, PLAYER_TORCH_LIGHT_RADIUS, LIGHT_COLOR_TORCH)
 
     if fire_light_radius > 0:
         pt2: Transform = g.em.get_component(g.player_id, Transform)
         lx = int(pt2.x - g.camera.x + 10)
         ly = int(pt2.y - g.camera.y + 14)
-        punch_light(lx, ly, fire_light_radius, (255, 120, 30))
+        punch_light(lx, ly, fire_light_radius, LIGHT_COLOR_FIRE_ENCHANT)
 
     g.screen.blit(overlay, (0, 0))
 
@@ -265,10 +281,10 @@ def draw_mob_health_bars(g: 'Game') -> None:
             continue
         sx = int(t.x - g.camera.x)
         sy = int(t.y - g.camera.y - 8)
-        pygame.draw.rect(g.screen, (40, 10, 10),
+        pygame.draw.rect(g.screen, MOB_HP_BAR_BG,
                          (sx, sy, MOB_HP_BAR_W, MOB_HP_BAR_H))
         fill = int(MOB_HP_BAR_W * h.current / h.maximum)
-        pygame.draw.rect(g.screen, (220, 40, 40),
+        pygame.draw.rect(g.screen, MOB_HP_BAR_FILL,
                          (sx, sy, fill, MOB_HP_BAR_H))
 
 
@@ -282,10 +298,10 @@ def draw_placeable_health_bars(g: 'Game') -> None:
             continue
         sx = int(t.x - g.camera.x)
         sy = int(t.y - g.camera.y - 6)
-        pygame.draw.rect(g.screen, (40, 30, 10),
+        pygame.draw.rect(g.screen, PLACEABLE_HP_BAR_BG,
                          (sx, sy, PLACEABLE_HP_BAR_W, PLACEABLE_HP_BAR_H))
         fill = int(PLACEABLE_HP_BAR_W * h.current / h.maximum)
-        pygame.draw.rect(g.screen, (200, 160, 40),
+        pygame.draw.rect(g.screen, PLACEABLE_HP_BAR_FILL,
                          (sx, sy, fill, PLACEABLE_HP_BAR_H))
 
 
@@ -341,18 +357,18 @@ def draw_hotbar(g: 'Game') -> None:
     bg = pygame.Surface((tw + 16, ss + 12), pygame.SRCALPHA)
     bg.fill((15, 15, 25, 180))
     g.screen.blit(bg, (bx - 8, by - 6))
-    pygame.draw.rect(g.screen, (100, 100, 130),
+    pygame.draw.rect(g.screen, HOTBAR_BORDER,
                      (bx - 8, by - 6, tw + 16, ss + 12), 1, border_radius=6)
 
     for i in range(slots):
         x = bx + i * (ss + gap)
         rect = pygame.Rect(x, by, ss, ss)
         sel = i == inv.equipped_slot
-        bg_c = (80, 80, 115) if sel else (30, 30, 48)
+        bg_c = HOTBAR_SLOT_SELECTED_BG if sel else HOTBAR_SLOT_NORMAL_BG
         pygame.draw.rect(g.screen, bg_c, rect, border_radius=5)
-        bd = (200, 200, 240) if sel else (90, 90, 110)
+        bd = HOTBAR_SELECTED_BORDER if sel else HOTBAR_NORMAL_BORDER
         pygame.draw.rect(g.screen, bd, rect, 2, border_radius=5)
-        ns = g.font_sm.render(str(i + 1), True, (170, 170, 190))
+        ns = g.font_sm.render(str(i + 1), True, HOTBAR_SLOT_NUMBER_COLOR)
         g.screen.blit(ns, (x + 3, by + 2))
         if i in inv.hotbar:
             item_id, count = inv.hotbar[i]
@@ -386,7 +402,7 @@ def draw_hotbar(g: 'Game') -> None:
                 draw_rarity_border(g.screen, rect, hb_rar)
             elif hb_ench:
                 from enchantments.effects import ENCHANT_COLORS
-                ec = ENCHANT_COLORS.get(hb_ench['type'], (200, 200, 200))
+                ec = ENCHANT_COLORS.get(hb_ench['type'], UI_ENCHANT_FALLBACK)
                 pygame.draw.rect(g.screen, ec, rect, 2, border_radius=5)
             from ui.rarity_display import draw_enhancement_border
             draw_enhancement_border(g.screen, rect, item_id)
@@ -424,7 +440,7 @@ def draw_hotbar(g: 'Game') -> None:
         eq_ench = inv.get_equipped_enchant()
         eq_rar = inv.get_equipped_rarity()
         name = ITEM_DATA[eq_item][0]
-        name_color = (220, 220, 240)
+        name_color = UI_NOTIFICATION_TEXT
         if eq_rar and eq_rar != 'common':
             name = f"{eq_rar.title()} {name}"
             from data.quality import get_rarity_color
@@ -459,20 +475,20 @@ def draw_hud(g: 'Game') -> None:
     g.xp_bar.draw(g.screen)
     xt = g.font_sm.render(
         f"Lv.{ps.level}  XP {ps.xp}/{ps.xp_to_next}", True,
-        (180, 210, 255))
+        HUD_STATUS_TEXT)
     g.screen.blit(xt, (24, 39))
 
     inv: Inventory = g.em.get_component(g.player_id, Inventory)
     res = (f"Wood:{inv.count('wood')}  Stone:{inv.count('stone')}"
            f"  Iron:{inv.count('iron')}")
-    g.screen.blit(g.font_sm.render(res, True, (200, 200, 210)), (20, 58))
+    g.screen.blit(g.font_sm.render(res, True, HUD_RESOURCE_TEXT), (20, 58))
     row2 = f"Day:{g.daynight.day_number}  Kills:{ps.kills}"
-    g.screen.blit(g.font_sm.render(row2, True, (200, 200, 210)), (20, 74))
+    g.screen.blit(g.font_sm.render(row2, True, HUD_RESOURCE_TEXT), (20, 74))
 
     # Time of day + Day number
     period = g.daynight.get_period_name()
-    period_colors = {'Day': (255, 255, 200), 'Dawn': (255, 200, 140),
-                     'Dusk': (200, 140, 180), 'Night': (140, 140, 220)}
+    period_colors = {'Day': PERIOD_COLOR_DAY, 'Dawn': PERIOD_COLOR_DAWN,
+                     'Dusk': PERIOD_COLOR_DUSK, 'Night': PERIOD_COLOR_NIGHT}
     pc = period_colors.get(period, WHITE)
     tr_bg = pygame.Surface((200, 55), pygame.SRCALPHA)
     tr_bg.fill((10, 10, 20, 150))
@@ -534,13 +550,13 @@ def draw_hud(g: 'Game') -> None:
     dn_period = g.daynight.get_period_name()
     if dn_period == "Dusk":
         wt = g.font.render("Night approaches... find light!",
-                            True, (255, 200, 80))
+                            True, HUD_DUSK_WARNING)
         g.screen.blit(wt, (SCREEN_WIDTH // 2 - wt.get_width() // 2, 70))
     pt: Transform = g.em.get_component(g.player_id, Transform)
     tx, ty = pt.x / TILE_SIZE, pt.y / TILE_SIZE
     if (tx < 4 or tx > WORLD_WIDTH - 4
             or ty < 4 or ty > WORLD_HEIGHT - 4):
-        et = g.font.render("~ Edge of the World ~", True, (170, 170, 200))
+        et = g.font.render("~ Edge of the World ~", True, HUD_WORLD_EDGE_WARNING)
         g.screen.blit(et, (SCREEN_WIDTH // 2 - et.get_width() // 2, 94))
 
     # Controls hint
@@ -567,7 +583,7 @@ def draw_hud(g: 'Game') -> None:
         ctrl_bg.fill((10, 10, 20, 120))
         g.screen.blit(ctrl_bg, (ctrl_x - 4, ctrl_y - 3))
         for i, line in enumerate(controls):
-            cs = g.font_sm.render(line, True, (130, 130, 150))
+            cs = g.font_sm.render(line, True, HUD_CONTROL_HINT)
             g.screen.blit(cs, (ctrl_x, ctrl_y + i * line_h))
 
     # Contextual bed prompt
@@ -579,7 +595,7 @@ def draw_hud(g: 'Game') -> None:
                 bt = g.em.get_component(eid, Transform)
                 if math.hypot(bt.x - pt_bed.x, bt.y - pt_bed.y) < 50:
                     bed_txt = g.font.render(
-                        "Press F to Sleep", True, (180, 180, 255))
+                        "Press F to Sleep", True, HUD_BED_PROMPT_TEXT)
                     bed_bg = pygame.Surface(
                         (bed_txt.get_width() + 16,
                          bed_txt.get_height() + 8), pygame.SRCALPHA)
@@ -615,11 +631,11 @@ def draw_hud(g: 'Game') -> None:
                         struct_name = f"{prefix} {struct_name}"
             if h.current < h.maximum:
                 label = f"{struct_name} - Press F to Repair"
-                color = (180, 255, 180)
+                color = HUD_REPAIR_DAMAGED_TEXT
                 bg_color = (10, 30, 10, 160)
             else:
                 label = struct_name
-                color = (200, 200, 200)
+                color = HUD_REPAIR_NORMAL_TEXT
                 bg_color = (20, 20, 20, 160)
             repair_txt = g.font.render(label, True, color)
             repair_bg = pygame.Surface(
@@ -664,7 +680,7 @@ def draw_death_screen(g: 'Game') -> None:
     for by, label in buttons:
         r = pygame.Rect(bx, by, btn_w, 36)
         hov = r.collidepoint(mx, my)
-        bc = (60, 60, 90) if hov else (40, 40, 60)
+        bc = DEATH_BUTTON_HOVER if hov else DEATH_BUTTON_NORMAL
         pygame.draw.rect(g.screen, bc, r, border_radius=5)
         pygame.draw.rect(g.screen, GRAY, r, 1, border_radius=5)
         lt = g.font.render(label, True, WHITE)
@@ -710,14 +726,14 @@ def draw_placement_preview(g: 'Game') -> None:
         tsx = int(ttx * TILE_SIZE - g.camera.x)
         tsy = int(tty * TILE_SIZE - g.camera.y)
         if is_upgrade:
-            color = (255, 200, 60, 120)
-            bd_color = (255, 200, 60)
+            color = PLACEMENT_UPGRADE_PREVIEW_COLOR
+            bd_color = PLACEMENT_UPGRADE_BORDER
         elif all_valid:
             color = PLACEMENT_PREVIEW_COLOR
-            bd_color = (60, 220, 80)
+            bd_color = PLACEMENT_VALID_BORDER
         else:
             color = PLACEMENT_INVALID_COLOR
-            bd_color = (220, 60, 60)
+            bd_color = PLACEMENT_INVALID_BORDER
         ghost = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
         ghost.fill(color)
         g.screen.blit(ghost, (tsx, tsy))
@@ -764,13 +780,13 @@ def draw_placement_preview(g: 'Game') -> None:
 
 def draw_spell_targeting(g: 'Game') -> None:
     mx, my = pygame.mouse.get_pos()
-    pygame.draw.circle(g.screen, (255, 120, 30), (mx, my), 16, 2)
-    pygame.draw.line(g.screen, (255, 120, 30),
+    pygame.draw.circle(g.screen, SPELL_TARGET_RETICLE, (mx, my), 16, 2)
+    pygame.draw.line(g.screen, SPELL_TARGET_RETICLE,
                      (mx - 20, my), (mx + 20, my), 1)
-    pygame.draw.line(g.screen, (255, 120, 30),
+    pygame.draw.line(g.screen, SPELL_TARGET_RETICLE,
                      (mx, my - 20), (mx, my + 20), 1)
     hint = g.font_sm.render(
-        "Click to cast | ESC/Right-click to cancel", True, (255, 180, 80))
+        "Click to cast | ESC/Right-click to cancel", True, SPELL_HELP_TEXT)
     g.screen.blit(hint,
                   (SCREEN_WIDTH // 2 - hint.get_width() // 2, 40))
 
