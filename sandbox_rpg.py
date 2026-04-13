@@ -87,7 +87,7 @@ from systems import (
     AISystem, ProjectileSystem, TrapSystem, TurretSystem, WaveSystem,
     calc_melee_damage, calc_ranged_damage, calc_damage_reduction,
 )
-from gui import (
+from ui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
     CharacterMenu, ChestUI, EnchantmentTableUI,
 )
