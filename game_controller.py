@@ -257,100 +257,157 @@ CAVE_ENTRANCE_MIN_DIST: float = 800.0
 # ######################################################################
 #                        DAY / NIGHT CONTROLS
 # ######################################################################
+# All times-of-day are expressed as (hour, minute) tuples in 24-hour format.
+# To change when something happens, just set the time — e.g. (5, 0) = 05:00.
+# The engine-facing 0.0–1.0 fractions are auto-derived below each tuple.
+
 # --- Cycle length ---
-DAY_LENGTH_BASE: float = 960.0
-TIME_SPEED_NORMAL: float = 1.0
+DAY_LENGTH_BASE: float = 960.0           # real seconds for 1 full in-game day (16 min)
+TIME_SPEED_NORMAL: float = 1.0           # normal time speed multiplier
 
 # --- Sleep / Rest ---
-SLEEP_DURATION: float = 5.0
-SLEEP_SPEED_MULT: float = 12.0
-BED_INTERACT_RANGE: float = 50.0
+SLEEP_DURATION: float = 5.0              # real seconds the sleep overlay lasts
+SLEEP_SPEED_MULT: float = 12.0           # time passes 12x faster while sleeping
+BED_INTERACT_RANGE: float = 50.0         # pixel range to interact with a bed
 
-# --- Period thresholds (0.0–1.0 fraction of day cycle) ---
-TIME_NIGHT_END: float = 0.22
-TIME_DAY_START: float = 0.30
-TIME_DAY_END: float = 0.70
-TIME_NIGHT_START: float = 0.78
+# --- Period schedule (24-hour clock) ---
+# The day is divided into five periods that repeat every cycle:
+#   Night  → 00:00 to DAWN_BEGINS
+#   Dawn   → DAWN_BEGINS to DAY_BEGINS
+#   Day    → DAY_BEGINS to DUSK_BEGINS
+#   Dusk   → DUSK_BEGINS to NIGHT_BEGINS
+#   Night  → NIGHT_BEGINS to 24:00 (wraps to 00:00)
+#
+# Set each as (hour, minute).  The engine fractions (TIME_*) are computed
+# automatically — never edit them directly; change the (h, m) tuples instead.
+
+DAWN_BEGINS: Tuple[int, int]  = (5, 17)    # 05:17 — night ends, dawn begins
+DAY_BEGINS: Tuple[int, int]   = (7, 12)    # 07:12 — dawn ends, day begins
+DUSK_BEGINS: Tuple[int, int]  = (16, 48)   # 16:48 — day ends, dusk begins
+NIGHT_BEGINS: Tuple[int, int] = (18, 43)   # 18:43 — dusk ends, night begins
+
+# Engine fractions (auto-derived — do not edit these directly)
+TIME_NIGHT_END: float   = (DAWN_BEGINS[0] * 60 + DAWN_BEGINS[1]) / 1440.0
+TIME_DAY_START: float   = (DAY_BEGINS[0] * 60 + DAY_BEGINS[1]) / 1440.0
+TIME_DAY_END: float     = (DUSK_BEGINS[0] * 60 + DUSK_BEGINS[1]) / 1440.0
+TIME_NIGHT_START: float = (NIGHT_BEGINS[0] * 60 + NIGHT_BEGINS[1]) / 1440.0
 
 # --- Period transition messages ---
+# Each period transition shows a banner on screen.
+#   *_TEXT      — message text ("" = no banner for that transition)
+#   *_DURATION  — real seconds the banner stays visible
+#   *_FADE_DIVISOR — controls fade speed: alpha = timer / divisor (lower = slower)
+#   *_COLOR     — text colour of the banner
+#
+# The time each message appears is the period threshold above.
+
+# "Day X" banner — appears at DAY_BEGINS (07:12), lasts 3.0 seconds
 DAY_FLASH_DURATION: float = 3.0
 DAY_FLASH_FADE_DIVISOR: float = 1.0
 DAY_FLASH_TEXT: str = "Day {day}"
 DAY_FLASH_COLOR: Tuple[int, int, int] = (255, 255, 200)
 
+# "Night falls — Defend!" — appears at NIGHT_BEGINS (18:43), lasts 2.5 seconds
 NIGHT_FLASH_DURATION: float = 2.5
 NIGHT_FLASH_FADE_DIVISOR: float = 0.8
 NIGHT_FLASH_TEXT: str = "Night falls \u2014 Defend!"
 NIGHT_FLASH_COLOR: Tuple[int, int, int] = (255, 120, 80)
 
+# Dawn banner — appears at DAWN_BEGINS (05:17), lasts 2.0 seconds
 DAWN_FLASH_DURATION: float = 2.0
-DAWN_FLASH_TEXT: str = ""
+DAWN_FLASH_TEXT: str = ""               # empty = no banner at dawn
 DAWN_FLASH_COLOR: Tuple[int, int, int] = (255, 220, 150)
 
+# "Dusk approaches..." — appears at DUSK_BEGINS (16:48), lasts 2.0 seconds
 DUSK_FLASH_DURATION: float = 2.0
 DUSK_FLASH_TEXT: str = "Dusk approaches..."
 DUSK_FLASH_COLOR: Tuple[int, int, int] = (255, 180, 100)
 
+# Sleeping overlay text (shown during sleep animation)
 SLEEP_OVERLAY_TEXT: str = "Sleeping... Zzz"
 SLEEP_OVERLAY_COLOR: Tuple[int, int, int] = (180, 180, 255)
 
-# --- Darkness ---
+# --- Darkness visual threshold ---
+# get_darkness() returns 0.0 (full day) to 1.0+ (deep night).
+# Night damage only applies when darkness exceeds this value.
 NIGHT_DARKNESS_THRESHOLD: float = 0.5
 
-# --- Night damage ---
-NIGHT_DAMAGE_BASE: int = 2
-NIGHT_DAMAGE_INCREASE: int = 1
-NIGHT_DAMAGE_INCREASE_FREQ: int = 1
-NIGHT_DAMAGE_INTERVAL: float = 3.0
-LIGHT_SAFETY_RADIUS: float = 200.0
+# --- Night damage (base values — scaled by difficulty, see DIFFICULTY_PROFILES) ---
+NIGHT_DAMAGE_BASE: int = 2               # HP per tick on day 1
+NIGHT_DAMAGE_INCREASE: int = 1           # extra HP added per scaling step
+NIGHT_DAMAGE_INCREASE_FREQ: int = 1      # add INCREASE every N days
+NIGHT_DAMAGE_INTERVAL: float = 3.0       # real seconds between damage ticks
+LIGHT_SAFETY_RADIUS: float = 200.0       # pixel radius around light sources that protects
 
-# --- Backwards compat ---
+# --- Backwards compat alias ---
 NIGHT_SLEEP_SPEED_MULT: float = SLEEP_SPEED_MULT
 
 
 # ######################################################################
 #                        DAY EVENT CONTROLS
 # ######################################################################
-# --- Wave system ---
-WAVE_START_NIGHT: int = 1
-WAVE_BASE_COUNT: int = 3
-WAVE_SCALE_PER_NIGHT: int = 2
-WAVE_SPAWN_RADIUS: float = 350.0
-WAVE_SPAWN_RADIUS_VARIANCE: float = 100.0
-WAVE_DAY_BONUS_PER_DAY: int = 1
-WAVE_SPAWN_INITIAL_INTERVAL: float = 2.0
-WAVE_SPAWN_MIN_INTERVAL: float = 0.8
-WAVE_INTERVAL_REDUCTION: float = 0.1
-WAVE_SPAWN_BATCH: int = 3
-WAVE_RANGED_MOB_CHANCE: float = 0.25
+# --- Wave system (night-time enemy waves) ---
+WAVE_START_NIGHT: int = 1                # waves begin after surviving this many nights
+WAVE_BASE_COUNT: int = 3                 # mobs in the first qualifying wave
+WAVE_SCALE_PER_NIGHT: int = 2            # extra mobs per night survived
+WAVE_SPAWN_RADIUS: float = 350.0         # px from player where wave mobs spawn
+WAVE_SPAWN_RADIUS_VARIANCE: float = 100.0  # random ± on spawn radius
+WAVE_DAY_BONUS_PER_DAY: int = 1          # extra mobs per calendar day on top of night count
+WAVE_SPAWN_INITIAL_INTERVAL: float = 2.0 # seconds between batches at wave start
+WAVE_SPAWN_MIN_INTERVAL: float = 0.8     # fastest possible batch interval
+WAVE_INTERVAL_REDUCTION: float = 0.1     # seconds shaved off interval per qualifying night
+WAVE_SPAWN_BATCH: int = 3                # mobs spawned per batch tick
+WAVE_RANGED_MOB_CHANCE: float = 0.25     # chance a wave mob is ranged (after RANGED_ENEMY_START_DAY)
 
 # --- Mob respawn / population ---
-MOB_RESPAWN_INTERVAL: float = 4.0
-MOB_RESPAWN_MIN_DIST: float = 300.0
-MOB_MAX_COUNT: int = 80
-MOB_RESPAWN_BATCH: int = 3
+MOB_RESPAWN_INTERVAL: float = 4.0        # seconds between natural respawn ticks
+MOB_RESPAWN_MIN_DIST: float = 300.0      # min px from player for a new mob to spawn
+MOB_MAX_COUNT: int = 80                  # hard cap on total mobs alive at once
+MOB_RESPAWN_BATCH: int = 3               # mobs per respawn tick
 
 # --- Day-based enemy progression ---
-RANGED_ENEMY_START_DAY: int = 3
-PER_DAY_SCALE_FACTOR: float = 0.05
+RANGED_ENEMY_START_DAY: int = 3           # ranged enemies appear after this day
+PER_DAY_SCALE_FACTOR: float = 0.05       # mob stats *= (1 + day * this)
 
-# --- Overworld spawn chances ---
-MOB_SPAWN_ATTEMPTS: int = 20
+# --- Overworld spawn chances (per spawn-attempt roll) ---
+MOB_SPAWN_ATTEMPTS: int = 20             # random attempts per tick
 GRASS_MOB_SPAWN_CHANCE: float = 0.4
 FOREST_MOB_SPAWN_CHANCE: float = 0.5
 DIRT_MOB_SPAWN_CHANCE: float = 0.4
-ORC_SPAWN_CHANCE: float = 0.2
-GHOST_SPAWN_CHANCE: float = 0.25
-DARK_KNIGHT_SPAWN_CHANCE: float = 0.15
-NIGHT_MOB_SPAWN_CHANCE: float = 0.4
+ORC_SPAWN_CHANCE: float = 0.2            # chance for orc on dirt instead of generic
+GHOST_SPAWN_CHANCE: float = 0.25         # chance for ghost at night
+DARK_KNIGHT_SPAWN_CHANCE: float = 0.15   # chance for dark knight at night
+NIGHT_MOB_SPAWN_CHANCE: float = 0.4      # chance for any night-specific spawn
 
-# --- Initial mob population ---
+# --- Initial mob population (spawned once at world generation) ---
+# Each tuple: (mob_type, required_tile_type, count)
 INITIAL_MOB_SPAWNS: List[Tuple[str, int, int]] = [
     ('slime',  2, 25),    # TILE_GRASS  = 2
     ('wolf',   6, 10),    # TILE_FOREST = 6
     ('spider', 6,  8),    # TILE_FOREST = 6
     ('goblin', 3,  5),    # TILE_DIRT   = 3
 ]
+
+# --- Resource respawn (overworld trees/rocks) ---
+# Days between overworld resource replenishment, per difficulty.
+# 0 = resources never respawn (Hardcore).
+RESOURCE_RESPAWN_DAYS: Dict[int, int] = {
+    0: 3,     # Easy     — every 3 days
+    1: 7,     # Normal   — every 7 days
+    2: 14,    # Hard     — every 14 days
+    3: 0,     # Hardcore  — never
+}
+
+# --- Cave reset interval ---
+# Days between automatic cave regeneration, per difficulty.
+# 1 = caves rebuild every day (current default).
+# 0 = caves never regenerate (one-time clear).
+CAVE_RESET_DAYS: Dict[int, int] = {
+    0: 1,     # Easy     — every day
+    1: 1,     # Normal   — every day
+    2: 2,     # Hard     — every 2 days
+    3: 3,     # Hardcore  — every 3 days
+}
 
 
 # ######################################################################
@@ -362,50 +419,98 @@ DIFFICULTY_HARD: int = 2
 DIFFICULTY_HARDCORE: int = 3
 DIFFICULTY_NAMES: Tuple[str, ...] = ("Easy", "Normal", "Hard", "Hardcore")
 
+# --- Difficulty profiles — per-difficulty multipliers and scaling ---
+# All difficulty-sensitive systems read from these profiles.
+# Keys:
+#   enemy_hp_mult       — multiplier on mob base HP
+#   enemy_dmg_mult      — multiplier on mob base damage (contact + ranged)
+#   enemy_hp_per_day    — additional HP% gained per day  (mob HP *= 1 + day * this)
+#   enemy_dmg_per_day   — additional DMG% gained per day (mob DMG *= 1 + day * this)
+#   boss_hp_mult        — extra multiplier on boss HP (stacks with enemy_hp_mult)
+#   boss_dmg_mult       — extra multiplier on boss damage
+#   boss_hp_per_day     — additional boss HP% gained per day (on top of enemy growth)
+#   boss_dmg_per_day    — additional boss DMG% gained per day
+#   spawn_rate_mult     — multiplier on mob respawn frequency (higher = faster)
+#   wave_count_mult     — multiplier on night wave mob count
+#   night_dmg_mult      — multiplier on night darkness damage
+#   night_dmg_per_day   — extra night damage added per day (flat, applied after mult)
+#   night_dmg_tick_min  — minimum damage per night tick (floor)
+#   night_dmg_tick_max  — maximum damage per night tick (0 = no cap)
+#   xp_mult             — multiplier on XP earned
+#   loot_luck_bonus     — flat bonus added to rarity roll weights for better tier
+
 DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
     0: {  # Easy
-        'enemy_hp_mult':   1.0,
-        'enemy_dmg_mult':  1.0,
-        'spawn_rate_mult': 1.0,
-        'wave_count_mult': 1.0,
-        'boss_hp_mult':    1.0,
-        'boss_dmg_mult':   1.0,
-        'night_dmg_mult':  1.0,
-        'xp_mult':         1.0,
-        'loot_luck_bonus': 0.0,
+        'enemy_hp_mult':    1.0,
+        'enemy_dmg_mult':   1.0,
+        'enemy_hp_per_day': 0.03,    # +3% HP per day
+        'enemy_dmg_per_day': 0.02,   # +2% DMG per day
+        'boss_hp_mult':     1.0,
+        'boss_dmg_mult':    1.0,
+        'boss_hp_per_day':  0.02,    # +2% boss HP per day (stacks with enemy growth)
+        'boss_dmg_per_day': 0.01,    # +1% boss DMG per day
+        'spawn_rate_mult':  1.0,
+        'wave_count_mult':  1.0,
+        'night_dmg_mult':   1.0,
+        'night_dmg_per_day': 0.0,    # no extra night dmg per day
+        'night_dmg_tick_min': 1,     # minimum 1 dmg per tick
+        'night_dmg_tick_max': 0,     # 0 = no cap
+        'xp_mult':          1.0,
+        'loot_luck_bonus':  0.0,
     },
     1: {  # Normal
-        'enemy_hp_mult':   1.3,
-        'enemy_dmg_mult':  1.3,
-        'spawn_rate_mult': 1.2,
-        'wave_count_mult': 1.3,
-        'boss_hp_mult':    1.0,
-        'boss_dmg_mult':   1.0,
-        'night_dmg_mult':  1.0,
-        'xp_mult':         1.0,
-        'loot_luck_bonus': 0.0,
+        'enemy_hp_mult':    1.3,
+        'enemy_dmg_mult':   1.3,
+        'enemy_hp_per_day': 0.05,    # +5% HP per day (matches PER_DAY_SCALE_FACTOR)
+        'enemy_dmg_per_day': 0.05,   # +5% DMG per day
+        'boss_hp_mult':     1.0,
+        'boss_dmg_mult':    1.0,
+        'boss_hp_per_day':  0.04,    # +4% boss HP per day
+        'boss_dmg_per_day': 0.03,    # +3% boss DMG per day
+        'spawn_rate_mult':  1.2,
+        'wave_count_mult':  1.3,
+        'night_dmg_mult':   1.0,
+        'night_dmg_per_day': 0.5,    # +0.5 flat night dmg per day
+        'night_dmg_tick_min': 1,
+        'night_dmg_tick_max': 0,
+        'xp_mult':          1.0,
+        'loot_luck_bonus':  0.0,
     },
     2: {  # Hard
-        'enemy_hp_mult':   1.8,
-        'enemy_dmg_mult':  1.8,
-        'spawn_rate_mult': 1.5,
-        'wave_count_mult': 1.8,
-        'boss_hp_mult':    1.3,
-        'boss_dmg_mult':   1.2,
-        'night_dmg_mult':  1.5,
-        'xp_mult':         1.2,
-        'loot_luck_bonus': 0.0,
+        'enemy_hp_mult':    1.8,
+        'enemy_dmg_mult':   1.8,
+        'enemy_hp_per_day': 0.08,    # +8% HP per day
+        'enemy_dmg_per_day': 0.08,   # +8% DMG per day
+        'boss_hp_mult':     1.3,
+        'boss_dmg_mult':    1.2,
+        'boss_hp_per_day':  0.06,    # +6% boss HP per day
+        'boss_dmg_per_day': 0.05,    # +5% boss DMG per day
+        'spawn_rate_mult':  1.5,
+        'wave_count_mult':  1.8,
+        'night_dmg_mult':   1.5,
+        'night_dmg_per_day': 1.0,    # +1 flat night dmg per day
+        'night_dmg_tick_min': 2,
+        'night_dmg_tick_max': 0,
+        'xp_mult':          1.2,
+        'loot_luck_bonus':  0.0,
     },
     3: {  # Hardcore
-        'enemy_hp_mult':   3.5,
-        'enemy_dmg_mult':  3.0,
-        'spawn_rate_mult': 4.0,
-        'wave_count_mult': 4.0,
-        'boss_hp_mult':    2.0,
-        'boss_dmg_mult':   1.5,
-        'night_dmg_mult':  2.0,
-        'xp_mult':         1.5,
-        'loot_luck_bonus': 0.0,
+        'enemy_hp_mult':    3.5,
+        'enemy_dmg_mult':   3.0,
+        'enemy_hp_per_day': 0.12,    # +12% HP per day
+        'enemy_dmg_per_day': 0.10,   # +10% DMG per day
+        'boss_hp_mult':     2.0,
+        'boss_dmg_mult':    1.5,
+        'boss_hp_per_day':  0.10,    # +10% boss HP per day
+        'boss_dmg_per_day': 0.08,    # +8% boss DMG per day
+        'spawn_rate_mult':  4.0,
+        'wave_count_mult':  4.0,
+        'night_dmg_mult':   2.0,
+        'night_dmg_per_day': 2.0,    # +2 flat night dmg per day
+        'night_dmg_tick_min': 5,
+        'night_dmg_tick_max': 0,
+        'xp_mult':          1.5,
+        'loot_luck_bonus':  0.0,
     },
 }
 
