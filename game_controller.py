@@ -242,9 +242,9 @@ CAVE_WIDTH: int = 60
 CAVE_HEIGHT: int = 45
 CAVE_WALL_DENSITY: float = 0.48
 CAVE_SMOOTH_PASSES: int = 5
-CAVE_MOB_TYPES: tuple = ('skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith')
+CAVE_MOB_TYPES: Tuple[str, ...] = ('skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith')
 CAVE_MOB_COUNT: int = 15
-CAVE_BOSS_TYPES: tuple = (
+CAVE_BOSS_TYPES: Tuple[str, ...] = (
     'boss_golem', 'boss_lich', 'boss_dragon', 'boss_necromancer', 'boss_troll_king',
 )
 CAVE_ORE_COUNT: int = 8
@@ -276,23 +276,23 @@ TIME_NIGHT_START: float = 0.78
 DAY_FLASH_DURATION: float = 3.0
 DAY_FLASH_FADE_DIVISOR: float = 1.0
 DAY_FLASH_TEXT: str = "Day {day}"
-DAY_FLASH_COLOR: tuple = (255, 255, 200)
+DAY_FLASH_COLOR: Tuple[int, int, int] = (255, 255, 200)
 
 NIGHT_FLASH_DURATION: float = 2.5
 NIGHT_FLASH_FADE_DIVISOR: float = 0.8
 NIGHT_FLASH_TEXT: str = "Night falls \u2014 Defend!"
-NIGHT_FLASH_COLOR: tuple = (255, 120, 80)
+NIGHT_FLASH_COLOR: Tuple[int, int, int] = (255, 120, 80)
 
 DAWN_FLASH_DURATION: float = 2.0
 DAWN_FLASH_TEXT: str = ""
-DAWN_FLASH_COLOR: tuple = (255, 220, 150)
+DAWN_FLASH_COLOR: Tuple[int, int, int] = (255, 220, 150)
 
 DUSK_FLASH_DURATION: float = 2.0
 DUSK_FLASH_TEXT: str = "Dusk approaches..."
-DUSK_FLASH_COLOR: tuple = (255, 180, 100)
+DUSK_FLASH_COLOR: Tuple[int, int, int] = (255, 180, 100)
 
 SLEEP_OVERLAY_TEXT: str = "Sleeping... Zzz"
-SLEEP_OVERLAY_COLOR: tuple = (180, 180, 255)
+SLEEP_OVERLAY_COLOR: Tuple[int, int, int] = (180, 180, 255)
 
 # --- Darkness ---
 NIGHT_DARKNESS_THRESHOLD: float = 0.5
@@ -360,7 +360,7 @@ DIFFICULTY_EASY: int = 0
 DIFFICULTY_NORMAL: int = 1
 DIFFICULTY_HARD: int = 2
 DIFFICULTY_HARDCORE: int = 3
-DIFFICULTY_NAMES: tuple = ("Easy", "Normal", "Hard", "Hardcore")
+DIFFICULTY_NAMES: Tuple[str, ...] = ("Easy", "Normal", "Hard", "Hardcore")
 
 DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
     0: {  # Easy
@@ -644,7 +644,7 @@ ELEMENTAL_RESISTANCE: Dict[int, float] = {1: 0.15, 2: 0.25, 3: 0.40, 4: 0.55, 5:
 # ######################################################################
 #                        RARITY CONTROLS
 # ######################################################################
-RARITY_TIERS: tuple = ('common', 'rare', 'epic', 'legendary', 'mythic')
+RARITY_TIERS: Tuple[str, ...] = ('common', 'rare', 'epic', 'legendary', 'mythic')
 RARITY_MULTIPLIERS: Dict[str, float] = {
     'common': 1.0, 'rare': 1.5, 'epic': 2.0, 'legendary': 2.5, 'mythic': 3.0,
 }
