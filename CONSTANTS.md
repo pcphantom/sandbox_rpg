@@ -8,9 +8,10 @@ This document tracks all global constants, key variables, and data structures us
 
 | Module | Purpose | Key Contents |
 |--------|---------|-----------|
+| `game_controller.py` | **Single source of truth** for ALL game tuning variables | ~410 symbols, every constant in the game |
 | `sandbox_rpg.py` | Game class, main loop, event/update routing | Game class (entry point) |
 | **core/** | Core engine modules | |
-| `core/constants.py` | Game-wide constants | ~240 constants |
+| `core/constants.py` | Re-exports from `game_controller.py` + data modules | ~240 re-exported constants |
 | `core/components.py` | ECS component definitions | 15 component types |
 | `core/item_stack.py` | Centralised item identity, stacking, transfer, sort | normalize_rarity, items_match, add_to_slots, remove_from_slots, sort_slots, transfer_slot, transfer_all |
 | `core/ecs.py` | EntityManager | Core ECS |
@@ -44,10 +45,10 @@ This document tracks all global constants, key variables, and data structures us
 | `data/crafting.py` | Crafting recipes | RECIPES |
 | `data/combat.py` | Combat data | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
 | `data/mobs.py` | Mob definitions | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
-| `data/day_night.py` | Day/night timing, sleep, all time controls | DAY_LENGTH_BASE, SLEEP_DURATION, SLEEP_SPEED_MULT, BED_INTERACT_RANGE, etc. |
-| `data/stats.py` | All stat scaling constants | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
-| `data/day_events.py` | Spawn/wave tuning | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS |
-| `data/difficulty.py` | Difficulty profiles & multipliers (single source of truth) | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
+| `data/day_night.py` | Day/night timing — re-exports from `game_controller.py` | DAWN_BEGINS, DAY_BEGINS, DUSK_BEGINS, NIGHT_BEGINS, TIME_*, flash/banner vars, sleep vars, night damage vars |
+| `data/stats.py` | Player stat tuning — re-exports from `game_controller.py` | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
+| `data/day_events.py` | Spawn/wave tuning — re-exports from `game_controller.py` | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS, RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS |
+| `data/difficulty.py` | Difficulty profiles — re-exports from `game_controller.py` + helpers | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
 | `data/quality.py` | Item quality/rarity | QUALITY_COLORS, get_item_quality, get_item_color |
 | **items/** | Modular item definitions with control flags | |
 | `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
@@ -190,13 +191,22 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `CAVE_DMG_MULT` | 1.3 | Extra damage multiplier for cave mobs |
 | `CAVE_ENTRANCE_MIN_DIST` | 800.0 | Min px distance between cave entrances |
 
-### Cave Daily Regeneration
+### Cave Regeneration (per difficulty)
 
-Caves regenerate automatically when a new day starts (`DayNightCycle.day_changed` flag).
+Caves regenerate on a schedule controlled by `CAVE_RESET_DAYS` in `game_controller.py`:
+
+| Difficulty | `CAVE_RESET_DAYS` | Behaviour |
+|-----------|-------------------|-----------|
+| Easy | 1 | Caves rebuild every day |
+| Normal | 1 | Caves rebuild every day |
+| Hard | 2 | Caves rebuild every 2 days |
+| Hardcore | 3 | Caves rebuild every 3 days |
+
 - `CaveData.regenerate(day_number)` rebuilds all cave interiors using `seed + day_number * 99991` as the seed, producing different layouts each day.
 - `boss_alive` and `chest_looted` lists are reset so bosses and chests reappear.
 - If the player is inside a cave when the day changes, they are automatically exited first.
 - Cave entrances on the overworld remain in the same positions.
+- Tracked via `Game._last_cave_reset_day` (saved/loaded).
 
 ### Cave Chest Behaviour
 
@@ -230,9 +240,9 @@ Caves regenerate automatically when a new day starts (`DayNightCycle.day_changed
 | `INVENTORY_COLS` | 6 | Columns in inventory grid |
 | `INVENTORY_TOTAL_SLOTS` | 96 | Total main inventory capacity (24×4) |
 
-## Stat Scaling (`data/stats.py`, re-exported via `core/constants.py`)
+## Stat Scaling (`game_controller.py` → `data/stats.py` → `core/constants.py`)
 
-Single source of truth for ALL stat effects. Change this file to tune stat balance.
+Single source of truth for ALL stat effects. Change `game_controller.py` to tune stat balance.
 
 ### Strength
 
@@ -282,7 +292,7 @@ Single source of truth for ALL stat effects. Change this file to tune stat balan
 | `MOVEMENT_ACCEL_MULT` | 10 | Movement acceleration responsiveness |
 | `SPRITE_FLIP_THRESHOLD` | 5.0 | Velocity threshold for sprite flip |
 
-## Sleep / Time Controls (`data/day_night.py`, re-exported via `core/constants.py`)
+## Sleep / Time Controls (`game_controller.py` → `data/day_night.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -378,7 +388,7 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 |-----------|---------|-------------|---------------|-------------|
 | Total DR | 10 | 12 | 16 | 20 |
 
-## Wave System (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Wave System (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -394,43 +404,50 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 | `WAVE_SPAWN_BATCH` | 3 | Mobs per batch tick |
 | `WAVE_RANGED_MOB_CHANCE` | 0.25 | Chance a wave mob is ranged |
 
-## Day/Night Timing (`data/day_night.py`, re-exported via `data/__init__.py`)
+## Day/Night Timing (`game_controller.py` → `data/day_night.py` → `core/constants.py`)
 
-### Cycle Constants (`data/day_night.py`, re-exported via `data/__init__.py`)
+All time-of-day values are set in `game_controller.py` as `(hour, minute)` tuples on a 24-hour clock.
+Engine fractions (`TIME_*`) are auto-derived — never edit them directly.
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 4× slower than original 240.0 |
-
-### Time Thresholds (`data/day_night.py`)
+### Cycle Constants
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `TIME_NIGHT_END` | 0.22 | Night → Dawn transition |
-| `TIME_DAY_START` | 0.30 | Dawn → Day transition |
-| `TIME_DAY_END` | 0.70 | Day → Dusk transition |
-| `TIME_NIGHT_START` | 0.78 | Dusk → Night transition |
+| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 16 real minutes = 1 game day |
 
-### Banner / Flash Constants (`data/day_night.py`)
+### Period Schedule (24-hour clock)
+
+| Period | Begins At | Variable | Engine Fraction |
+|--------|-----------|----------|-----------------|
+| Dawn | 05:17 | `DAWN_BEGINS = (5, 17)` | `TIME_NIGHT_END ≈ 0.2201` |
+| Day | 07:12 | `DAY_BEGINS = (7, 12)` | `TIME_DAY_START = 0.3000` |
+| Dusk | 16:48 | `DUSK_BEGINS = (16, 48)` | `TIME_DAY_END = 0.7000` |
+| Night | 18:43 | `NIGHT_BEGINS = (18, 43)` | `TIME_NIGHT_START ≈ 0.7799` |
+
+To change when a period starts, edit the `(hour, minute)` tuple in `game_controller.py`.
+
+### Banner / Flash Constants
+
+Each period transition shows a banner. The time each appears is the period threshold above.
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `DAY_FLASH_DURATION` | 3.0 | Seconds the "Day X" banner is visible |
+| `DAY_FLASH_TEXT` | "Day {day}" | Banner at DAY_BEGINS (07:12) |
+| `DAY_FLASH_DURATION` | 3.0 | Seconds visible |
 | `DAY_FLASH_FADE_DIVISOR` | 1.0 | Alpha = timer / this (lower = fades slower) |
-| `DAY_FLASH_TEXT` | "Day {day}" | Banner text ({day} replaced at runtime) |
 | `DAY_FLASH_COLOR` | (255, 255, 200) | Banner text colour |
-| `NIGHT_FLASH_DURATION` | 2.5 | Seconds the night warning is visible |
-| `NIGHT_FLASH_FADE_DIVISOR` | 0.8 | Alpha = timer / this |
-| `NIGHT_FLASH_TEXT` | "Night falls — Defend!" | Night warning text |
+| `NIGHT_FLASH_TEXT` | "Night falls — Defend!" | Banner at NIGHT_BEGINS (18:43) |
+| `NIGHT_FLASH_DURATION` | 2.5 | Seconds visible |
+| `NIGHT_FLASH_FADE_DIVISOR` | 0.8 | Alpha control |
 | `NIGHT_FLASH_COLOR` | (255, 120, 80) | Night warning colour |
+| `DAWN_FLASH_TEXT` | "" | Banner at DAWN_BEGINS (empty = disabled) |
+| `DAWN_FLASH_DURATION` | 2.0 | Seconds visible |
+| `DAWN_FLASH_COLOR` | (255, 220, 150) | Dawn message colour |
+| `DUSK_FLASH_TEXT` | "Dusk approaches..." | Banner at DUSK_BEGINS (16:48) |
+| `DUSK_FLASH_DURATION` | 2.0 | Seconds visible |
+| `DUSK_FLASH_COLOR` | (255, 180, 100) | Dusk message colour |
 | `SLEEP_OVERLAY_TEXT` | "Sleeping... Zzz" | Sleeping overlay text |
 | `SLEEP_OVERLAY_COLOR` | (180, 180, 255) | Sleeping overlay colour |
-| `DAWN_FLASH_DURATION` | 2.0 | Dawn message display time (seconds) |
-| `DAWN_FLASH_TEXT` | "" | Dawn message (empty = disabled) |
-| `DAWN_FLASH_COLOR` | (255, 220, 150) | Dawn message colour |
-| `DUSK_FLASH_DURATION` | 2.0 | Dusk message display time (seconds) |
-| `DUSK_FLASH_TEXT` | "Dusk approaches..." | Dusk message text |
-| `DUSK_FLASH_COLOR` | (255, 180, 100) | Dusk message colour |
 | `NIGHT_DARKNESS_THRESHOLD` | 0.5 | Darkness level above which night damage applies |
 
 ### AI Aggro (`systems.py`)
@@ -442,12 +459,12 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 
 ### Day/Night Periods
 
-| Period | Time Range | Description |
-|--------|-----------|-------------|
-| Night | 0.00–0.22, 0.78–1.00 | Dark, enemies deal night damage to unlit players |
-| Dawn | 0.22–0.30 | Transition, lighting ramps up |
-| Day | 0.30–0.70 | Full daylight |
-| Dusk | 0.70–0.78 | "Dusk approaches..." warning displayed |
+| Period | Clock Time | Engine Range | Description |
+|--------|-----------|--------------|-------------|
+| Night | 00:00–05:17, 18:43–24:00 | 0.00–0.22, 0.78–1.00 | Dark, enemies deal night damage to unlit players |
+| Dawn | 05:17–07:12 | 0.22–0.30 | Transition, lighting ramps up |
+| Day | 07:12–16:48 | 0.30–0.70 | Full daylight |
+| Dusk | 16:48–18:43 | 0.70–0.78 | "Dusk approaches..." warning displayed |
 
 ### Key Methods (`DayNightCycle` in `systems.py`)
 
@@ -457,7 +474,7 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 | `is_sleepable()` | `t < TIME_NIGHT_END or t >= TIME_DAY_END` (allows sleep during Dusk+Night) |
 | `day_changed` | `bool` flag — True the frame day_number increments, False otherwise |
 
-## Difficulty System (`data/difficulty.py`, re-exported via `core/constants.py`)
+## Difficulty System (`game_controller.py` → `data/difficulty.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -475,13 +492,34 @@ Full dict-based profiles with named keys. Access: `DIFFICULTY_PROFILES[level]['e
 |-----|------|--------|------|----------|---------|
 | `enemy_hp_mult` | 1.0 | 1.3 | 1.8 | 3.5 | Multiplier on mob base HP |
 | `enemy_dmg_mult` | 1.0 | 1.3 | 1.8 | 3.0 | Multiplier on mob base damage |
-| `spawn_rate_mult` | 1.0 | 1.2 | 1.5 | 4.0 | Mob respawn frequency multiplier |
-| `wave_count_mult` | 1.0 | 1.3 | 1.8 | 4.0 | Night wave mob count multiplier |
+| `enemy_hp_per_day` | 0.03 | 0.05 | 0.08 | 0.12 | Daily mob HP growth (HP *= 1 + day × this) |
+| `enemy_dmg_per_day` | 0.02 | 0.05 | 0.08 | 0.10 | Daily mob DMG growth (DMG *= 1 + day × this) |
 | `boss_hp_mult` | 1.0 | 1.0 | 1.3 | 2.0 | Boss HP multiplier (stacks with enemy_hp) |
 | `boss_dmg_mult` | 1.0 | 1.0 | 1.2 | 1.5 | Boss damage multiplier (stacks with enemy_dmg) |
+| `boss_hp_per_day` | 0.02 | 0.04 | 0.06 | 0.10 | Daily boss HP growth (on top of enemy growth) |
+| `boss_dmg_per_day` | 0.01 | 0.03 | 0.05 | 0.08 | Daily boss DMG growth (on top of enemy growth) |
+| `spawn_rate_mult` | 1.0 | 1.2 | 1.5 | 4.0 | Mob respawn frequency multiplier |
+| `wave_count_mult` | 1.0 | 1.3 | 1.8 | 4.0 | Night wave mob count multiplier |
 | `night_dmg_mult` | 1.0 | 1.0 | 1.5 | 2.0 | Night darkness damage multiplier |
+| `night_dmg_per_day` | 0.0 | 0.5 | 1.0 | 2.0 | Flat night damage added per day |
+| `night_dmg_tick_min` | 1 | 1 | 2 | 5 | Minimum night damage per tick (floor) |
+| `night_dmg_tick_max` | 0 | 0 | 0 | 0 | Maximum night damage per tick (0 = no cap) |
 | `xp_mult` | 1.0 | 1.0 | 1.2 | 1.5 | XP earned multiplier |
-| `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat rarity roll bonus (multiplies non-common weights by 1+bonus) |
+| `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat bonus to rarity roll weights |
+
+### Resource Respawn (`RESOURCE_RESPAWN_DAYS`)
+
+Controls how often overworld trees and rocks replenish (per difficulty).
+
+| Difficulty | Days | Behaviour |
+|-----------|------|-----------|
+| Easy | 3 | Every 3 days |
+| Normal | 7 | Every 7 days |
+| Hard | 14 | Every 14 days |
+| Hardcore | 0 | Never — resources are finite |
+
+Tracked via `Game._last_resource_respawn_day` (saved/loaded).
+`game/entities.py: respawn_resources()` places new trees/rocks at seed-consistent positions, skipping tiles already occupied.
 
 ### Legacy Tuple Format (`DIFFICULTY_MULTIPLIERS`)
 
@@ -498,15 +536,18 @@ Backward-compatible: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_coun
 
 | Multiplier | Applied in | How |
 |------------|-----------|-----|
-| `enemy_hp_mult` / `enemy_dmg_mult` | `game/entities.py: create_mob()` | Scales HP, contact_damage, ranged_damage |
-| `boss_hp_mult` / `boss_dmg_mult` | `game/entities.py: create_mob()` | Additional scale inside `if data.get('boss')` block |
+| `enemy_hp_mult` / `enemy_hp_per_day` | `game/entities.py: create_mob()` | Scales HP: `base * enemy_hp_mult * (1 + days * enemy_hp_per_day)` |
+| `enemy_dmg_mult` / `enemy_dmg_per_day` | `game/entities.py: create_mob()` | Scales DMG: `base * enemy_dmg_mult * (1 + days * enemy_dmg_per_day)` |
+| `boss_hp_mult` / `boss_hp_per_day` | `game/entities.py: create_mob()` | Additional scale inside boss block (stacks with enemy growth) |
+| `boss_dmg_mult` / `boss_dmg_per_day` | `game/entities.py: create_mob()` | Additional scale inside boss block |
 | `spawn_rate_mult` | `sandbox_rpg.py` (respawn) | Divides `MOB_RESPAWN_INTERVAL` |
 | `wave_count_mult` | `systems/wave.py` | Multiplies wave mob count |
-| `night_dmg_mult` | `game/combat.py: night_damage()` | Multiplies computed night damage |
+| `night_dmg_mult` / `night_dmg_per_day` | `game/combat.py: night_damage()` | Multiplies + adds flat per-day to night damage |
+| `night_dmg_tick_min` / `night_dmg_tick_max` | `game/combat.py: night_damage()` | Enforces min/max bounds on night tick damage |
 | `xp_mult` | `game/entities.py: on_mob_killed()` | Multiplies XP before `check_level_up()` |
 | `loot_luck_bonus` | Wired into `roll_rarity()` via `roll_loot(luck_bonus=)` | Multiplies non-common rarity weights by `(1 + luck_bonus)` |
 
-## Mob Respawn (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Mob Respawn (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -515,7 +556,7 @@ Backward-compatible: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_coun
 | `MOB_MAX_COUNT` | 80 | Max mobs alive at once |
 | `MOB_RESPAWN_BATCH` | 3 | Mobs to spawn per respawn tick |
 
-## Ranged Enemies (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Ranged Enemies (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
