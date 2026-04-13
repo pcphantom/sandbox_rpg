@@ -16,6 +16,11 @@ from core.constants import (
     QUICK_SAVE_SLOT,
     DIFFICULTY_NAMES,
     MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    UI_BG_MAIN_MENU, UI_BG_BUTTON_HOVER, UI_BG_BUTTON_NORMAL,
+    UI_BG_BUTTON_SELECTED, UI_BORDER_NORMAL, UI_BORDER_PANEL,
+    VOLUME_SLIDER_BG, VOLUME_SLIDER_FILL,
+    OPTIONS_INFO_TEXT, OPTIONS_BACK_HOVER, OPTIONS_BACK_NORMAL,
+    OPTIONS_BACK_BORDER,
 )
 from core.settings import (
     save_settings,
@@ -71,7 +76,7 @@ def handle_main_menu_events(g: 'Game') -> None:
 
 
 def draw_main_menu(g: 'Game') -> None:
-    g.screen.fill((15, 15, 30))
+    g.screen.fill(UI_BG_MAIN_MENU)
     title = g.font_xl.render("Sandbox Survival RPG", True, WHITE)
     g.screen.blit(title,
                   (SCREEN_WIDTH // 2 - title.get_width() // 2, 120))
@@ -95,9 +100,9 @@ def draw_main_menu(g: 'Game') -> None:
     for by, label, color in buttons:
         r = pygame.Rect(bx, by, btn_w, btn_h)
         hov = r.collidepoint(mx, my)
-        bc = (50, 50, 75) if hov else (30, 30, 50)
+        bc = UI_BG_BUTTON_HOVER if hov else UI_BG_BUTTON_NORMAL
         pygame.draw.rect(g.screen, bc, r, border_radius=6)
-        bd = color if hov else (100, 100, 130)
+        bd = color if hov else UI_BORDER_NORMAL
         pygame.draw.rect(g.screen, bd, r, 2, border_radius=6)
         lt = g.font_lg.render(label, True, WHITE if hov else GRAY)
         g.screen.blit(lt, (r.centerx - lt.get_width() // 2,
@@ -225,7 +230,7 @@ def open_options_from_pause(g: 'Game') -> None:
 
 
 def draw_options_menu(g: 'Game') -> None:
-    g.screen.fill((15, 15, 30))
+    g.screen.fill(UI_BG_MAIN_MENU)
     mx, my = pygame.mouse.get_pos()
     pw, ph = 450, 560
     px = SCREEN_WIDTH // 2 - pw // 2
@@ -233,7 +238,7 @@ def draw_options_menu(g: 'Game') -> None:
     bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
     bg.fill((20, 20, 35, 240))
     g.screen.blit(bg, (px, py))
-    pygame.draw.rect(g.screen, (140, 140, 170),
+    pygame.draw.rect(g.screen, UI_BORDER_PANEL,
                      (px, py, pw, ph), 2, border_radius=10)
 
     title = g.font_lg.render("Options", True, WHITE)
@@ -252,10 +257,10 @@ def draw_options_menu(g: 'Game') -> None:
         r = pygame.Rect(diff_bx + i * (btn_w + 8), diff_y, btn_w, btn_h)
         sel = i == g.difficulty
         hov = r.collidepoint(mx, my)
-        bc = ((80, 80, 120) if sel else (50, 50, 75) if hov
-              else (30, 30, 50))
+        bc = (UI_BG_BUTTON_SELECTED if sel else UI_BG_BUTTON_HOVER if hov
+              else UI_BG_BUTTON_NORMAL)
         pygame.draw.rect(g.screen, bc, r, border_radius=5)
-        bd = diff_colors[i] if sel else (100, 100, 130)
+        bd = diff_colors[i] if sel else UI_BORDER_NORMAL
         pygame.draw.rect(g.screen, bd, r, 2, border_radius=5)
         lt = g.font_sm.render(name, True,
                               diff_colors[i] if sel else WHITE)
@@ -279,10 +284,10 @@ def draw_options_menu(g: 'Game') -> None:
                         mode_bw, btn_h)
         sel = mode_id == g.display_mode
         hov = r.collidepoint(mx, my)
-        bc = ((80, 80, 120) if sel else (50, 50, 75) if hov
-              else (30, 30, 50))
+        bc = (UI_BG_BUTTON_SELECTED if sel else UI_BG_BUTTON_HOVER if hov
+              else UI_BG_BUTTON_NORMAL)
         pygame.draw.rect(g.screen, bc, r, border_radius=5)
-        bd = CYAN if sel else (100, 100, 130)
+        bd = CYAN if sel else UI_BORDER_NORMAL
         pygame.draw.rect(g.screen, bd, r, 2, border_radius=5)
         lt = g.font_sm.render(label, True, WHITE if sel else GRAY)
         g.screen.blit(lt, (r.centerx - lt.get_width() // 2,
@@ -301,10 +306,10 @@ def draw_options_menu(g: 'Game') -> None:
         r = pygame.Rect(rx, ry, res_bw, 30)
         sel = (rw == g.window_w and rh == g.window_h)
         hov = r.collidepoint(mx, my)
-        bc = ((80, 80, 120) if sel else (50, 50, 75) if hov
-              else (30, 30, 50))
+        bc = (UI_BG_BUTTON_SELECTED if sel else UI_BG_BUTTON_HOVER if hov
+              else UI_BG_BUTTON_NORMAL)
         pygame.draw.rect(g.screen, bc, r, border_radius=4)
-        bd = GREEN if sel else (100, 100, 130)
+        bd = GREEN if sel else UI_BORDER_NORMAL
         pygame.draw.rect(g.screen, bd, r, 2, border_radius=4)
         lt = g.font_sm.render(f"{rw}x{rh}", True,
                               WHITE if sel else GRAY)
@@ -319,10 +324,10 @@ def draw_options_menu(g: 'Game') -> None:
         r = pygame.Rect(px + 100 + i * 78, music_y, 70, btn_h)
         sel = g.music_manager.enabled == enabled
         hov = r.collidepoint(mx, my)
-        bc = ((80, 80, 120) if sel else (50, 50, 75) if hov
-              else (30, 30, 50))
+        bc = (UI_BG_BUTTON_SELECTED if sel else UI_BG_BUTTON_HOVER if hov
+              else UI_BG_BUTTON_NORMAL)
         pygame.draw.rect(g.screen, bc, r, border_radius=5)
-        bd = GREEN if sel and enabled else RED if sel else (100, 100, 130)
+        bd = GREEN if sel and enabled else RED if sel else UI_BORDER_NORMAL
         pygame.draw.rect(g.screen, bd, r, 2, border_radius=5)
         lt = g.font_sm.render(label, True, WHITE if sel else GRAY)
         g.screen.blit(lt, (r.centerx - lt.get_width() // 2,
@@ -334,15 +339,15 @@ def draw_options_menu(g: 'Game') -> None:
     g.screen.blit(vol_label, (px + 20, vol_y + 4))
     slider_x = px + 100
     slider_w = 300
-    pygame.draw.rect(g.screen, (30, 30, 50),
+    pygame.draw.rect(g.screen, VOLUME_SLIDER_BG,
                      (slider_x, vol_y + 8, slider_w, 16),
                      border_radius=4)
     fill_w = int(slider_w * g.music_manager.volume)
     if fill_w > 0:
-        pygame.draw.rect(g.screen, (70, 160, 255),
+        pygame.draw.rect(g.screen, VOLUME_SLIDER_FILL,
                          (slider_x, vol_y + 8, fill_w, 16),
                          border_radius=4)
-    pygame.draw.rect(g.screen, (100, 100, 130),
+    pygame.draw.rect(g.screen, UI_BORDER_NORMAL,
                      (slider_x, vol_y + 8, slider_w, 16), 2,
                      border_radius=4)
     pct = g.font_sm.render(
@@ -353,7 +358,7 @@ def draw_options_menu(g: 'Game') -> None:
     cur_info = g.font_sm.render(
         f"Current: {g.window_w}x{g.window_h}  "
         f"{DISPLAY_MODE_NAMES.get(g.display_mode, '?')}",
-        True, (160, 160, 190))
+        True, OPTIONS_INFO_TEXT)
     g.screen.blit(cur_info,
                   (px + pw // 2 - cur_info.get_width() // 2,
                    py + ph - 100))
@@ -362,9 +367,9 @@ def draw_options_menu(g: 'Game') -> None:
     back_y = py + ph - 60
     back_r = pygame.Rect(px + pw // 2 - 80, back_y, 160, 40)
     hov = back_r.collidepoint(mx, my)
-    bc = (60, 70, 100) if hov else (40, 45, 65)
+    bc = OPTIONS_BACK_HOVER if hov else OPTIONS_BACK_NORMAL
     pygame.draw.rect(g.screen, bc, back_r, border_radius=6)
-    pygame.draw.rect(g.screen, (130, 130, 160), back_r, 2,
+    pygame.draw.rect(g.screen, OPTIONS_BACK_BORDER, back_r, 2,
                      border_radius=6)
     bt = g.font.render("Back  [Esc]", True, WHITE)
     g.screen.blit(bt, (back_r.centerx - bt.get_width() // 2,

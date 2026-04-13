@@ -43,6 +43,13 @@ from data import (
 )
 from drops import LOOT_TABLES, CAVE_CHEST_LOOT, roll_loot, pick_weighted, maybe_enhance
 from world.generator import WorldGenerator
+from game_controller import (
+    MOB_COLOR_SLIME, MOB_COLOR_SKELETON, MOB_COLOR_WOLF, MOB_COLOR_GOBLIN,
+    MOB_COLOR_GHOST, MOB_COLOR_SPIDER, MOB_COLOR_ORC, MOB_COLOR_DARK_KNIGHT,
+    MOB_COLOR_ZOMBIE, MOB_COLOR_WRAITH, MOB_COLOR_TROLL,
+    MOB_COLOR_SKELETON_ARCHER, MOB_COLOR_GOBLIN_SHAMAN,
+    MOB_COLOR_BOSS_GOLEM, MOB_COLOR_BOSS_LICH, BOSS_GLOW_DEFAULT,
+)
 
 
 # ======================================================================
@@ -107,7 +114,7 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
         mob_ai.ranged_speed = data.get('ranged_speed', 350.0)
     if data.get('boss', False):
         mob_ai.is_boss = True
-        mob_ai.glow_color = data.get('glow_color', (255, 60, 60))
+        mob_ai.glow_color = data.get('glow_color', BOSS_GLOW_DEFAULT)
         # Boss-specific scaling (stacks with enemy multipliers)
         boss_hp_day = 1.0 + days_elapsed * prof['boss_hp_per_day']
         boss_dmg_day = 1.0 + days_elapsed * prof['boss_dmg_per_day']
@@ -256,14 +263,14 @@ def on_mob_killed(g: 'Game', eid: int) -> None:
                 g.dmg_numbers.append((td.x, td.y - 10, '+Loot', CYAN, 1.2))
 
     mob_colors = {
-        'slime': (50, 200, 70), 'skeleton': (200, 200, 210),
-        'wolf': (100, 100, 100), 'goblin': (80, 140, 60),
-        'ghost': (180, 180, 220), 'spider': (60, 40, 30),
-        'orc': (80, 100, 50), 'dark_knight': (40, 40, 50),
-        'zombie': (100, 140, 80), 'wraith': (140, 80, 180),
-        'troll': (80, 120, 60), 'skeleton_archer': (200, 200, 210),
-        'goblin_shaman': (100, 60, 160),
-        'boss_golem': (180, 80, 60), 'boss_lich': (120, 60, 180),
+        'slime': MOB_COLOR_SLIME, 'skeleton': MOB_COLOR_SKELETON,
+        'wolf': MOB_COLOR_WOLF, 'goblin': MOB_COLOR_GOBLIN,
+        'ghost': MOB_COLOR_GHOST, 'spider': MOB_COLOR_SPIDER,
+        'orc': MOB_COLOR_ORC, 'dark_knight': MOB_COLOR_DARK_KNIGHT,
+        'zombie': MOB_COLOR_ZOMBIE, 'wraith': MOB_COLOR_WRAITH,
+        'troll': MOB_COLOR_TROLL, 'skeleton_archer': MOB_COLOR_SKELETON_ARCHER,
+        'goblin_shaman': MOB_COLOR_GOBLIN_SHAMAN,
+        'boss_golem': MOB_COLOR_BOSS_GOLEM, 'boss_lich': MOB_COLOR_BOSS_LICH,
     }
     color = mob_colors.get(mob_ai.mob_type, GRAY)
     g.particles.emit(td.x + 12, td.y + 10, 15, color, 80, 0.5)

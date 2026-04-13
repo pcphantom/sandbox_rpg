@@ -170,9 +170,95 @@ UI_BG_BUTTON_HOVER: Tuple[int, int, int] = (50, 50, 75)
 UI_BG_BUTTON_SELECTED: Tuple[int, int, int] = (80, 80, 120)
 UI_BORDER_NORMAL: Tuple[int, int, int] = (100, 100, 130)
 UI_BORDER_PANEL: Tuple[int, int, int] = (140, 140, 170)
+UI_BORDER_LIGHT: Tuple[int, int, int] = (130, 130, 155)
+UI_BORDER_DIALOG: Tuple[int, int, int] = (160, 160, 200)
+UI_BORDER_BUTTON: Tuple[int, int, int] = (160, 160, 180)
 UI_TEXT_NORMAL: Tuple[int, int, int] = (200, 200, 220)
 UI_TEXT_MUTED: Tuple[int, int, int] = (130, 130, 160)
 UI_TEXT_HIGHLIGHT: Tuple[int, int, int] = (200, 200, 240)
+UI_NOTIFICATION_TEXT: Tuple[int, int, int] = (220, 220, 240)
+
+# --- UI slot colors (inventory/pause/chest grids) ---
+UI_SLOT_BG_NORMAL: Tuple[int, int, int] = (45, 45, 60)
+UI_SLOT_BG_SELECTED: Tuple[int, int, int] = (80, 80, 110)
+UI_SLOT_BG_HOVER: Tuple[int, int, int] = (70, 70, 95)
+UI_SLOT_BORDER_NORMAL: Tuple[int, int, int] = (100, 100, 120)
+UI_SLOT_SEPARATOR: Tuple[int, int, int] = (80, 80, 100)
+UI_NAV_HOVER: Tuple[int, int, int] = (70, 70, 100)
+UI_NAV_NORMAL: Tuple[int, int, int] = (50, 50, 70)
+UI_SAVE_SLOT_SELECTED: Tuple[int, int, int] = (70, 70, 110)
+UI_SPLIT_BUTTON_NORMAL: Tuple[int, int, int] = (55, 55, 75)
+
+# --- UI action button colors ---
+UI_CONFIRM_BUTTON: Tuple[int, int, int] = (60, 120, 60)
+UI_CANCEL_BUTTON: Tuple[int, int, int] = (120, 60, 60)
+UI_STAT_BUTTON_HOVER: Tuple[int, int, int] = (70, 110, 70)
+UI_STAT_BUTTON_NORMAL: Tuple[int, int, int] = (50, 80, 50)
+UI_UNEQUIP_HOVER: Tuple[int, int, int] = (110, 50, 50)
+UI_UNEQUIP_NORMAL: Tuple[int, int, int] = (80, 40, 40)
+UI_EQUIP_HOVER: Tuple[int, int, int] = (50, 80, 50)
+UI_EQUIP_NORMAL: Tuple[int, int, int] = (40, 60, 40)
+UI_DROPDOWN_HOVER: Tuple[int, int, int] = (55, 65, 95)
+UI_DROPDOWN_NORMAL: Tuple[int, int, int] = (35, 35, 55)
+
+# --- Crafting panel colors ---
+UI_CRAFT_CAN_NORMAL: Tuple[int, int, int] = (60, 90, 60)
+UI_CRAFT_CAN_HOVER: Tuple[int, int, int] = (80, 120, 80)
+UI_CRAFT_CAN_BORDER: Tuple[int, int, int] = (100, 180, 100)
+UI_CRAFT_CANNOT_NORMAL: Tuple[int, int, int] = (55, 35, 35)
+UI_CRAFT_CANNOT_HOVER: Tuple[int, int, int] = (75, 50, 50)
+UI_CRAFT_CANNOT_BORDER: Tuple[int, int, int] = (140, 60, 60)
+
+# --- Progress bar defaults ---
+UI_PROGRESS_FG: Tuple[int, int, int] = (200, 60, 60)
+UI_PROGRESS_BG: Tuple[int, int, int] = (40, 20, 20)
+
+# --- Drop confirm dialog ---
+UI_DROP_DIALOG_BG: Tuple[int, int, int, int] = (30, 10, 10, 240)
+UI_DROP_DIALOG_BORDER: Tuple[int, int, int] = (200, 60, 60)
+UI_DROP_YES_BUTTON: Tuple[int, int, int] = (140, 40, 40)
+UI_DROP_NO_BUTTON: Tuple[int, int, int] = (50, 80, 50)
+
+# --- Chest UI ---
+UI_CHEST_PANEL_BG: Tuple[int, int, int, int] = (20, 20, 35, 240)
+UI_CHEST_SLOT_BG_NORMAL: Tuple[int, int, int] = (50, 50, 65)
+UI_CHEST_SLOT_BG_HOVER: Tuple[int, int, int] = (70, 70, 95)
+UI_CHEST_SORT_HOVER: Tuple[int, int, int] = (70, 100, 70)
+UI_CHEST_SORT_NORMAL: Tuple[int, int, int] = (50, 70, 50)
+UI_CHEST_SORT_BORDER: Tuple[int, int, int] = (100, 160, 100)
+UI_CHEST_MOVE_HOVER: Tuple[int, int, int] = (100, 70, 70)
+UI_CHEST_MOVE_NORMAL: Tuple[int, int, int] = (70, 50, 50)
+UI_CHEST_MOVE_BORDER: Tuple[int, int, int] = (160, 100, 100)
+
+# --- Enchantment table UI ---
+UI_ENCHANT_PANEL_BG: Tuple[int, int, int, int] = (20, 15, 30, 240)
+UI_ENCHANT_PANEL_BORDER: Tuple[int, int, int] = (140, 100, 170)
+UI_ENCHANT_SLOT_BG_NORMAL: Tuple[int, int, int] = (40, 30, 55)
+UI_ENCHANT_SLOT_BG_HOVER: Tuple[int, int, int] = (60, 45, 80)
+UI_ENCHANT_SLOT_BORDER: Tuple[int, int, int] = (120, 80, 160)
+UI_ENCHANT_COMBINE_ACTIVE: Tuple[int, int, int] = (55, 95, 55)
+UI_ENCHANT_COMBINE_ACTIVE_HOVER: Tuple[int, int, int] = (75, 130, 75)
+UI_ENCHANT_COMBINE_ACTIVE_BORDER: Tuple[int, int, int] = (100, 200, 100)
+UI_ENCHANT_COMBINE_INACTIVE: Tuple[int, int, int] = (40, 40, 50)
+UI_ENCHANT_COMBINE_INACTIVE_BORDER: Tuple[int, int, int] = (75, 75, 90)
+UI_ENCHANT_DIVIDER: Tuple[int, int, int] = (120, 80, 150)
+
+# --- Enchant/enhancement color fallback (for unknown levels) ---
+UI_ENCHANT_FALLBACK: Tuple[int, int, int] = (200, 200, 200)
+
+# --- Death screen ---
+DEATH_BUTTON_HOVER: Tuple[int, int, int] = (60, 60, 90)
+DEATH_BUTTON_NORMAL: Tuple[int, int, int] = (40, 40, 60)
+
+# --- HUD status area ---
+HUD_STATUS_TEXT: Tuple[int, int, int] = (180, 210, 255)
+HUD_RESOURCE_TEXT: Tuple[int, int, int] = (200, 200, 210)
+
+# --- Spell targeting ---
+SPELL_HELP_TEXT: Tuple[int, int, int] = (255, 180, 80)
+
+# --- Placement borders (non-alpha versions) ---
+PLACEMENT_UPGRADE_BORDER: Tuple[int, int, int] = (255, 200, 60)
 
 # --- Hotbar colors ---
 HOTBAR_BG: Tuple[int, int, int, int] = (15, 15, 25, 180)

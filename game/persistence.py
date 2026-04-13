@@ -20,6 +20,7 @@ from core.constants import (
     DIFFICULTY_EASY,
     TIME_DAY_START, TIME_DAY_END,
     DOOR_COLLIDER_W, DOOR_COLLIDER_H,
+    LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
@@ -254,7 +255,7 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
     if item_id == 'campfire':
         g.em.add_component(eid, Renderable(
             g.textures.get('campfire_True'), layer=2))
-        g.em.add_component(eid, LightSource(180, (255, 160, 80), 1.0))
+        g.em.add_component(eid, LightSource(180, LIGHT_COLOR_CAMPFIRE, 1.0))
         h = Health(struct.get('max_hp', 60))
         h.current = struct.get('hp', h.maximum)
         g.em.add_component(eid, h)
@@ -262,7 +263,7 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
     elif item_id == 'torch':
         g.em.add_component(eid, Renderable(
             g.textures.get('torch_placed'), layer=2))
-        g.em.add_component(eid, LightSource(120, (255, 180, 60), 0.8))
+        g.em.add_component(eid, LightSource(120, LIGHT_COLOR_TORCH, 0.8))
         h = Health(struct.get('max_hp', 30))
         h.current = struct.get('hp', h.maximum)
         g.em.add_component(eid, h)
