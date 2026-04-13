@@ -1,0 +1,60 @@
+"""Melee weapon item definitions."""
+
+ITEMS = [
+    {
+        'id': 'axe',
+        'name': 'Stone Axe',
+        'desc': '+2 harvest yield. Decent weapon.',
+        'category': 'weapon',
+        'damage': 12, 'harvest_bonus': 2, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+    },
+    {
+        'id': 'sword',
+        'name': 'Wood Sword',
+        'desc': 'Solid melee damage.',
+        'category': 'weapon',
+        'damage': 20, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+    },
+    {
+        'id': 'iron_sword',
+        'name': 'Iron Sword',
+        'desc': 'A strong melee blade.',
+        'category': 'weapon',
+        'damage': 30, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+    },
+    {
+        'id': 'spear',
+        'name': 'Spear',
+        'desc': 'Long reach melee weapon.',
+        'category': 'weapon',
+        'damage': 18, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+    },
+    {
+        'id': 'iron_axe',
+        'name': 'Iron Axe',
+        'desc': '+4 harvest yield. Strong weapon.',
+        'category': 'weapon',
+        'damage': 22, 'harvest_bonus': 4, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+    },
+    {
+        'id': 'mace',
+        'name': 'Iron Mace',
+        'desc': 'Heavy blunt weapon.',
+        'category': 'weapon',
+        'damage': 26, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+    },
+    {
+        'id': 'bone_club',
+        'name': 'Bone Club',
+        'desc': 'Crude but effective.',
+        'category': 'weapon',
+        'damage': 14, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+    },
+]

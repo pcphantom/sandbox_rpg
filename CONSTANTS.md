@@ -4,7 +4,132 @@ This document tracks all global constants, key variables, and data structures us
 
 ---
 
-## Display Constants (`constants.py`)
+## Module Architecture
+
+| Module | Purpose | Key Contents |
+|--------|---------|-----------|
+| `sandbox_rpg.py` | Game class, main loop, event/update routing | Game class (entry point) |
+| **core/** | Core engine modules | |
+| `core/constants.py` | Game-wide constants | ~240 constants |
+| `core/components.py` | ECS component definitions | 15 component types |
+| `core/item_stack.py` | Centralised item identity, stacking, transfer, sort | normalize_rarity, items_match, add_to_slots, remove_from_slots, sort_slots, transfer_slot, transfer_all |
+| `core/ecs.py` | EntityManager | Core ECS |
+| `core/utils.py` | Math/geometry helpers | clamp, lerp, hash_noise, fbm_noise |
+| `core/camera.py` | Camera | Viewport tracking |
+| `core/settings.py` | Display/audio settings | load_settings, save_settings |
+| `core/music.py` | MusicManager | Background music |
+| **game/** | Game logic modules | |
+| `game/combat.py` | Combat mechanics, damage, spells, bombs | 16 functions |
+| `game/drawing.py` | All rendering/drawing | 13 functions |
+| `game/entities.py` | Entity creation, population, lifecycle | 12 functions |
+| `game/interaction.py` | Interact, placement, crafting, sleep | 8 functions |
+| `game/menus.py` | Main menu, options menu | 6 functions |
+| `game/persistence.py` | Save/load orchestration | 8 functions |
+| `game/save_load.py` | Low-level save file I/O | File operations |
+| **systems/** | ECS systems | |
+| `systems/movement.py` | Movement | MovementSystem |
+| `systems/physics.py` | Physics / collision | PhysicsSystem |
+| `systems/render.py` | Render | RenderSystem |
+| `systems/day_night.py` | Day/night cycle | DayNightCycle |
+| `systems/ai.py` | AI behaviour | AISystem |
+| `systems/projectile.py` | Projectiles | ProjectileSystem |
+| `systems/trap.py` | Traps | TrapSystem |
+| `systems/turret.py` | Turrets | TurretSystem |
+| `systems/wave.py` | Enemy waves | WaveSystem |
+| `systems/damage_calc.py` | Damage formulas (imports from data/stats) | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
+| **core/** | Core ECS, components, constants, enhancement | |
+| `core/enhancement.py` | Centralized enhancement scaling (single source of truth) | OFFENSE_BONUS_PER_LEVEL, DEFENSE_BONUS_PER_LEVEL, TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL, PROTECTION_DR_PER_LEVEL, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
+| **data/** | Centralised game data/tuning | |
+| `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
+| `data/crafting.py` | Crafting recipes | RECIPES |
+| `data/combat.py` | Combat data | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
+| `data/mobs.py` | Mob definitions | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
+| `data/day_night.py` | Day/night timing, sleep, all time controls | DAY_LENGTH_BASE, SLEEP_DURATION, SLEEP_SPEED_MULT, BED_INTERACT_RANGE, etc. |
+| `data/stats.py` | All stat scaling constants | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
+| `data/day_events.py` | Spawn/wave tuning | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS |
+| `data/difficulty.py` | Difficulty profiles & multipliers (single source of truth) | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
+| `data/quality.py` | Item quality/rarity | QUALITY_COLORS, get_item_quality, get_item_color |
+| **items/** | Modular item definitions with control flags | |
+| `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
+| `items/materials.py` | Material items (wood, stone, iron, etc.) | ITEMS list |
+| `items/consumables.py` | Consumable items (berry, pie, bandage, etc.) | ITEMS list |
+| `items/weapons.py` | Melee weapons (axe, sword, iron_sword, etc.) | ITEMS list |
+| `items/ranged.py` | Ranged weapons (bow, crossbow, sling) | ITEMS list |
+| `items/ammo.py` | Ammunition (arrow, bolt, rock_ammo, etc.) | ITEMS list |
+| `items/armor.py` | Armor and shields | ITEMS list |
+| `items/placeables.py` | Placeables (turret, wall, chest, etc.) | ITEMS list |
+| `items/spells.py` | Spell books (all tiers) | ITEMS list |
+| `items/tools.py` | Tools (hammer) | ITEMS list |
+| `items/tomes.py` | Enchantment and transfer tomes | ITEMS list |
+| `items/throwables.py` | Throwables (bomb) | ITEMS list |
+| **world/** | World generation | |
+| `world/generator.py` | Overworld terrain | World, WorldGenerator |
+| `world/cave.py` | Cave interiors, daily regeneration | CaveData, generate_cave_interior, CaveData.regenerate() |
+| **gui.py** | Main GUI panels (root) | InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI |
+| **ui/** | Modular GUI (mirrors gui.py) | |
+| `ui/elements.py` | UIElement, ProgressBar, Tooltip | Base widgets |
+| `ui/split_dialog.py` | SplitDialog | Stack splitting |
+| `gui.py` | DropConfirmDialog | Drop item confirmation prompt |
+| `ui/inventory.py` | InventoryGrid | Inventory panel |
+| `ui/crafting.py` | CraftingPanel | Crafting panel |
+| `ui/pause_menu.py` | PauseMenu | Pause/save/load |
+| `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown |
+| `ui/minimap.py` | Minimap | Minimap drawing |
+| **enchantments/** | Enchantment system | |
+| `enchantments/effects.py` | Enchant types, prefixes, colours | ENCHANT_PREFIX, ENCHANT_COLORS, get_enchant_display_prefix |
+| `enchantments/recipes.py` | Enchant combine logic | try_combine |
+| **drops/** | Loot tables | LOOT_TABLES, roll_loot, CAVE_CHEST_LOOT |
+| **systems/** | Centralized game systems | |
+| `systems/rarity.py` | Rarity stat application & drop rolling | apply_rarity, roll_rarity |
+| `systems/damage_calc.py` | Damage/DR formulas | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
+| **ui/** | Modular GUI panels | |
+| `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
+| **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE |
+| **rendering/** | Rendering utilities | |
+| `rendering/particles.py` | Particle effects | ParticleSystem |
+| `textures.py` | Texture generation (root) | TextureGenerator |
+
+---
+
+## Item Control Flags (`items/` package)
+
+Three per-item boolean flags centralize eligibility checks. All consumer modules read these instead of hardcoding category checks.
+
+| Flag Dict | Purpose | Consumers |
+|-----------|---------|-----------|
+| `CAN_ENCHANT` | Item can receive enchantments at enchantment table | `enchantments/recipes.py: _is_equipment()` |
+| `CAN_ENHANCE` | Item can be stat-enhanced (+1..+5) via tome | `enchantments/recipes.py: _get_base_item()`, `drops/__init__.py: _maybe_enhance()` |
+| `HAS_RARITY` | Item can roll a rarity tier on drop | `systems/rarity.py: roll_rarity()`, `enchantments/recipes.py: _is_rarity_eligible()` |
+
+### Default Flag Values by Category
+
+| Category | can_enchant | can_enhance | has_rarity |
+|----------|-------------|-------------|------------|
+| material | False | False | False |
+| consumable | False | False | False |
+| weapon | True | varies* | True |
+| ranged | True | False | True |
+| ammo | False | False | False |
+| armor / shield | True | varies* | True |
+| placeable (turret) | True | True | True |
+| placeable (others) | False | False | True |
+| spell | False | False | False |
+| tool | False | False | True |
+| enchant_tome / transfer_tome | False | False | False |
+| throwable | False | False | False |
+
+*`can_enhance=True` for: iron_sword, iron_axe, mace, iron_armor, iron_shield, turret
+
+### Enhanced Item Flag Inheritance
+
+Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags from their base item:
+- `can_enchant` → same as base
+- `can_enhance` → True (they are enhancement-level items)
+- `has_rarity` → same as base
+
+---
+
+## Display Constants (`core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -15,7 +140,7 @@ This document tracks all global constants, key variables, and data structures us
 | `WORLD_HEIGHT` | 150 | World height in tiles |
 | `FPS` | 60 | Target frames per second |
 
-## Colour Constants (`constants.py`)
+## Colour Constants (`core/constants.py`)
 
 | Constant | RGB Value | Usage |
 |----------|-----------|-------|
@@ -33,19 +158,61 @@ This document tracks all global constants, key variables, and data structures us
 | `LIGHT_BLUE` | (140, 200, 255) | Water accents |
 | `DARK_GREEN` | (30, 80, 30) | Forest textures |
 
-## Tile Types (`constants.py`)
+## Tile Types (`core/constants.py`)
 
-| Constant | Value |
-|----------|-------|
-| `TILE_WATER` | 0 |
-| `TILE_SAND` | 1 |
-| `TILE_GRASS` | 2 |
-| `TILE_DIRT` | 3 |
-| `TILE_STONE_FLOOR` | 4 |
-| `TILE_STONE_WALL` | 5 |
-| `TILE_FOREST` | 6 |
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `TILE_WATER` | 0 | Water terrain |
+| `TILE_SAND` | 1 | Sand terrain |
+| `TILE_GRASS` | 2 | Grass terrain |
+| `TILE_DIRT` | 3 | Dirt terrain |
+| `TILE_STONE_FLOOR` | 4 | Stone floor |
+| `TILE_STONE_WALL` | 5 | Stone wall (impassable) |
+| `TILE_FOREST` | 6 | Forest terrain |
+| `TILE_CAVE_FLOOR` | 7 | Cave interior floor |
+| `TILE_CAVE_ENTRANCE` | 8 | Cave entrance marker |
 
-## Save System (`constants.py`)
+## Cave System (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `CAVE_COUNT` | 3 | Number of caves per map |
+| `CAVE_WIDTH` | 60 | Cave interior width in tiles |
+| `CAVE_HEIGHT` | 45 | Cave interior height in tiles |
+| `CAVE_WALL_DENSITY` | 0.48 | Cellular automata initial wall chance |
+| `CAVE_SMOOTH_PASSES` | 5 | CA smoothing iterations |
+| `CAVE_MOB_TYPES` | ('skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith') | Mobs that spawn in caves |
+| `CAVE_MOB_COUNT` | 15 | Mobs per cave |
+| `CAVE_BOSS_TYPES` | ('boss_golem', 'boss_lich', 'boss_dragon', 'boss_necromancer', 'boss_troll_king') | Cave boss mob types |
+| `CAVE_ORE_COUNT` | 8 | Iron ore nodes per cave |
+| `CAVE_DIAMOND_COUNT` | 3 | Diamond nodes per cave |
+| `CAVE_HP_MULT` | 1.5 | Extra HP multiplier for cave mobs |
+| `CAVE_DMG_MULT` | 1.3 | Extra damage multiplier for cave mobs |
+| `CAVE_ENTRANCE_MIN_DIST` | 800.0 | Min px distance between cave entrances |
+
+### Cave Daily Regeneration
+
+Caves regenerate automatically when a new day starts (`DayNightCycle.day_changed` flag).
+- `CaveData.regenerate(day_number)` rebuilds all cave interiors using `seed + day_number * 99991` as the seed, producing different layouts each day.
+- `boss_alive` and `chest_looted` lists are reset so bosses and chests reappear.
+- If the player is inside a cave when the day changes, they are automatically exited first.
+- Cave entrances on the overworld remain in the same positions.
+
+### Cave Chest Behaviour
+
+- Cave chests always spawn when the player enters a cave (unless already looted this regeneration cycle).
+- They use a **gold-coloured** texture (`cave_chest_placed`) instead of the regular brown `chest_placed`.
+- Cave chests do **NOT** have a `Building` component, so cave enemies will not attack them.
+- Killing the boss is **not** required to open the chest.
+- `chest_looted[cave_index]` is set to True when the player interacts with the chest.
+
+### Cave Entity Protection
+
+- **AI only attacks `Building` entities** — cave-spawned resources (ore, diamonds) and cave chests lack `Building`, so enemies ignore them.
+- **Player cannot place items in caves** — `placement_confirm()` rejects if `g.in_cave >= 0`.
+- **Save/load and structure snapshots** only capture entities with `Building` component.
+
+## Save System (`core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -53,32 +220,89 @@ This document tracks all global constants, key variables, and data structures us
 | `SAVE_SLOTS` | 4 | Total slots (0=quick, 1-3=manual) |
 | `QUICK_SAVE_SLOT` | 0 | Quick save slot index |
 
-## Inventory (`constants.py`)
+## Inventory (`core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
+| `HOTBAR_CAPACITY` | 6 | Number of dedicated hotbar slots (separate from inventory) |
 | `INVENTORY_SLOTS_PER_PAGE` | 24 | Slots per inventory page |
 | `INVENTORY_PAGES` | 4 | Number of inventory pages |
 | `INVENTORY_COLS` | 6 | Columns in inventory grid |
-| `INVENTORY_TOTAL_SLOTS` | 96 | Total inventory capacity |
+| `INVENTORY_TOTAL_SLOTS` | 96 | Total main inventory capacity (24×4) |
 
-## Combat (`constants.py`)
+## Stat Scaling (`data/stats.py`, re-exported via `core/constants.py`)
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `MIN_ATTACK_COOLDOWN` | 0.15 | Minimum attack cooldown (seconds) |
-| `BASE_ATTACK_COOLDOWN` | 0.30 | Base attack cooldown |
-| `AGILITY_COOLDOWN_REDUCTION` | 0.02 | Cooldown reduction per AGI point |
-| `STAT_POINTS_PER_LEVEL` | 3 | Stat points gained per level |
+Single source of truth for ALL stat effects. Change this file to tune stat balance.
 
-## Sleep (`constants.py`)
+### Strength
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `SLEEP_DURATION` | 5.0 | Sleep duration in seconds |
-| `SLEEP_TIME_MULTIPLIER` | 12.0 | Legacy sleep time multiplier |
+| `STR_DAMAGE_MULT` | 2 | Damage bonus per Strength point |
+| `BASE_MELEE_DAMAGE` | 5 | Base unarmed/melee damage |
+| `BASE_MELEE_DAMAGE_MIN` | 5 | Minimum melee damage floor |
+| `LEVEL_DAMAGE_MULT` | 2 | Bonus damage per level above 1 |
 
-## Building System (`constants.py`)
+### Agility
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `AGI_SPEED_BONUS` | 0.01 | Speed multiplier per AGI point (1% per point) |
+| `AGI_SPEED_BONUS_CAP` | 1.0 | Max speed bonus from agility (+100% = 200% total speed) |
+| `AGILITY_COOLDOWN_REDUCTION` | 0.002 | Melee cooldown reduction per AGI point |
+| `AGI_RANGED_SPEED_BONUS` | 0.01 | Ranged attack speed bonus per AGI point (1% per point) |
+| `AGI_RANGED_SPEED_BONUS_CAP` | 1.0 | Max ranged attack speed bonus (+100% = halves cooldown) |
+| `AGI_RANGED_DAMAGE_MULT` | 2 | Ranged damage bonus per AGI point |
+| `BASE_ATTACK_COOLDOWN` | 0.30 | Base melee attack cooldown |
+| `MIN_ATTACK_COOLDOWN` | 0.15 | Minimum melee attack cooldown |
+| `MIN_RANGED_COOLDOWN` | 0.2 | Minimum ranged attack cooldown |
+
+### Vitality
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `LEVEL_UP_BASE_HP` | 10 | Base HP increase per level |
+| `VIT_HP_BONUS_PER_LEVEL` | 5 | Extra HP per VIT point on level up |
+| `VITALITY_CAMPFIRE_BONUS_PER` | 2 | +1 campfire heal per this many VIT |
+
+### Luck
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `CRIT_CHANCE_PER_LUCK` | 0.01 | Crit chance per Luck point (1%) |
+| `CRIT_DAMAGE_MULT` | 1.5 | Critical hit damage multiplier |
+| `LUCK_HARVEST_CHANCE` | 0.005 | Extra harvest chance per Luck point |
+
+### General
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `STAT_POINTS_PER_LEVEL` | 3 | Stat points per level-up |
+| `PLAYER_BASE_SPEED` | 100.0 | Base movement speed (px/s) |
+| `MOVEMENT_ACCEL_MULT` | 10 | Movement acceleration responsiveness |
+| `SPRITE_FLIP_THRESHOLD` | 5.0 | Velocity threshold for sprite flip |
+
+## Sleep / Time Controls (`data/day_night.py`, re-exported via `core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `SLEEP_DURATION` | 5.0 | Sleep animation duration (seconds) |
+| `SLEEP_SPEED_MULT` | 12.0 | Time advancement multiplier while sleeping |
+| `BED_INTERACT_RANGE` | 50.0 | Bed interaction range (px) |
+| `TIME_SPEED_NORMAL` | 1.0 | Normal time speed multiplier |
+| `NIGHT_SLEEP_SPEED_MULT` | 12.0 | Backward compat alias for SLEEP_SPEED_MULT |
+
+## World Generation (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `ELEVATION_SCALE` | 0.045 | Perlin noise scale for elevation |
+| `MOISTURE_SCALE` | 0.06 | Perlin noise scale for moisture |
+| `MOISTURE_OFFSET` | 500.0 | Offset between elevation/moisture noise |
+| `ELEVATION_OCTAVES` | 6 | Octaves for elevation noise |
+| `MOISTURE_OCTAVES` | 4 | Octaves for moisture noise |
+
+## Building System (`core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -87,25 +311,143 @@ This document tracks all global constants, key variables, and data structures us
 | `TURRET_RANGE` | 200.0 | Turret detection range |
 | `TURRET_DAMAGE` | 8 | Turret damage per shot |
 | `TURRET_COOLDOWN` | 1.5 | Turret fire cooldown |
-| `CHEST_CAPACITY` | 24 | Chest storage slots |
+| `CHEST_CAPACITY` | 96 | Chest storage slots |
+| `REPAIR_RANGE` | 60.0 | Max distance to repair a structure with hammer |
+| `CAMPFIRE_BASE_HEAL` | 3 | Base HP healed per tick near campfire |
+| `CAMPFIRE_HEAL_RADIUS` | 120.0 | Proximity radius for campfire healing (px) |
+| `CAMPFIRE_HEAL_INTERVAL` | 1.0 | Seconds between campfire heal ticks |
+| `VITALITY_CAMPFIRE_BONUS_PER` | 2 | +1 heal per this many vitality points |
+| `TRAP_HP` | 40 | Spike trap hit points |
+| `BED_HP` | 80 | Bed hit points |
+| `CAMPFIRE_HP` | 60 | Campfire hit points |
+| `CHEST_HP_VALUE` | 60 | Chest hit points |
+| `DOOR_HP` | 50 | Door hit points |
+| `DOOR_COLLIDER_W` | 24 | Door collider width |
+| `DOOR_COLLIDER_H` | 32 | Door collider height |
+| `STONE_WALL_HP_MULT` | 1.5 | Stone wall HP multiplier (×WALL_HP) |
+| `ENCHANT_TABLE_CAPACITY` | 9 | Enchantment table storage slots |
+| `ENCHANT_TABLE_HP` | 60 | Enchantment table hit points |
+| `CAMPFIRE_LIGHT_RADIUS` | 180 | Campfire light radius in px |
+| `TORCH_LIGHT_RADIUS` | 120 | Placed torch light radius in px |
 
-## Wave System (`constants.py`)
+## Enhancement Scaling (`core/enhancement.py`)
+
+Single source of truth for all enhancement-level scaling. Turrets get BOTH offense (damage) AND defense (DR) bonuses.
+
+### Control Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `OFFENSE_BONUS_PER_LEVEL` | 2 | +damage per enhancement level for melee weapons |
+| `DEFENSE_BONUS_PER_LEVEL` | 2 | +DR per enhancement level for armor/shields |
+| `TURRET_OFFENSE_BONUS_PER_LEVEL` | 2 | +damage per enhancement level for turrets |
+| `TURRET_DEFENSE_BONUS_PER_LEVEL` | 2 | +DR per enhancement level for turrets (mobs attacking) |
+| `PROTECTION_DR_PER_LEVEL` | 2 | +DR per protection enchant level (stacks with above) |
+
+### Turret Enhancement Damage (`TURRET_ENHANCE_DAMAGE`)
+
+| Level | 0 | 1 | 2 | 3 | 4 | 5 |
+|-------|---|---|---|---|---|---|
+| Damage | 8 | 10 | 12 | 14 | 16 | 18 |
+
+### Turret Enhancement HP (`TURRET_ENHANCE_HP`)
+
+| Level | 0 | 1 | 2 | 3 | 4 | 5 |
+|-------|---|---|---|---|---|---|
+| HP | 80 | 96 | 112 | 136 | 160 | 192 |
+
+### Turret Enhancement DR (`TURRET_ENHANCE_DR`)
+
+| Level | 0 | 1 | 2 | 3 | 4 | 5 |
+|-------|---|---|---|---|---|---|
+| DR | 0 | 2 | 4 | 6 | 8 | 10 |
+
+### Turret Total DR Examples (Enhancement + Protection Enchant)
+
+| Turret +5 | +5 only | +5 + Prot I | +5 + Prot III | +5 + Prot V |
+|-----------|---------|-------------|---------------|-------------|
+| Total DR | 10 | 12 | 16 | 20 |
+
+## Wave System (`data/day_events.py`, re-exported via `data/__init__.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `WAVE_START_NIGHT` | 3 | Night count before waves begin |
+| `WAVE_START_NIGHT` | 1 | Night count before waves begin |
 | `WAVE_BASE_COUNT` | 3 | Base enemies per wave |
 | `WAVE_SCALE_PER_NIGHT` | 2 | Additional enemies per night |
 | `WAVE_SPAWN_RADIUS` | 350.0 | Spawn distance from target |
+| `WAVE_SPAWN_RADIUS_VARIANCE` | 100.0 | Spawn radius jitter for waves |
+| `WAVE_DAY_BONUS_PER_DAY` | 1 | Bonus mobs per day on top of night scaling |
+| `WAVE_SPAWN_INITIAL_INTERVAL` | 2.0 | Seconds between batches at start |
+| `WAVE_SPAWN_MIN_INTERVAL` | 0.8 | Fastest possible spawn interval |
+| `WAVE_INTERVAL_REDUCTION` | 0.1 | Seconds shaved per qualifying night |
+| `WAVE_SPAWN_BATCH` | 3 | Mobs per batch tick |
+| `WAVE_RANGED_MOB_CHANCE` | 0.25 | Chance a wave mob is ranged |
 
-## Day/Night Timing (`constants.py`)
+## Day/Night Timing (`data/day_night.py`, re-exported via `data/__init__.py`)
+
+### Cycle Constants (`data/day_night.py`, re-exported via `data/__init__.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 4x slower than original 240.0 |
-| `NIGHT_SLEEP_SPEED_MULT` | 12.0 | Time multiplier when sleeping on bed at night |
+| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 4× slower than original 240.0 |
 
-## Difficulty System (`constants.py`)
+### Time Thresholds (`data/day_night.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `TIME_NIGHT_END` | 0.22 | Night → Dawn transition |
+| `TIME_DAY_START` | 0.30 | Dawn → Day transition |
+| `TIME_DAY_END` | 0.70 | Day → Dusk transition |
+| `TIME_NIGHT_START` | 0.78 | Dusk → Night transition |
+
+### Banner / Flash Constants (`data/day_night.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `DAY_FLASH_DURATION` | 3.0 | Seconds the "Day X" banner is visible |
+| `DAY_FLASH_FADE_DIVISOR` | 1.0 | Alpha = timer / this (lower = fades slower) |
+| `DAY_FLASH_TEXT` | "Day {day}" | Banner text ({day} replaced at runtime) |
+| `DAY_FLASH_COLOR` | (255, 255, 200) | Banner text colour |
+| `NIGHT_FLASH_DURATION` | 2.5 | Seconds the night warning is visible |
+| `NIGHT_FLASH_FADE_DIVISOR` | 0.8 | Alpha = timer / this |
+| `NIGHT_FLASH_TEXT` | "Night falls — Defend!" | Night warning text |
+| `NIGHT_FLASH_COLOR` | (255, 120, 80) | Night warning colour |
+| `SLEEP_OVERLAY_TEXT` | "Sleeping... Zzz" | Sleeping overlay text |
+| `SLEEP_OVERLAY_COLOR` | (180, 180, 255) | Sleeping overlay colour |
+| `DAWN_FLASH_DURATION` | 2.0 | Dawn message display time (seconds) |
+| `DAWN_FLASH_TEXT` | "" | Dawn message (empty = disabled) |
+| `DAWN_FLASH_COLOR` | (255, 220, 150) | Dawn message colour |
+| `DUSK_FLASH_DURATION` | 2.0 | Dusk message display time (seconds) |
+| `DUSK_FLASH_TEXT` | "Dusk approaches..." | Dusk message text |
+| `DUSK_FLASH_COLOR` | (255, 180, 100) | Dusk message colour |
+| `NIGHT_DARKNESS_THRESHOLD` | 0.5 | Darkness level above which night damage applies |
+
+### AI Aggro (`systems.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `AGGRO_DISENGAGE_MULT` | 2.0 | Chase disengage range multiplier when aggroed |
+| `AGGRO_BOSS_DISENGAGE_MULT` | 3.0 | Chase disengage multiplier for boss mobs |
+
+### Day/Night Periods
+
+| Period | Time Range | Description |
+|--------|-----------|-------------|
+| Night | 0.00–0.22, 0.78–1.00 | Dark, enemies deal night damage to unlit players |
+| Dawn | 0.22–0.30 | Transition, lighting ramps up |
+| Day | 0.30–0.70 | Full daylight |
+| Dusk | 0.70–0.78 | "Dusk approaches..." warning displayed |
+
+### Key Methods (`DayNightCycle` in `systems.py`)
+
+| Method | Logic |
+|--------|-------|
+| `is_night()` | `t < TIME_NIGHT_END or t >= TIME_NIGHT_START` |
+| `is_sleepable()` | `t < TIME_NIGHT_END or t >= TIME_DAY_END` (allows sleep during Dusk+Night) |
+| `day_changed` | `bool` flag — True the frame day_number increments, False otherwise |
+
+## Difficulty System (`data/difficulty.py`, re-exported via `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -115,90 +457,740 @@ This document tracks all global constants, key variables, and data structures us
 | `DIFFICULTY_HARDCORE` | 3 | Hardcore difficulty index |
 | `DIFFICULTY_NAMES` | ("Easy", "Normal", "Hard", "Hardcore") | Display names |
 
-### Difficulty Multipliers (`DIFFICULTY_MULTIPLIERS`)
+### Difficulty Profiles (`DIFFICULTY_PROFILES`)
 
-Format: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_count_mult)`
+Full dict-based profiles with named keys. Access: `DIFFICULTY_PROFILES[level]['enemy_hp_mult']` or use `get_profile(level)`.
+
+| Key | Easy | Normal | Hard | Hardcore | Purpose |
+|-----|------|--------|------|----------|---------|
+| `enemy_hp_mult` | 1.0 | 1.3 | 1.8 | 3.5 | Multiplier on mob base HP |
+| `enemy_dmg_mult` | 1.0 | 1.3 | 1.8 | 3.0 | Multiplier on mob base damage |
+| `spawn_rate_mult` | 1.0 | 1.2 | 1.5 | 4.0 | Mob respawn frequency multiplier |
+| `wave_count_mult` | 1.0 | 1.3 | 1.8 | 4.0 | Night wave mob count multiplier |
+| `boss_hp_mult` | 1.0 | 1.0 | 1.3 | 2.0 | Boss HP multiplier (stacks with enemy_hp) |
+| `boss_dmg_mult` | 1.0 | 1.0 | 1.2 | 1.5 | Boss damage multiplier (stacks with enemy_dmg) |
+| `night_dmg_mult` | 1.0 | 1.0 | 1.5 | 2.0 | Night darkness damage multiplier |
+| `xp_mult` | 1.0 | 1.0 | 1.2 | 1.5 | XP earned multiplier |
+| `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat rarity roll bonus (multiplies non-common weights by 1+bonus) |
+
+### Legacy Tuple Format (`DIFFICULTY_MULTIPLIERS`)
+
+Backward-compatible: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_count_mult)` — derived from profiles.
 
 | Difficulty | HP Mult | DMG Mult | Spawn Mult | Wave Mult |
 |-----------|---------|----------|------------|-----------|
 | Easy | 1.0 | 1.0 | 1.0 | 1.0 |
 | Normal | 1.3 | 1.3 | 1.2 | 1.3 |
 | Hard | 1.8 | 1.8 | 1.5 | 1.8 |
-| Hardcore | 2.5 | 2.5 | 2.0 | 2.5 |
+| Hardcore | 3.5 | 3.0 | 4.0 | 4.0 |
 
-## Mob Respawn (`constants.py`)
+### Difficulty Profile Consumers
+
+| Multiplier | Applied in | How |
+|------------|-----------|-----|
+| `enemy_hp_mult` / `enemy_dmg_mult` | `game/entities.py: create_mob()` | Scales HP, contact_damage, ranged_damage |
+| `boss_hp_mult` / `boss_dmg_mult` | `game/entities.py: create_mob()` | Additional scale inside `if data.get('boss')` block |
+| `spawn_rate_mult` | `sandbox_rpg.py` (respawn) | Divides `MOB_RESPAWN_INTERVAL` |
+| `wave_count_mult` | `systems/wave.py` | Multiplies wave mob count |
+| `night_dmg_mult` | `game/combat.py: night_damage()` | Multiplies computed night damage |
+| `xp_mult` | `game/entities.py: on_mob_killed()` | Multiplies XP before `check_level_up()` |
+| `loot_luck_bonus` | Wired into `roll_rarity()` via `roll_loot(luck_bonus=)` | Multiplies non-common rarity weights by `(1 + luck_bonus)` |
+
+## Mob Respawn (`data/day_events.py`, re-exported via `data/__init__.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `MOB_RESPAWN_INTERVAL` | 8.0 | Seconds between natural mob respawns |
+| `MOB_RESPAWN_INTERVAL` | 4.0 | Seconds between natural mob respawns |
+| `MOB_RESPAWN_MIN_DIST` | 300.0 | Minimum spawn distance from player (px) |
+| `MOB_MAX_COUNT` | 80 | Max mobs alive at once |
+| `MOB_RESPAWN_BATCH` | 3 | Mobs to spawn per respawn tick |
+
+## Ranged Enemies (`data/day_events.py`, re-exported via `data/__init__.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
 | `RANGED_ENEMY_START_DAY` | 3 | Day after which ranged enemies appear |
 
-## Placement Preview (`constants.py`)
+## Placement Preview (`core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
 | `PLACEMENT_PREVIEW_COLOR` | (60, 220, 80, 120) | Valid placement ghost color |
 | `PLACEMENT_INVALID_COLOR` | (220, 60, 60, 120) | Invalid placement ghost color |
 
+## Font Sizes (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `FONT_SIZE_MAIN` | 16 | Main UI font size |
+| `FONT_SIZE_SM` | 13 | Small font size |
+| `FONT_SIZE_LG` | 22 | Large font size |
+| `FONT_SIZE_XL` | 48 | Extra-large font size |
+
+## Player Constants (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `PLAYER_BASE_SPEED` | 100.0 | Base movement speed (px/s) |
+| `PLAYER_FRICTION` | 0.82 | Movement friction factor (frame-rate-independent via `pow(friction, dt * FPS)` in MovementSystem) |
+| `PLAYER_COLLIDER_W` | 20 | Player collider width |
+| `PLAYER_COLLIDER_H` | 28 | Player collider height |
+| `AGI_SPEED_BONUS` | 0.01 | Speed bonus per agility point (re-exported from data/stats.py) |
+| `AGI_SPEED_BONUS_CAP` | 1.0 | Max speed bonus cap (re-exported from data/stats.py) |
+| `MOVEMENT_ACCEL_MULT` | 10 | Movement acceleration multiplier |
+| `SPRITE_FLIP_THRESHOLD` | 5.0 | Velocity threshold for sprite flip |
+| `STARTING_WOOD` | 5 | Starting wood count |
+| `STARTING_STONE` | 3 | Starting stone count |
+| `PLAYER_TORCH_LIGHT_RADIUS` | 110 | Light radius when holding torch |
+
+## Melee / Ranged Combat Tuning (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `SPEAR_ATTACK_RANGE` | 65.0 | Spear attack range (px) |
+| `WEAPON_ATTACK_RANGE` | 55.0 | Standard weapon attack range (px) |
+| `UNARMED_ATTACK_RANGE` | 38.0 | Unarmed attack range (px) |
+| `MELEE_KNOCKBACK_FORCE` | 200.0 | Knockback force from melee hits |
+| `ATTACK_ANIM_DURATION` | 0.18 | Attack animation duration (seconds) |
+| `INTERACT_COOLDOWN` | 0.25 | Interaction cooldown (seconds) |
+
+## Contact / Projectile Damage (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `CONTACT_DAMAGE_RADIUS` | 28.0 | Contact damage detection radius |
+| `PLAYER_HIT_INVULN` | 0.5 | Invulnerability after being hit (seconds) |
+| `DAMAGE_FLASH_DURATION` | 0.15 | Damage flash visual duration |
+| `HIT_SHAKE_AMOUNT` | 4.0 | Screen shake on melee hit |
+| `HIT_SHAKE_DURATION` | 0.2 | Shake duration on melee hit |
+| `ENEMY_PROJ_HIT_RADIUS` | 20.0 | Enemy projectile hit detection radius |
+| `PROJ_SHAKE_AMOUNT` | 3.0 | Screen shake on projectile hit |
+| `PROJ_SHAKE_DURATION` | 0.15 | Shake duration on projectile hit |
+
+## Night Damage (`data/day_night.py`, re-exported via `constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `NIGHT_DAMAGE_BASE` | 2 | Starting HP per tick on day 1 |
+| `NIGHT_DAMAGE_INCREASE` | 1 | Extra HP added per scaling step |
+| `NIGHT_DAMAGE_INCREASE_FREQ` | 1 | Add INCREASE every N days |
+| `NIGHT_DAMAGE_INTERVAL` | 3.0 | Seconds between night damage ticks |
+| `LIGHT_SAFETY_RADIUS` | 200.0 | Safe radius around light sources |
+
+Night damage formula: `(NIGHT_DAMAGE_BASE + NIGHT_DAMAGE_INCREASE * ((day - 1) // NIGHT_DAMAGE_INCREASE_FREQ)) * night_dmg_mult`
+Fire enchant on equipped weapon (hotbar or equipment slot) counts as a light source.
+
+## Interaction Ranges (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `INTERACT_RANGE` | 50.0 | General interaction range |
+| `HARVEST_RANGE` | 50.0 | Resource harvesting range |
+| `BED_INTERACT_RANGE` | 50.0 | Bed interaction range |
+| `LUCK_HARVEST_CHANCE` | 0.005 | Per-luck-point bonus harvest chance (re-exported from data/stats.py) |
+
+## Mob Spawning Tuning (`data/day_events.py`, re-exported via `constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `PER_DAY_SCALE_FACTOR` | 0.05 | Mob scaling per day elapsed |
+| `MOB_SPAWN_ATTEMPTS` | 20 | Max spawn placement attempts |
+| `GHOST_SPAWN_CHANCE` | 0.25 | Chance to spawn ghost at night |
+| `NIGHT_MOB_SPAWN_CHANCE` | 0.4 | General night spawn chance |
+| `DARK_KNIGHT_SPAWN_CHANCE` | 0.15 | Dark knight spawn chance |
+| `FOREST_MOB_SPAWN_CHANCE` | 0.5 | Forest biome mob spawn chance |
+| `DIRT_MOB_SPAWN_CHANCE` | 0.4 | Dirt biome mob spawn chance |
+| `ORC_SPAWN_CHANCE` | 0.2 | Orc spawn chance on dirt |
+| `GRASS_MOB_SPAWN_CHANCE` | 0.4 | Grass biome mob spawn chance |
+
+## World Population (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `TREE_COUNT` | 350 | Trees on grass/dirt |
+| `FOREST_TREE_COUNT` | 150 | Extra trees in forest |
+| `ROCK_COUNT` | 200 | Rock nodes on map |
+
+## Level Up (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `LEVEL_UP_BASE_HP` | 10 | Base HP increase per level |
+| `VIT_HP_BONUS_PER_LEVEL` | 5 | Extra HP per vitality point on level up |
+
+## HUD (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `NOTIFICATION_DURATION` | 2.5 | Notification display time (seconds) |
+| `HUD_REFRESH_INTERVAL` | 0.5 | HUD text refresh interval |
+| `DMG_NUMBER_FLOAT_SPEED` | 40.0 | Damage number float-up speed |
+| `MOB_HP_BAR_W` | 28 | Mob HP bar width |
+| `MOB_HP_BAR_H` | 4 | Mob HP bar height |
+| `PLACEABLE_HP_BAR_W` | 28 | Placeable HP bar width |
+| `PLACEABLE_HP_BAR_H` | 3 | Placeable HP bar height |
+| `HOTBAR_SLOTS` | 6 | Number of hotbar slots |
+| `HOTBAR_SLOT_SIZE` | 48 | Hotbar slot pixel size |
+| `HOTBAR_SLOT_GAP` | 6 | Gap between hotbar slots |
+
+## Window Limits (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `MIN_WINDOW_WIDTH` | 640 | Minimum window width |
+| `MIN_WINDOW_HEIGHT` | 480 | Minimum window height |
+
+## Initial Mob Population (`data/day_events.py`, re-exported via `constants.py`)
+
+Format: `(mob_type, required_tile, count)`
+
+| Mob Type | Tile | Count |
+|----------|------|-------|
+| slime | TILE_GRASS | 25 |
+| wolf | TILE_FOREST | 10 |
+| spider | TILE_FOREST | 8 |
+| goblin | TILE_DIRT | 5 |
+
 ---
 
 ## Mob Types (`items_data.py: MOB_DATA`)
 
-| Mob Type | HP | Speed | Detection | Damage | XP | Ranged | Boss |
-|----------|-----|-------|-----------|--------|-----|--------|------|
-| slime | 30 | 35 | 180 | 5 | 15 | No | No |
-| skeleton | 60 | 50 | 220 | 10 | 35 | No | No |
-| wolf | 40 | 65 | 160 | 8 | 25 | No | No |
-| goblin | 50 | 45 | 200 | 12 | 40 | No | No |
-| ghost | 35 | 40 | 250 | 6 | 50 | No | No |
-| spider | 25 | 55 | 140 | 7 | 20 | No | No |
-| orc | 90 | 38 | 180 | 16 | 60 | No | No |
-| dark_knight | 120 | 42 | 200 | 20 | 80 | No | No |
-| zombie | 70 | 30 | 160 | 14 | 35 | No | No |
-| wraith | 55 | 52 | 280 | 10 | 55 | No | No |
-| troll | 150 | 28 | 160 | 22 | 75 | No | No |
-| skeleton_archer | 50 | 35 | 260 | 8 | 45 | Yes | No |
-| goblin_shaman | 45 | 32 | 240 | 6 | 50 | Yes | No |
-| boss_golem | 400 | 22 | 300 | 35 | 250 | No | Yes |
-| boss_lich | 300 | 35 | 350 | 28 | 300 | Yes | Yes |
+| Mob Type | HP | Speed | Detection | Damage | XP | Solid | Ranged | Boss |
+|----------|-----|-------|-----------|--------|-----|-------|--------|------|
+| slime | 30 | 35 | 180 | 5 | 15 | Yes | No | No |
+| skeleton | 60 | 50 | 220 | 10 | 35 | Yes | No | No |
+| wolf | 40 | 65 | 160 | 8 | 25 | Yes | No | No |
+| goblin | 50 | 45 | 200 | 12 | 40 | Yes | No | No |
+| ghost | 35 | 40 | 250 | 6 | 50 | No | No | No |
+| spider | 25 | 55 | 140 | 7 | 20 | Yes | No | No |
+| orc | 90 | 38 | 180 | 16 | 60 | Yes | No | No |
+| dark_knight | 120 | 42 | 200 | 20 | 80 | Yes | No | No |
+| zombie | 70 | 30 | 160 | 14 | 35 | Yes | No | No |
+| wraith | 55 | 52 | 280 | 10 | 55 | No | No | No |
+| troll | 150 | 28 | 160 | 22 | 75 | Yes | No | No |
+| skeleton_archer | 50 | 35 | 260 | 8 | 45 | Yes | Yes | No |
+| goblin_shaman | 45 | 32 | 240 | 6 | 50 | Yes | Yes | No |
+| boss_golem | 400 | 22 | 300 | 35 | 250 | Yes | No | Yes |
+| boss_lich | 300 | 35 | 350 | 28 | 300 | Yes | Yes | Yes |
+| boss_dragon | 500 | 30 | 350 | 40 | 350 | Yes | Yes | Yes |
+| boss_necromancer | 280 | 38 | 320 | 24 | 280 | Yes | Yes | Yes |
+| boss_troll_king | 600 | 20 | 280 | 45 | 400 | Yes | No | Yes |
+
+### Ranged Mob Stats
+
+| Mob Type | Ranged DMG | Range | Cooldown | Speed |
+|----------|-----------|-------|----------|-------|
+| skeleton_archer | 12 | 250.0 | 2.0 | 350.0 |
+| goblin_shaman | 15 | 220.0 | 2.5 | 300.0 |
+| boss_lich | 25 | 300.0 | 1.8 | 400.0 |
+| boss_dragon | 35 | 320.0 | 1.5 | 450.0 |
+| boss_necromancer | 20 | 280.0 | 2.0 | 350.0 |
+
+### Boss Glow Colors
+
+| Boss | Glow Color |
+|------|-----------|
+| boss_golem | (255, 60, 60) |
+| boss_lich | (200, 60, 255) |
+| boss_dragon | (255, 140, 30) |
+| boss_necromancer | (60, 255, 80) |
+| boss_troll_king | (80, 200, 60) |
 
 ## Wave Mob Tiers (`items_data.py`)
 
-| Tier | Mobs |
-|------|------|
-| 0 (Easy) | slime, spider |
-| 1 (Medium) | skeleton, wolf, goblin, zombie |
-| 2 (Hard) | orc, wraith |
-| 3 (Boss-tier) | dark_knight, troll |
+| Tier | Label | Mobs |
+|------|-------|------|
+| 0 | Easy | slime, spider |
+| 1 | Medium | skeleton, wolf, goblin, zombie |
+| 2 | Hard | orc, wraith |
+| 3 | Elite | dark_knight, troll |
 
-Ranged wave mobs: skeleton_archer, goblin_shaman (after Day 3)
-Boss wave mobs: boss_golem, boss_lich
+Ranged wave mobs (after Day 3): skeleton_archer, goblin_shaman
+Boss wave mobs: boss_golem, boss_lich, boss_dragon, boss_necromancer, boss_troll_king
+
+---
 
 ## Item IDs (`items_data.py: ITEM_DATA`)
 
+Format: `(name, description, damage, harvest_bonus, heal, placeable)`
+
 ### Materials
-wood, stone, stick, iron, cloth, bone, leather
+| ID | Name | Notes |
+|----|------|-------|
+| wood | Wood | Basic building material |
+| stone | Stone | Hard and durable |
+| stick | Stick | 3 dmg weak weapon |
+| iron | Iron Ingot | Smelted metal |
+| cloth | Cloth | Woven fabric |
+| bone | Bone | Dropped by skeletons |
+| leather | Leather | Animal hide |
+| diamond | Diamond | Precious gemstone (rare) |
+| gunpowder | Gunpowder | Explosive powder |
+| iron_ore | Iron Ore | Raw iron, found in caves |
 
 ### Consumables
-berry (15hp), pie (40hp), bandage (25hp), health_potion (80hp), antidote (10hp)
+| ID | Name | Heal | Notes |
+|----|------|------|-------|
+| berry | Berry | 15 | [F] to eat |
+| pie | Berry Pie | 40 | [F] to eat |
+| bandage | Bandage | 25 | [F] to use |
+| health_potion | Health Potion | 80 | [F] to drink |
+| antidote | Antidote | 10 | Cures poison |
 
 ### Spell Books
-spell_fireball — Fireball Tome (60 damage, 80 radius, 350 speed, 400 range)
+| ID | Name |
+|----|------|
+| spell_fireball | Fireball Tome |
+| spell_fireball_2 | Fireball II Tome |
+| spell_fireball_3 | Fireball III Tome |
+| spell_fireball_4 | Fireball IV Tome |
+| spell_fireball_5 | Fireball V Tome |
+| spell_heal | Heal Tome |
+| spell_heal_2 | Heal II Tome |
+| spell_heal_3 | Heal III Tome |
+| spell_heal_4 | Heal IV Tome |
+| spell_heal_5 | Heal V Tome |
+| spell_lightning | Lightning Tome |
+| spell_lightning_2 | Lightning II Tome |
+| spell_lightning_3 | Lightning III Tome |
+| spell_lightning_4 | Lightning IV Tome |
+| spell_lightning_5 | Lightning V Tome |
+| spell_ice | Ice Tome |
+| spell_ice_2 | Ice II Tome |
+| spell_ice_3 | Ice III Tome |
+| spell_ice_4 | Ice IV Tome |
+| spell_ice_5 | Ice V Tome |
 
 ### Melee Weapons
-axe (12dmg), sword (20dmg), iron_sword (30dmg), spear (18dmg), iron_axe (22dmg), mace (26dmg), bone_club (14dmg)
+| ID | Name | Damage | Harvest Bonus |
+|----|------|--------|---------------|
+| axe | Stone Axe | 12 | +2 |
+| sword | Wood Sword | 20 | 0 |
+| iron_sword | Iron Sword | 30 | 0 |
+| spear | Spear | 18 | 0 |
+| iron_axe | Iron Axe | 22 | +4 |
+| mace | Iron Mace | 26 | 0 |
+| bone_club | Bone Club | 14 | 0 |
+
+### Enhanced Weapons (+1 to +5, generated from `core/enhancement.py`)
+
+Control variable: `OFFENSE_BONUS_PER_LEVEL = 2` (+2 damage per enhancement level)
+
+| Base | +1 DMG | +2 DMG | +3 DMG | +4 DMG | +5 DMG |
+|------|--------|--------|--------|--------|--------|
+| iron_sword (30) | 32 | 34 | 36 | 38 | 40 |
+| iron_axe (22) | 24 | 26 | 28 | 30 | 32 |
+| mace (26) | 28 | 30 | 32 | 34 | 36 |
+
+IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`
 
 ### Ranged Weapons
-bow, crossbow, sling
+| ID | Name | Damage | Range | Ammo | Speed | Cooldown |
+|----|------|--------|-------|------|-------|----------|
+| bow | Bow | 18 | 300.0 | arrow, fire_arrow | 400.0 | 0.6 |
+| crossbow | Crossbow | 28 | 350.0 | bolt | 500.0 | 1.2 |
+| sling | Sling | 12 | 250.0 | rock_ammo, sling_bullet | 350.0 | 0.5 |
 
-### Ammo
-arrow, fire_arrow, bolt, rock_ammo, sling_bullet
+### Ammunition
+| ID | Name | Notes |
+|----|------|-------|
+| arrow | Arrow | Bow ammo |
+| fire_arrow | Fire Arrow | +8 damage |
+| bolt | Bolt | Crossbow ammo |
+| rock_ammo | Rock Ammo | Sling ammo (rough) |
+| sling_bullet | Sling Bullet | Sling ammo (+5 dmg) |
+
+### Armor
+| ID | Name | DR | Notes |
+|----|------|----|-------|
+| leather_armor | Leather Armor | 3 | Basic |
+| iron_armor | Iron Armor | 6 | Strong |
+| wood_shield | Wood Shield | — | Blocks some damage |
+| iron_shield | Iron Shield | 4 | Sturdy metal |
+
+### Enhanced Armor (+1 to +5 DR, generated from `core/enhancement.py`)
+
+Control variable: `DEFENSE_BONUS_PER_LEVEL = 2` (+2 DR per enhancement level)
+
+| Base | +1 DR | +2 DR | +3 DR | +4 DR | +5 DR |
+|------|-------|-------|-------|-------|-------|
+| iron_armor (6) | 8 | 10 | 12 | 14 | 16 |
+| iron_shield (4) | 6 | 8 | 10 | 12 | 14 |
+
+IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
+
+### Light Sources & Placeables
+| ID | Name | Damage | Placeable |
+|----|------|--------|-----------|
+| torch | Torch | 5 | Yes |
+| campfire | Campfire Kit | 0 | Yes |
+| trap | Spike Trap | 0 | Yes |
+| bed | Bed | 0 | Yes |
+| wall | Wood Wall | 0 | Yes |
+| stone_wall_b | Stone Wall | 0 | Yes |
+| turret | Turret | 0 | Yes |
+| chest | Chest | 0 | Yes |
+| door | Door | 0 | Yes |
+| enchantment_table | Enchantment Table | 0 | Yes |
+
+### Tools
+| ID | Name | Damage | Notes |
+|----|------|--------|-------|
+| hammer | Hammer | 5 | Repair structures with [F] near damaged |
+
+### Throwables
+| ID | Name | Notes |
+|----|------|-------|
+| bomb | Bomb | Explodes on impact |
+
+### Buff Spell Tomes
+| ID | Name |
+|----|------|
+| spell_regen_1 | Regen I Tome |
+| spell_regen_2 | Regen II Tome |
+| spell_regen_3 | Regen III Tome |
+| spell_regen_4 | Regen IV Tome |
+| spell_regen_5 | Regen V Tome |
+| spell_protection_1 | Protection I Tome |
+| spell_protection_2 | Protection II Tome |
+| spell_protection_3 | Protection III Tome |
+| spell_protection_4 | Protection IV Tome |
+| spell_protection_5 | Protection V Tome |
+| spell_strength_1 | Strength I Tome |
+| spell_strength_2 | Strength II Tome |
+| spell_strength_3 | Strength III Tome |
+| spell_strength_4 | Strength IV Tome |
+| spell_strength_5 | Strength V Tome |
+
+---
+
+## Spell Data (`spells/: SPELL_DATA`)
+
+### Offensive Spells
+| Spell | Type | Damage | Heal | Radius | Speed | Range | Cooldown | Special |
+|-------|------|--------|------|--------|-------|-------|----------|---------|
+| spell_fireball | projectile | 60 | — | 80.0 | 350.0 | 400.0 | 3.0 | — |
+| spell_fireball_2 | projectile | 90 | — | 100.0 | 380.0 | 450.0 | 2.5 | — |
+| spell_fireball_3 | projectile | 130 | — | 120.0 | 420.0 | 500.0 | 2.0 | — |
+| spell_fireball_4 | projectile | 180 | — | 140.0 | 460.0 | 550.0 | 1.6 | — |
+| spell_fireball_5 | projectile | 240 | — | 160.0 | 500.0 | 600.0 | 1.2 | — |
+| spell_heal | self | — | 50 | — | — | — | 3.0 | — |
+| spell_heal_2 | self | — | 80 | — | — | — | 2.5 | — |
+| spell_heal_3 | self | — | 120 | — | — | — | 2.0 | — |
+| spell_heal_4 | self | — | 170 | — | — | — | 1.6 | — |
+| spell_heal_5 | self | — | 230 | — | — | — | 1.2 | — |
+| spell_lightning | projectile | 80 | — | 40.0 | 600.0 | 350.0 | 3.0 | — |
+| spell_lightning_2 | projectile | 120 | — | 50.0 | 650.0 | 400.0 | 2.5 | — |
+| spell_lightning_3 | projectile | 170 | — | 60.0 | 700.0 | 450.0 | 2.0 | — |
+| spell_lightning_4 | projectile | 230 | — | 70.0 | 750.0 | 500.0 | 1.6 | — |
+| spell_lightning_5 | projectile | 300 | — | 80.0 | 800.0 | 550.0 | 1.2 | — |
+| spell_ice | projectile | 45 | — | 60.0 | 280.0 | 300.0 | 3.0 | slow 3s ×0.4 |
+| spell_ice_2 | projectile | 70 | — | 70.0 | 310.0 | 350.0 | 2.5 | slow 4s ×0.3 |
+| spell_ice_3 | projectile | 100 | — | 80.0 | 340.0 | 400.0 | 2.0 | slow 5s ×0.2 |
+| spell_ice_4 | projectile | 140 | — | 90.0 | 370.0 | 450.0 | 1.6 | slow 6s ×0.15 |
+| spell_ice_5 | projectile | 190 | — | 100.0 | 400.0 | 500.0 | 1.2 | slow 7s ×0.1 |
+
+### Buff Spells
+| ID | Effect | Level | Duration | Value | Cooldown |
+|----|--------|-------|----------|-------|----------|
+| spell_regen_1 | regen | 1 | 30.0s | 2 HP/sec | 5.0 |
+| spell_regen_2 | regen | 2 | 30.0s | 4 HP/sec | 5.0 |
+| spell_regen_3 | regen | 3 | 30.0s | 6 HP/sec | 5.0 |
+| spell_regen_4 | regen | 4 | 30.0s | 9 HP/sec | 5.0 |
+| spell_regen_5 | regen | 5 | 30.0s | 12 HP/sec | 5.0 |
+| spell_protection_1 | protection | 1 | 60.0s | 2 DR | 5.0 |
+| spell_protection_2 | protection | 2 | 60.0s | 4 DR | 5.0 |
+| spell_protection_3 | protection | 3 | 60.0s | 6 DR | 5.0 |
+| spell_protection_4 | protection | 4 | 60.0s | 9 DR | 5.0 |
+| spell_protection_5 | protection | 5 | 60.0s | 12 DR | 5.0 |
+| spell_strength_1 | strength | 1 | 60.0s | +3 DMG | 5.0 |
+| spell_strength_2 | strength | 2 | 60.0s | +6 DMG | 5.0 |
+| spell_strength_3 | strength | 3 | 60.0s | +10 DMG | 5.0 |
+| spell_strength_4 | strength | 4 | 60.0s | +15 DMG | 5.0 |
+| spell_strength_5 | strength | 5 | 60.0s | +20 DMG | 5.0 |
+
+## Bomb Data (`items_data.py: BOMB_DATA`)
+
+| ID | Damage | Radius | Speed | Range | Fuse |
+|----|--------|--------|-------|-------|------|
+| bomb | 50 | 80.0 | 300.0 | 250.0 | 0.0 |
+
+## Quality / Rarity System (`data/quality.py`)
+
+### Rarity Tiers
+
+Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and enchantment. It multiplies base stats of equipment items.
+
+**CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps `None` → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
+
+| Tier | Color Name | RGB | Stat Multiplier |
+|------|-----------|-----|-----------------|
+| common | White | (255, 255, 255) | 1.0× (100%) |
+| rare | Blue | (100, 150, 255) | 1.5× (150%) |
+| epic | Purple | (180, 80, 255) | 2.0× (200%) |
+| legendary | Gold | (255, 215, 0) | 2.5× (250%) |
+| mythic | Red | (255, 60, 60) | 3.0× (300%) |
+
+### Rarity-Eligible Categories (`data/quality.py: RARITY_ELIGIBLE_CATEGORIES`)
+
+> **Note**: `RARITY_ELIGIBLE_CATEGORIES` is retained for backward compat but `HAS_RARITY` (from `items/` package) is now the primary source of truth used by `roll_rarity()` and `_is_rarity_eligible()`.
+
+`weapon`, `armor`, `shield`, `tool`, `placeable`, `ranged`
+
+### Rarity Functions (`data/quality.py`)
+
+| Function | Purpose |
+|----------|---------|
+| `get_rarity_color(rarity)` | Returns RGB tuple for tier (default White) |
+| `get_rarity_multiplier(rarity)` | Returns float multiplier (default 1.0) |
+| `next_rarity(rarity)` | Returns next tier or None if mythic |
+| `get_item_color(item_id, rarity=None)` | Returns display color; rarity overrides intrinsic quality |
+
+### Rarity Stat Effects
+
+All stat applications centralised in `systems/rarity.py`:
+
+| Function | Purpose |
+|----------|---------|
+| `apply_rarity(base, rarity)` | Returns `int(base * multiplier)`, no-op for None/common |
+| `roll_rarity(item_id, is_boss, rng, luck_bonus=0.0)` | Rolls rarity tier for eligible items, None for non-eligible |
+
+| System | Usage |
+|--------|-------|
+| Melee damage (`game/combat.py`) | `base = apply_rarity(base, rarity)` |
+| Ranged damage (`game/combat.py`) | `base_ranged = apply_rarity(base_ranged, rarity)` |
+| Armor DR (`systems/damage_calc.py`) | `base_dr = apply_rarity(base_dr, rarity)` |
+| Shield DR (`systems/damage_calc.py`) | `base_dr = apply_rarity(base_dr, rarity)` |
+| Placeable HP (`game/interaction.py`) | `Health(apply_rarity(HP, rarity))` for all placeable types |
+| Drop rolling (`drops/__init__.py`) | `roll_rarity(item_id, is_boss, rng, luck_bonus)` |
+| Cave chests (`game/entities.py`) | `roll_rarity(item_id, True, rng)` |
+
+### Rarity UI Helpers (`ui/rarity_display.py`)
+
+| Function | Purpose |
+|----------|---------|
+| `draw_rarity_border(surface, rect, rarity)` | Draws 2px colored border for non-common rarity |
+| `insert_rarity_tooltip(lines, colors, rarity)` | Inserts "Rarity: {tier}" line at index 1 |
+| `pick_up_rarity(inv, src, slot)` | Moves rarity from slot dict to held_rarity |
+| `place_rarity(inv, dst, slot)` | Moves held_rarity into target dict |
+| `swap_rarity(inv, target, slot)` | Swaps held_rarity with target dict entry |
+
+### Centralised Item Stack Module (`core/item_stack.py`)
+
+All item identity, stacking, sorting, and transfer logic lives here. Every container (Inventory, Storage, ChestUI) delegates to these functions.
+
+| Function | Purpose |
+|----------|---------|
+| `normalize_rarity(rarity)` | `None`/`'common'` → `'common'`; others unchanged |
+| `items_match(id_a, ench_a, rar_a, id_b, ench_b, rar_b)` | True if two items are identical for stacking |
+| `make_stack_key(item_id, ench, rarity)` | Hashable key for grouping identical items |
+| `add_to_slots(slots, enchants, rarities, capacity, item_id, enchant, rarity, count, non_stackable=False)` | Add items to any container dict, returns overflow |
+| `remove_from_slots(slots, enchants, rarities, item_id, count, ...)` | Remove items from any container dict |
+| `sort_slots(slots, enchants, rarities)` | Merge duplicate stacks and compact to contiguous indices |
+| `transfer_slot(src_slots, src_ench, src_rar, slot, dst_slots, dst_ench, dst_rar, dst_cap)` | Atomic single-slot transfer between containers |
+| `transfer_all(src_slots, src_ench, src_rar, dst_slots, dst_ench, dst_rar, dst_cap)` | Move all items from src to dst |
+
+### Rarity Data Storage
+
+| Location | Field | Type | Purpose |
+|----------|-------|------|---------|
+| `Inventory` | `slot_rarities` | Dict[int, str] | Main inv slot → rarity tier string |
+| `Inventory` | `hotbar_rarities` | Dict[int, str] | Hotbar slot → rarity tier string |
+| `Inventory` | `held_rarity` | Optional[str] | Rarity of currently held/dragged item |
+| `Equipment` | `rarities` | Dict[str, str] | Equipped slot name → rarity tier string |
+| `Storage` | `slot_rarities` | Dict[int, str] | Storage slot → rarity tier string |
+
+### Rarity Save/Load (`game/persistence.py`)
+
+| Save Key | Source |
+|----------|--------|
+| `inv_rarities` | `{str(k): v for k, v in inv.slot_rarities.items()}` |
+| `hotbar_rarities` | `{str(k): v for k, v in inv.hotbar_rarities.items()}` |
+| `eq_rarities` | `equipment.rarities` |
+| `storage_rarities` | `{str(k): v for k, v in stor.slot_rarities.items()}` (per structure) |
+
+### Rarity Drop Weights (`drops/common.py`)
+
+**Normal Mobs:**
+
+| Tier | Weight |
+|------|--------|
+| common | 70 |
+| rare | 20 |
+| epic | 8 |
+| legendary | 1.5 |
+| mythic | 0.5 |
+
+**Boss Mobs & Cave Chests:**
+
+| Tier | Weight |
+|------|--------|
+| common | 20 |
+| rare | 30 |
+| epic | 30 |
+| legendary | 15 |
+| mythic | 5 |
+
+### Legacy Quality Colors (backward compat)
+| Tier | Color | RGB |
+|------|-------|-----|
+| common | White | (255, 255, 255) |
+| rare | Blue | (80, 140, 255) |
+| epic | Purple | (180, 60, 255) |
+
+### Rare Items (Blue — intrinsic display, non-equipment)
+`iron_sword_1`, `iron_sword_2`, `iron_axe_1`, `iron_axe_2`, `mace_1`, `mace_2`, `iron_armor_1`, `iron_armor_2`, `iron_shield_1`, `iron_shield_2`, `diamond`, `ench_regen_1`, `ench_protection_1`, `ench_strength_1`, `enchant_tome_1`, `enchant_tome_2`
+
+### Epic Items (Purple — intrinsic display, non-equipment)
+`iron_sword_3`-`5`, `iron_axe_3`-`5`, `mace_3`-`5`, `iron_armor_3`-`5`, `iron_shield_3`-`5`, `spell_fireball`-`spell_fireball_5`, `spell_heal`-`spell_heal_5`, `spell_lightning`-`spell_lightning_5`, `spell_ice`-`spell_ice_5`, `spell_regen_2`-`5`, `spell_protection_2`-`5`, `spell_strength_2`-`5`, `enchant_tome_3`, `enchant_tome_4`, `enchant_tome_5`
+
+---
+
+## Recipes (`items_data.py: RECIPES`)
+
+### Tools & Melee Weapons
+| Result | Cost |
+|--------|------|
+| Hammer | wood×3, iron×2 |
+| Stone Axe | wood×3, stone×2 |
+| Wood Sword | wood×5, stick×2, stone×1 |
+| Iron Axe | iron×3, wood×2 |
+| Iron Sword | iron×4, wood×2 |
+| Iron Mace | iron×5, wood×1 |
+| Spear | stick×4, stone×2 |
+| Bone Club | bone×3, stick×1 |
+
+### Ranged Weapons
+| Result | Cost |
+|--------|------|
+| Bow | wood×5, stick×3 |
+| Crossbow | wood×6, iron×3, stick×2 |
+| Sling | stick×2, leather×1 |
+
+### Ammunition
+| Result | Cost |
+|--------|------|
+| Arrow ×5 | stick×2, stone×1 |
+| Fire Arrow ×3 | arrow×3, torch×1 |
+| Bolt ×5 | iron×1, stick×2 |
+| Rock Ammo ×5 | stone×3 |
+| Sling Bullet ×3 | stone×2, stick×1 |
+
+### Armor
+| Result | Cost |
+|--------|------|
+| Leather Armor | leather×4, stick×2 |
+| Iron Armor | iron×6, leather×2 |
+| Wood Shield | wood×6, stick×3 |
+| Iron Shield | iron×4, wood×2 |
+
+### Consumables
+| Result | Cost |
+|--------|------|
+| Berry Pie | berry×5, wood×1 |
+| Bandage | cloth×2, berry×1 |
+| Health Potion | berry×8, stone×2, cloth×1 |
+| Antidote | berry×3, bone×1 |
+
+### Utility & Placeables
+| Result | Cost |
+|--------|------|
+| Campfire | wood×5, stone×3 |
+| Torch | wood×2, stick×1 |
+| Spike Trap | stick×4, stone×3 |
+| Bed | wood×8, cloth×3 |
+
+### Buildings
+| Result | Cost |
+|--------|------|
+| Wood Wall | wood×6 |
+| Stone Wall | stone×8 |
+| Turret | wood×8, stone×5, iron×3 |
+| Chest | wood×8, iron×2 |
+| Door | wood×4, iron×1 |
+| Enchantment Table | iron×6, diamond×2, wood×4 |
+
+### Material Processing
+| Result | Cost |
+|--------|------|
+| Sticks ×5 | wood×1 |
+| Iron Ingot | stone×4, wood×2 |
+| Iron from Ore | iron_ore×2, wood×1 |
+| Cloth | stick×3, berry×1 |
+| Leather | bone×2, berry×1 |
+
+### Throwables
+| Result | Cost |
+|--------|------|
+| Bomb ×1 | gunpowder×2, iron×1 |
+| Bomb ×3 | gunpowder×5, iron×2 |
 
 ### Armor
 leather_armor (3 DR), iron_armor (6 DR), wood_shield, iron_shield (4 DR)
 
 ### Placeables
-torch, campfire, trap, bed, wall, stone_wall_b, turret, chest, door
+torch, campfire, trap, bed, wall, stone_wall_b, turret, chest, door, enchantment_table
+
+---
+
+## Storage Component (`components.py: Storage`)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `capacity` | int | Max slots (96 for chests, 9 for enchant tables) |
+| `slots` | Dict[int, (str, int)] | slot → (item_id, count) |
+| `slot_enchantments` | Dict[int, Dict] | slot → {'type', 'level'} |
+| `slot_rarities` | Dict[int, str] | slot → rarity string |
+
+| Method | Purpose |
+|--------|---------|
+| `add_item(item_id, count)` | Stack by item_id only (no enchant/rarity awareness) |
+| `add_item_enchanted(item_id, enchant, count, rarity)` | Stack only if item_id + enchant + rarity all match |
+| `sort()` | Merge all duplicate stacks (same item + enchant + rarity) and compact slots |
+
+## Inventory Component (`components.py: Inventory`)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `capacity` | int | Main inventory capacity (default 96) |
+| `slots` | Dict[int, (str, int)] | Main inventory slots → (item_id, count) |
+| `hotbar` | Dict[int, (str, int)] | 6 dedicated hotbar slots → (item_id, count) |
+| `equipped_slot` | int | Currently selected hotbar slot (0-5) |
+| `held_item` | Optional[(str, int)] | Item currently picked up via drag-drop |
+
+`get_equipped()` returns the item in `hotbar[equipped_slot]`, NOT from `slots`.
+`add_item()` stacks to hotbar first, then slots; new items go to first empty main slot. **Non-stackable categories** (weapon, ranged, armor, shield, spell, tool, enchantment) always get their own slot.
+`remove_item()` removes from hotbar first, then slots.
+`remove_from_hotbar_slot(slot, count)` removes specifically from a given hotbar slot index (used for turret placement to consume from the correct slot).
+`count()` / `has()` check both hotbar and slots.
+
+### Non-Stackable Categories (`items/items.py: NON_STACKABLE_CATEGORIES`)
+
+Items in these categories always occupy their own slot (count = 1 each):
+`weapon`, `ranged`, `armor`, `shield`, `spell`, `tool`, `enchantment`
+
+### Stack Splitting (`gui.py: SplitDialog`)
+
+Right-click a stack (count > 1) in the inventory to open a split dialog.
+- Scroll wheel or +/- buttons adjust the split amount.
+- Type a number for precise control.
+- Press Enter or click Confirm to split; Esc or Cancel to close.
+- Default split amount is half the stack.
+
+### Drop Item Confirm (`gui.py: DropConfirmDialog`)
+
+Left-click outside the inventory panel while holding an item opens a confirmation dialog.
+- Shows item name (with rarity, enchant prefix, and count).
+- Warns the item will be lost forever.
+- "Yes, Drop" destroys the held item (clears `held_item`, `held_enchant`, `held_rarity`).
+- "Cancel" or Esc closes the dialog; the item remains held.
+- Enter confirms the drop.
+
+## Key Game State Fields (`sandbox_rpg.py: Game`)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `overworld_structures` | list | Snapshot of placed structures before entering cave |
 
 ---
 
@@ -246,3 +1238,265 @@ torch, campfire, trap, bed, wall, stone_wall_b, turret, chest, door
 | `ranged_speed` | float | Ranged projectile speed |
 | `is_boss` | bool | Whether mob is a boss |
 | `glow_color` | tuple/None | Boss glow RGB color |
+
+---
+
+## Data Modules (`data/` package)
+
+Centralised tuning modules. All values are re-exported through `constants.py` for backward compatibility.
+
+| File | Purpose |
+|------|---------|
+| `data/__init__.py` | Re-exports from submodules |
+| `data/crafting.py` | All crafting recipes (migrated from `items/recipes.py`) |
+| `data/day_night.py` | Cycle timing, period thresholds, banner text/colour, night damage, sleep |
+| `data/day_events.py` | Waves, mob respawn, day-based progression, spawn chances, initial population |
+| `enchantments/__init__.py` | Package re-exports for effects helpers + try_combine |
+| `enchantments/effects.py` | Enchantment control variables, bonus helpers, display helpers |
+| `enchantments/recipes.py` | try_combine() — enchantment table combine logic |
+
+### Recipes (`data/crafting.py`)
+
+Format: `{'name': str, 'cost': {item_id: amount}, 'gives': str, 'count': int}`
+Count defaults to 1 if omitted. See full list in Recipes section below.
+
+---
+
+## Enchantment System
+
+### Building Constants (`core/constants.py`)
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `ENCHANT_TABLE_CAPACITY` | 9 | Enchantment table storage slots (3×3 grid) |
+| `ENCHANT_TABLE_HP` | 60 | Enchantment table hit points |
+
+### Enchantment Items (`data/items.py`)
+
+| ID | Name | Category | Notes |
+|----|------|----------|-------|
+| `enchant_tome_1` | Enchantment Tome I | enchantment | Enhances equipment +1 |
+| `enchant_tome_2` | Enchantment Tome II | enchantment | Enhances equipment +2 |
+| `enchant_tome_3` | Enchantment Tome III | enchantment | Enhances equipment +3 |
+| `enchant_tome_4` | Enchantment Tome IV | enchantment | Enhances equipment +4 |
+| `enchant_tome_5` | Enchantment Tome V | enchantment | Enhances equipment +5 |
+| `enchant_transfer_tome` | Enchant Transfer Tome | transfer_tome | Transfer enchant between items |
+| `enhance_transfer_tome` | Enhancement Transfer Tome | transfer_tome | Transfer enhancement between items |
+| `superior_transfer_tome` | Superior Transfer Tome | transfer_tome | Transfer both enchant + enhancement |
+| `disenchant_tome` | Disenchant Tome | transfer_tome | Remove enchant from item |
+| `unenhance_tome` | Unenhance Tome | transfer_tome | Remove enhancement from item |
+| `enchantment_table` | Enchantment Table | placeable | Crafted, placed in world |
+
+### Transfer Tome Drop Sources (Boss-only)
+
+| Boss | Tomes in Pool | Weights |
+|------|--------------|---------|
+| boss_golem | enchant_transfer (2), enhance_transfer (2), superior_transfer (1), disenchant (2), unenhance (2) |
+| boss_lich | enchant_transfer (3), enhance_transfer (3), superior_transfer (1), disenchant (3), unenhance (3) |
+| boss_dragon | enchant_transfer (3), enhance_transfer (3), superior_transfer (2), disenchant (3), unenhance (3) |
+| boss_necromancer | enchant_transfer (3), enhance_transfer (3), superior_transfer (1), disenchant (3), unenhance (3) |
+| boss_troll_king | enchant_transfer (3), enhance_transfer (3), superior_transfer (1), disenchant (3), unenhance (3) |
+
+### Enchantment Table Recipe (`data/crafting.py`)
+
+| Result | Cost |
+|--------|------|
+| Enchantment Table | iron×6, diamond×2, wood×4 |
+
+### Enchantment Types (`enchantments/effects.py`)
+
+| Type | Applies To | Source | Effect |
+|------|-----------|--------|--------|
+| `fire` | weapon | spell_fireball + equipment | Bonus fire damage + light radius + fire particles on hit |
+| `ice` | weapon | spell_ice + equipment | Bonus ice damage + slow enemies on hit |
+| `lightning` | weapon | spell_lightning + equipment | Bonus lightning damage + arc to nearby mob on hit |
+| `protection` | armor/shield | any spell + armor/shield | Bonus damage reduction |
+
+### Enchantment Bonus Damage (`enchantments/effects.py: FIRE/ICE/LIGHTNING_BONUS_DAMAGE`)
+
+| Level | Fire | Ice | Lightning |
+|-------|------|-----|-----------|
+| 1 | +5 | +3 | +6 |
+| 2 | +10 | +7 | +12 |
+| 3 | +18 | +12 | +20 |
+| 4 | +28 | +19 | +30 |
+| 5 | +40 | +28 | +42 |
+
+### Fire Enchant Light Radius (`enchantments/effects.py: FIRE_LIGHT_RADIUS`)
+
+| Level | Radius (px) |
+|-------|-------------|
+| 1 | 90 |
+| 2 | 110 |
+| 3 | 140 |
+
+### Ice Enchant Slow (`enchantments/effects.py`)
+
+| Level | Slow Factor | Duration (s) |
+|-------|-------------|--------------|
+| 1 | 0.4 | 2.0 |
+| 2 | 0.3 | 3.0 |
+| 3 | 0.2 | 4.0 |
+
+### Lightning Arc (`enchantments/effects.py`)
+
+| Level | Arc Radius (px) | Damage Fraction |
+|-------|-----------------|-----------------|
+| 1 | 100 | 0.3 |
+| 2 | 140 | 0.4 |
+| 3 | 180 | 0.5 |
+
+### Protection Enchant DR (`core/enhancement.py: PROTECTION_DR_BONUS`)
+
+Control variable: `PROTECTION_DR_PER_LEVEL = 2` (+2 DR per enchant level, stacks with armor/turret enhancement DR)
+
+| Level | Bonus DR |
+|-------|----------|
+| 1 | +2 |
+| 2 | +4 |
+| 3 | +6 |
+| 4 | +8 |
+| 5 | +10 |
+
+### Elemental Resistance (`enchantments/effects.py: ELEMENTAL_RESISTANCE`)
+
+| Level | Resistance |
+|-------|-----------|
+| 1 | 15% |
+| 2 | 25% |
+| 3 | 40% |
+| 4 | 55% |
+| 5 | 70% |
+
+### Enchant Display (`enchantments/effects.py`)
+
+| Type | Prefix | Color RGB |
+|------|--------|-----------|
+| fire | Blazing | (255, 100, 30) |
+| ice | Frozen | (100, 200, 255) |
+| lightning | Charged | (255, 255, 80) |
+| protection | Warded | (180, 180, 255) |
+
+### Spell-to-Enchant Mapping (`enchantments/effects.py: SPELL_TO_ENCHANT`)
+
+| Spell Book | Enchant Type |
+|-----------|-------------|
+| spell_fireball | fire |
+| spell_ice | ice |
+| spell_lightning | lightning |
+| spell_protection | protection |
+
+### Enhanceable Base Items (via `CAN_ENHANCE` flag)
+
+> **Note**: The old `_ENHANCEABLE_BASES` set in recipes.py has been replaced by the `CAN_ENHANCE` flag dict from the `items/` package.
+
+`iron_sword`, `iron_axe`, `mace`, `iron_armor`, `iron_shield`, `turret`
+
+### Combine Recipes (`enchantments/recipes.py: try_combine()`)
+
+| # | Combination | Result |
+|---|------------|--------|
+| 1 | Tome + Equipment | Stat-enhanced item (+1..+5), preserves existing enchant |
+| 2 | Spell Book + Equipment | Elemental enchant (replaces existing) |
+| 3 | Tome + Spell Book + Equipment | Both stat enhancement and elemental enchant |
+| 4 | 9 identical items (same id, enchant, rarity) | 1 item of next rarity tier (preserves enchant + enhancement) |
+| 5 | (reserved) | |
+| 6 | Enchant Transfer Tome + enchanted item + non-enchanted equip | Transfers enchant to target; source loses enchant |
+| 7 | Enhancement Transfer Tome + enhanced item + non-enhanced equip | Transfers enhancement to target; source reverts to base |
+| 8 | Superior Transfer Tome + source + blank target | Transfers both enchant and enhancement to target |
+| 9 | Disenchant Tome + enchanted equip | Removes enchant, keeps item |
+| 10 | Unenhance Tome + enhanced equip | Reverts to base item, removes enhancement |
+
+### 9-Item Rarity Upgrade Rules
+- All 9 slots must be filled with the **exact same item** (same item_id, enchant, rarity)
+- Output: 1 copy of the item at the next rarity tier
+- Preserves enchant and enhancement on the result
+- Fails if items differ in any attribute or if already mythic tier
+
+### Non-Stackable Categories (`data/items.py`)
+
+Items in these categories always occupy their own slot (count = 1):
+`weapon`, `ranged`, `armor`, `shield`, `spell`, `tool`, `enchantment`, `transfer_tome`
+
+### Enchant Data Storage
+
+| Location | Field | Type | Purpose |
+|----------|-------|------|---------|
+| `Inventory` | `slot_enchantments` | Dict[int, Dict] | Main inv slot → {'type','level'} |
+| `Inventory` | `hotbar_enchantments` | Dict[int, Dict] | Hotbar slot → {'type','level'} |
+| `Equipment` | `enchantments` | Dict[str, Dict] | Equipped slot name → {'type','level'} |
+| `Storage` | `slot_enchantments` | Dict[int, Dict] | Storage slot → {'type','level'} |
+
+### Quality Tiers for Tomes (`data/quality.py`)
+
+| Tier | Items |
+|------|-------|
+| Rare (Blue) | `enchant_tome_1`, `enchant_tome_2` |
+| Epic (Purple) | `enchant_tome_3`, `enchant_tome_4`, `enchant_tome_5` |
+
+### Tome Drop Sources
+
+| Mob/Source | Tomes | Weights |
+|-----------|-------|---------|
+| dark_knight | enchant_tome_1 (w:3), enchant_tome_2 (w:2), enchant_tome_3 (w:1) | Normal drops |
+| troll | enchant_tome_1 (w:3), enchant_tome_2 (w:2) | Normal drops |
+| goblin_shaman | enchant_tome_1 (w:2) | Ranged drops |
+| boss_golem | enchant_tome_1 (w:5), enchant_tome_2 (w:4), enchant_tome_3 (w:3) | Boss drops |
+| boss_lich | enchant_tome_3 (w:4), enchant_tome_4 (w:3), enchant_tome_5 (w:2) | Boss drops |
+| boss_dragon | enchant_tome_3 (w:4), enchant_tome_4 (w:3), enchant_tome_5 (w:2) | Boss drops |
+| boss_necromancer | enchant_tome_2 (w:4), enchant_tome_3 (w:3), enchant_tome_4 (w:2), enchant_tome_5 (w:1) | Boss drops |
+| boss_troll_king | enchant_tome_2 (w:4), enchant_tome_3 (w:3), enchant_tome_4 (w:2), enchant_tome_5 (w:1) | Boss drops |
+| Cave Chest | enchant_tome_2, enchant_tome_3, enchant_tome_4 | Rare pool |
+
+---
+
+## Drop System (`drops/` package)
+
+Mob loot is data-driven via the `drops/` package. The old `MOB_DATA['drops']` keys have been removed.
+
+### Module Structure
+
+| File | Purpose |
+|------|---------|
+| `drops/__init__.py` | Merges all tables into `LOOT_TABLES`, exports `roll_loot()` |
+| `drops/common.py` | Enhancement odds, enhanceable item lists, material/consumable pools |
+| `drops/normal.py` | Loot tables for 11 normal enemies (`NORMAL_LOOT`) |
+| `drops/ranged.py` | Loot tables for 2 ranged enemies (`RANGED_LOOT`) |
+| `drops/bosses.py` | Loot tables for 5 bosses (`BOSS_LOOT`) + `CAVE_CHEST_LOOT` |
+
+### Loot Table Format
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `drop_chance` | float | Probability (0.0–1.0) that the mob drops anything |
+| `min_items` | int | Minimum distinct item types rolled from pool |
+| `max_items` | int | Maximum distinct item types rolled from pool |
+| `pool` | list[(id, weight, min, max)] | Weighted item pool with count ranges |
+| `guaranteed` | list[(id, min, max)] | Boss only — always dropped |
+| `enhanced_chance` | float | Boss only — chance to upgrade one drop to +1..+5 |
+
+### Enhancement Odds (`drops/common.py: ENHANCEMENT_ODDS`)
+
+| Tier | Chance |
+|------|--------|
+| +1 | 45% |
+| +2 | 30% |
+| +3 | 15% |
+| +4 | 7% |
+| +5 | 3% |
+
+### Cave Chest Loot (`drops/bosses.py: CAVE_CHEST_LOOT`)
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| `base` | 5 guaranteed item types | Always placed in chest |
+| `pool` | 50+ weighted `(item_id, weight, min, max)` tuples | Weapons, armor, shields, ranged, ammo, spells, tomes, consumables, materials |
+| `min_pool_rolls` | 3 | Minimum extra items from weighted pool |
+| `max_pool_rolls` | 6 | Maximum extra items from weighted pool |
+| `enhanced_chance` | 0.50 | Chance one pool item gets +1..+5 enhancement |
+
+Pool items receive boss rarity weights (`RARITY_WEIGHTS_BOSS`). Enhancement tiers use `ENHANCEMENT_ODDS`. Population uses public `pick_weighted()` and `maybe_enhance()` from `drops/__init__.py`.
+
+### Key Function: `roll_loot(table, rng=None, luck_bonus=0.0)`
+
+Returns `list[(item_id, count, rarity_or_None)]` — 3-tuples. Checks `drop_chance`, adds `guaranteed` items, picks `min_items`–`max_items` from weighted pool (no duplicates), then optionally enhances one drop for bosses. Rarity-eligible equipment items get a rarity roll using boss weights (if `enhanced_chance > 0`) or normal weights.

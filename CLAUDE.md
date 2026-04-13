@@ -2,6 +2,7 @@
 
 ## Agent Output Constraints
 - **Unrequested Changes**: NEVER Make unrequested changes, even if you think documentation or other instructions or even internal consistency suggests you should. In those circumstances, the ONLY appropriate response is to inform the user of the discrepancies, NOT to make changes unprompted, expecially when it comes to things like units, building operations, or game mechanics.
+- **Clarify Unrelated Changes**: If you are making instructed changes and you break something, you fix what you broke, but if during that you see something unrelated you think you should change, you do not change that, you only change the parts you are instructed to and necessary related changes.
 - **Complete Code Only**: Always provide complete, functional code in your outputs. Never redact, summarize, or skip logic.
 - **No Placeholders**: Never use placeholder code or comments like `// implement logic here` unless explicitly requested. At minimum, output complete functions and methods.
 - **Cleanup Practices**: Never leave behind unused code when altering, removing, or adding code. All dead and orphaned code MUST be removed during the same edits where the new code is added.
@@ -14,6 +15,15 @@
 - **Never rename documents**:, variables, classes, functions, etc., to reflect that you changed them, such as renaming fild.gd to file_fixed.gd, this is unacceptable under any circumstances, you can fix it and comment what you fixed, but never rename anything just to reflect this.
 - **Maintaining Naming Conventions**: Always maintain existing naming conventions, which means always read CONSTANTS.md before you implement any changes so you are aware of current constants, and never rename or add unnecessary ones, the point of this document is for you to know what constants exist, what they are for, and not to accidentally change them, so changing them directly contradicts the purpose, and in order to maintain this you must update this document for ALL constants and all changes, as this is your functionally necessary guide to working with the game's code.
 - **ALWAYS**: Run test and check outputs to make sure there are no errors or warnings, as no task you are working on is done until you are error and warning free! This includes running a headless test of the project to get errors from the engine!
+- **KISS**: Keep It Simple Stupid! This means do NOT over-complicate or over-eignieer code, instead, DO keep things simple, follow the easiest straight path to making things functional and creating the least work for processing while still processing completely and properly.
+- **DRY**: Don't Repeat Yourself! This means engineer code to minimize code needing to be repeated. Use isolated constants that are shared across every script, use modules for functions that multiple scripts can use one module rather than coding the same function into multiple scripts, everything that you feel the urge to repeat in multiple scripts should instead be a module that all those scripts use!
+- **YAGNI**: You're Not Going To Need It: Don't add placeholder code, don't add code for stuff you are not going to complete, instead, do add only complete code to use NOW, if you're instructed to add something, add it fully, don't add stuff you aren't even using, because odds are if you aren't finishing it now, you won't later.
+- **SOLID**: ALL of these primciples are a MUST FOLLOW!
+- Single Responsibility Principle (SRP): A class should have only one reason to change.
+- Open/Closed Principle (OCP): Software entities should be open for extension but closed for modification.
+- Liskov Substitution Principle (LSP): Subtypes must be substitutable for their base types without altering program correctness.
+- Interface Segregation Principle (ISP): Clients should not be forced to depend on methods they do not use.
+- Dependency Inversion Principle (DIP): Depend upon abstractions (interfaces) rather than concretions (classes).
 
 ## Godot 4 Architecture & Scaling
 - **Extreme Modularity**: Treat all distinct functions and behaviors as their own modules. Favor composition (Component pattern) over deep inheritance hierarchies.

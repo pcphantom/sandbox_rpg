@@ -5,8 +5,8 @@ from typing import Dict, Callable
 
 import pygame
 
-from constants import TILE_SIZE
-from utils import hash_noise, fbm_noise
+from core.constants import TILE_SIZE
+from core.utils import hash_noise, fbm_noise
 
 
 class TextureGenerator:
@@ -43,6 +43,9 @@ class TextureGenerator:
         self.generate_goblin_shaman()
         self.generate_boss_golem()
         self.generate_boss_lich()
+        self.generate_boss_dragon()
+        self.generate_boss_necromancer()
+        self.generate_boss_troll_king()
         # Resources
         self.generate_tree()
         self.generate_rock()
@@ -53,6 +56,10 @@ class TextureGenerator:
         self.generate_water_tile(0)
         self.generate_stone_tile()
         self.generate_forest_tile()
+        self.generate_cave_floor_tile()
+        self.generate_cave_entrance_tile()
+        self.generate_ore_node()
+        self.generate_diamond_node()
         # Original items
         self.generate_item_wood()
         self.generate_item_stone()
@@ -108,6 +115,7 @@ class TextureGenerator:
         self.generate_stone_wall_placed()
         self.generate_turret_placed()
         self.generate_chest_placed()
+        self.generate_cave_chest_placed()
         self.generate_door_placed()
         # Projectiles
         self.generate_projectile_arrow()
@@ -115,6 +123,28 @@ class TextureGenerator:
         self.generate_projectile_bolt()
         self.generate_projectile_fireball()
         self.generate_projectile_enemy()
+        # New spell / item textures
+        self.generate_item_spell_heal()
+        self.generate_item_spell_lightning()
+        self.generate_item_spell_ice()
+        self.generate_item_diamond()
+        self.generate_item_gunpowder()
+        self.generate_item_iron_ore()
+        self.generate_item_bomb()
+        self.generate_buff_spell_books()
+        self.generate_tiered_spell_books()
+        self.generate_stat_weapons()
+        self.generate_stat_armors()
+        self.generate_stat_turrets()
+        self.generate_projectile_lightning()
+        self.generate_projectile_ice()
+        self.generate_projectile_bomb()
+        self.generate_item_hammer()
+        # Enchantment system
+        self.generate_enchant_tomes()
+        self.generate_transfer_tomes()
+        self.generate_item_enchantment_table()
+        self.generate_enchantment_table_placed()
 
     # ==================================================================
     # PLAYER
@@ -642,6 +672,116 @@ class TextureGenerator:
             return s
         return self._get("boss_lich", make)
 
+    def generate_boss_dragon(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((34, 38), pygame.SRCALPHA)
+            # Dragon body (orange-red)
+            for y in range(6, 32):
+                for x in range(4, 30):
+                    dx = (x - 17) / 13.0
+                    dy = (y - 19) / 13.0
+                    if dx * dx + dy * dy < 1.0:
+                        r = 180 + int(40 * hash_noise(x, y, self.seed + 80))
+                        g = 80 + int(30 * hash_noise(x, y, self.seed + 81))
+                        s.set_at((x, y), (min(r, 255), g, 20, 255))
+            # Head
+            for y in range(1, 10):
+                for x in range(10, 24):
+                    if (x - 17) ** 2 + (y - 5) ** 2 < 35:
+                        s.set_at((x, y), (200, 100, 30, 255))
+            # Fire-orange eyes
+            pygame.draw.circle(s, (255, 200, 0, 255), (14, 5), 2)
+            pygame.draw.circle(s, (255, 200, 0, 255), (20, 5), 2)
+            # Wings
+            for y in range(8, 20):
+                for x in range(0, 5):
+                    a = 200 - (4 - x) * 40
+                    s.set_at((x, y), (160, 60, 20, max(a, 40)))
+                for x in range(29, 34):
+                    a = 200 - (x - 29) * 40
+                    s.set_at((x, y), (160, 60, 20, max(a, 40)))
+            # Tail
+            for i in range(8):
+                tx = 17 + i
+                ty = 30 + int(2 * math.sin(i * 0.8))
+                if 0 <= tx < 34 and 0 <= ty < 38:
+                    s.set_at((tx, ty), (160, 70, 20, 220))
+            return s
+        return self._get("boss_dragon", make)
+
+    def generate_boss_necromancer(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((26, 34), pygame.SRCALPHA)
+            # Dark green robe
+            for y in range(8, 32):
+                for x in range(4, 22):
+                    dx = (x - 13) / 9.0
+                    dy = (y - 20) / 12.0
+                    if dx * dx + dy * dy < 1.0:
+                        g = 40 + int(20 * hash_noise(x, y, self.seed + 82))
+                        s.set_at((x, y), (15, g, 15, 255))
+            # Pale face
+            for y in range(1, 10):
+                for x in range(8, 18):
+                    if (x - 13) ** 2 + (y - 5) ** 2 < 22:
+                        s.set_at((x, y), (180, 200, 170, 255))
+            # Green glowing eyes
+            pygame.draw.circle(s, (60, 255, 60, 240), (11, 5), 2)
+            pygame.draw.circle(s, (60, 255, 60, 240), (15, 5), 2)
+            # Green aura
+            for y in range(0, 11):
+                for x in range(6, 20):
+                    d2 = (x - 13) ** 2 + (y - 5) ** 2
+                    if 22 <= d2 < 35:
+                        a = 50 + int(30 * math.sin(x + y))
+                        s.set_at((x, y), (40, 180, 40, a))
+            # Staff with skull
+            for y in range(2, 30):
+                s.set_at((4, y), (60, 50, 40, 255))
+            pygame.draw.circle(s, (200, 200, 180, 220), (4, 1), 2)
+            return s
+        return self._get("boss_necromancer", make)
+
+    def generate_boss_troll_king(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((34, 40), pygame.SRCALPHA)
+            # Massive green-brown body
+            for y in range(5, 34):
+                for x in range(4, 30):
+                    dx = (x - 17) / 13.0
+                    dy = (y - 20) / 15.0
+                    if dx * dx + dy * dy < 1.0:
+                        g = 80 + int(30 * hash_noise(x, y, self.seed + 83))
+                        s.set_at((x, y), (60, g, 40, 255))
+            # Head
+            for y in range(1, 10):
+                for x in range(9, 25):
+                    if (x - 17) ** 2 + (y - 5) ** 2 < 50:
+                        g = 90 + int(20 * hash_noise(x, y, self.seed + 84))
+                        s.set_at((x, y), (70, g, 50, 255))
+            # Yellow angry eyes
+            pygame.draw.circle(s, (255, 255, 0, 255), (13, 5), 2)
+            pygame.draw.circle(s, (255, 255, 0, 255), (21, 5), 2)
+            # Crown
+            for x in range(10, 24):
+                s.set_at((x, 0), (200, 180, 50, 255))
+                if x % 3 == 0:
+                    s.set_at((x, -1 if -1 >= 0 else 0), (200, 180, 50, 255))
+            # Massive arms
+            for y in range(10, 24):
+                for x in range(0, 5):
+                    s.set_at((x, y), (70, 100, 50, 255))
+                for x in range(29, 34):
+                    s.set_at((x, y), (70, 100, 50, 255))
+            # Thick legs
+            for y in range(32, 40):
+                for x in range(7, 15):
+                    s.set_at((x, y), (60, 80, 40, 255))
+                for x in range(19, 27):
+                    s.set_at((x, y), (60, 80, 40, 255))
+            return s
+        return self._get("boss_troll_king", make)
+
     # ==================================================================
     # RESOURCES
     # ==================================================================
@@ -764,6 +904,81 @@ class TextureGenerator:
             return s
         return self._get("forest", make)
 
+    def generate_cave_floor_tile(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((TILE_SIZE, TILE_SIZE))
+            for y in range(TILE_SIZE):
+                for x in range(TILE_SIZE):
+                    n = hash_noise(x // 3, y // 3, self.seed + 40)
+                    c = int(45 + n * 30)
+                    s.set_at((x, y), (c, c - 5, c + 5))
+            # Scattered pebbles
+            for _ in range(5):
+                px = random.randint(2, 29)
+                py = random.randint(2, 29)
+                s.set_at((px, py), (75, 72, 80))
+            return s
+        return self._get("cave_floor", make)
+
+    def generate_cave_entrance_tile(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((TILE_SIZE, TILE_SIZE))
+            # Dark centre hole with stone border
+            s.fill((35, 35, 40))
+            pygame.draw.rect(s, (70, 65, 60), (0, 0, TILE_SIZE, TILE_SIZE), 3)
+            # Dark gradient centre
+            for dy in range(6, 26):
+                for dx in range(6, 26):
+                    dist = max(abs(dx - 16), abs(dy - 16))
+                    shade = max(10, 35 - dist * 2)
+                    s.set_at((dx, dy), (shade, shade, shade + 5))
+            # Small stalagmite hints at top corners
+            for cx in (4, 27):
+                for cy in range(2, 7):
+                    s.set_at((cx, cy), (55, 52, 50))
+            return s
+        return self._get("cave_entrance", make)
+
+    def generate_ore_node(self) -> pygame.Surface:
+        """Iron ore node for cave interiors (32x32 resource object)."""
+        def make() -> pygame.Surface:
+            s = pygame.Surface((24, 20), pygame.SRCALPHA)
+            # Rocky base
+            for y in range(20):
+                for x in range(24):
+                    if (x - 12) ** 2 + (y - 10) ** 2 < 100:
+                        c = random.randint(70, 95)
+                        s.set_at((x, y), (c, c - 5, c + 5, 255))
+            # Orange-brown ore flecks
+            for _ in range(8):
+                ox = random.randint(4, 19)
+                oy = random.randint(3, 16)
+                if (ox - 12) ** 2 + (oy - 10) ** 2 < 80:
+                    s.set_at((ox, oy), (180, 120, 50, 255))
+                    s.set_at((ox + 1, oy), (160, 100, 40, 255))
+            return s
+        return self._get("ore_node", make)
+
+    def generate_diamond_node(self) -> pygame.Surface:
+        """Diamond node for cave interiors (smaller sparkling rock)."""
+        def make() -> pygame.Surface:
+            s = pygame.Surface((22, 18), pygame.SRCALPHA)
+            # Rocky base
+            for y in range(18):
+                for x in range(22):
+                    if (x - 11) ** 2 + (y - 9) ** 2 < 80:
+                        c = random.randint(65, 85)
+                        s.set_at((x, y), (c, c, c + 10, 255))
+            # Cyan diamond flecks
+            for _ in range(5):
+                ox = random.randint(4, 17)
+                oy = random.randint(3, 14)
+                if (ox - 11) ** 2 + (oy - 9) ** 2 < 60:
+                    s.set_at((ox, oy), (120, 220, 255, 255))
+                    s.set_at((ox + 1, oy), (100, 200, 240, 255))
+            return s
+        return self._get("diamond_node", make)
+
     # ==================================================================
     # ORIGINAL ITEM ICONS (16×16)
     # ==================================================================
@@ -823,6 +1038,30 @@ class TextureGenerator:
                         s.set_at((x, y), (180, 180, 200, 255))
             return s
         return self._get("item_axe", make)
+
+    def generate_item_hammer(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Handle (brown, vertical center)
+            for y in range(7, 15):
+                s.set_at((7, y), (120, 80, 40, 255))
+                s.set_at((8, y), (100, 65, 30, 255))
+            # Head (iron block, horizontal on top)
+            for x in range(3, 13):
+                for y in range(2, 7):
+                    s.set_at((x, y), (170, 170, 190, 255))
+            # Head highlight (top edge)
+            for x in range(3, 13):
+                s.set_at((x, 2), (200, 200, 220, 255))
+            # Head shadow (bottom edge)
+            for x in range(3, 13):
+                s.set_at((x, 6), (130, 130, 150, 255))
+            # Head side highlights
+            for y in range(2, 7):
+                s.set_at((3, y), (190, 190, 210, 255))
+                s.set_at((12, y), (140, 140, 160, 255))
+            return s
+        return self._get("item_hammer", make)
 
     def generate_item_sword(self) -> pygame.Surface:
         def make() -> pygame.Surface:
@@ -1690,6 +1929,37 @@ class TextureGenerator:
             return s
         return self._get("chest_placed", make)
 
+    def generate_cave_chest_placed(self) -> pygame.Surface:
+        """Gold-coloured chest used in caves."""
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 24), pygame.SRCALPHA)
+            gold_body = (200, 170, 50, 255)
+            dark_gold = (150, 120, 30, 255)
+            bright_gold = (255, 220, 80, 255)
+            # Chest body — golden
+            for y in range(6, 20):
+                for x in range(4, 28):
+                    c = 180 + int(30 * hash_noise(x, y, self.seed + 97))
+                    s.set_at((x, y), (c, int(c * 0.85), 30, 255))
+            # Lid — darker gold
+            for x in range(4, 28):
+                s.set_at((x, 6), dark_gold)
+                s.set_at((x, 7), dark_gold)
+                s.set_at((x, 8), dark_gold)
+            # Bright gold clasp
+            for y in range(11, 14):
+                for x in range(14, 18):
+                    s.set_at((x, y), bright_gold)
+            # Bottom edge
+            for x in range(4, 28):
+                s.set_at((x, 19), dark_gold)
+            # Gold bands
+            for y in range(6, 20):
+                s.set_at((10, y), bright_gold)
+                s.set_at((22, y), bright_gold)
+            return s
+        return self._get("cave_chest_placed", make)
+
     def generate_door_placed(self) -> pygame.Surface:
         def make() -> pygame.Surface:
             s = pygame.Surface((24, 32), pygame.SRCALPHA)
@@ -1799,3 +2069,423 @@ class TextureGenerator:
             s.set_at((0, 4), (100, 30, 120, 150))
             return s
         return self._get("proj_enemy", make)
+
+    # ==================================================================
+    # NEW SPELL / ITEM / PROJECTILE TEXTURES
+    # ==================================================================
+
+    def generate_item_spell_heal(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            for y in range(3, 17):
+                for x in range(3, 17):
+                    c = 60 + int(30 * hash_noise(x, y, self.seed + 80))
+                    s.set_at((x, y), (c, 180 + c // 3, c, 255))
+            for y in range(3, 17):
+                s.set_at((3, y), (30, 100, 30, 255))
+                s.set_at((4, y), (40, 120, 40, 255))
+            for y in range(5, 15):
+                s.set_at((16, y), (240, 235, 220, 255))
+            # Cross symbol
+            for i in range(-2, 3):
+                s.set_at((10 + i, 9), (255, 255, 200, 255))
+                s.set_at((10, 9 + i), (255, 255, 200, 255))
+            return s
+        return self._get("item_spell_heal", make)
+
+    def generate_item_spell_lightning(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            for y in range(3, 17):
+                for x in range(3, 17):
+                    c = 80 + int(30 * hash_noise(x, y, self.seed + 90))
+                    s.set_at((x, y), (c, c + 20, 200 + c // 4, 255))
+            for y in range(3, 17):
+                s.set_at((3, y), (40, 40, 120, 255))
+                s.set_at((4, y), (50, 50, 140, 255))
+            for y in range(5, 15):
+                s.set_at((16, y), (240, 235, 220, 255))
+            # Lightning bolt symbol
+            pts = [(10, 5), (8, 9), (11, 9), (9, 14)]
+            for i in range(len(pts) - 1):
+                pygame.draw.line(s, (255, 255, 100, 255), pts[i], pts[i + 1])
+            return s
+        return self._get("item_spell_lightning", make)
+
+    def generate_item_spell_ice(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            for y in range(3, 17):
+                for x in range(3, 17):
+                    c = 100 + int(30 * hash_noise(x, y, self.seed + 100))
+                    s.set_at((x, y), (c, c + 40, 220, 255))
+            for y in range(3, 17):
+                s.set_at((3, y), (40, 60, 140, 255))
+                s.set_at((4, y), (50, 70, 160, 255))
+            for y in range(5, 15):
+                s.set_at((16, y), (240, 235, 220, 255))
+            # Snowflake symbol
+            pygame.draw.circle(s, (200, 230, 255, 255), (10, 9), 3)
+            s.set_at((10, 5), (200, 230, 255, 255))
+            s.set_at((10, 13), (200, 230, 255, 255))
+            s.set_at((7, 9), (200, 230, 255, 255))
+            s.set_at((13, 9), (200, 230, 255, 255))
+            return s
+        return self._get("item_spell_ice", make)
+
+    def generate_item_diamond(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            pts = [(10, 3), (15, 8), (10, 17), (5, 8)]
+            pygame.draw.polygon(s, (140, 220, 255, 255), pts)
+            pygame.draw.polygon(s, (100, 180, 240, 255), pts, 1)
+            pygame.draw.line(s, (200, 240, 255, 255), (10, 3), (10, 17))
+            pygame.draw.line(s, (200, 240, 255, 255), (5, 8), (15, 8))
+            return s
+        return self._get("item_diamond", make)
+
+    def generate_item_gunpowder(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            pygame.draw.circle(s, (60, 60, 60, 255), (10, 12), 6)
+            for i in range(8):
+                x = 5 + int(10 * hash_noise(i, 0, self.seed + 200))
+                y = 7 + int(10 * hash_noise(0, i, self.seed + 201))
+                s.set_at((x, y), (40, 40, 40, 255))
+            pygame.draw.circle(s, (80, 80, 80, 255), (10, 12), 3)
+            return s
+        return self._get("item_gunpowder", make)
+
+    def generate_item_iron_ore(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            for y in range(5, 17):
+                for x in range(4, 16):
+                    if ((x - 10) ** 2 + (y - 11) ** 2) < 40:
+                        c = 100 + int(40 * hash_noise(x, y, self.seed + 210))
+                        s.set_at((x, y), (c, c - 10, c - 20, 255))
+            # Orange-brown iron flecks
+            for i in range(4):
+                fx = 7 + int(6 * hash_noise(i, 1, self.seed + 211))
+                fy = 8 + int(6 * hash_noise(1, i, self.seed + 212))
+                s.set_at((fx, fy), (180, 120, 60, 255))
+            return s
+        return self._get("item_iron_ore", make)
+
+    def generate_item_bomb(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            pygame.draw.circle(s, (50, 50, 50, 255), (10, 12), 6)
+            pygame.draw.circle(s, (80, 80, 80, 255), (10, 12), 4)
+            # Fuse
+            pygame.draw.line(s, (140, 100, 50, 255), (10, 6), (13, 3), 1)
+            s.set_at((14, 2), (255, 200, 50, 255))
+            s.set_at((13, 2), (255, 150, 30, 255))
+            return s
+        return self._get("item_bomb", make)
+
+    def _generate_buff_spell_book(self, name: str,
+                                   color: tuple) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((20, 20), pygame.SRCALPHA)
+            r, g, b = color
+            for y in range(3, 17):
+                for x in range(3, 17):
+                    n = int(20 * hash_noise(x, y, self.seed + 300))
+                    s.set_at((x, y), (max(0, min(255, r + n)),
+                                       max(0, min(255, g + n)),
+                                       max(0, min(255, b + n)), 255))
+            for y in range(3, 17):
+                s.set_at((3, y), (r // 2, g // 2, b // 2, 255))
+                s.set_at((4, y), (r * 2 // 3, g * 2 // 3, b * 2 // 3, 255))
+            for y in range(5, 15):
+                s.set_at((16, y), (240, 235, 220, 255))
+            # Glow dot
+            pygame.draw.circle(s, (255, 255, 220, 200), (10, 9), 2)
+            return s
+        return self._get(f"item_{name}", make)
+
+    def generate_buff_spell_books(self) -> None:
+        colors = {
+            'spell_regen_1': (60, 180, 60), 'spell_regen_2': (40, 200, 40),
+            'spell_regen_3': (20, 220, 20), 'spell_regen_4': (10, 235, 10),
+            'spell_regen_5': (0, 250, 0),
+            'spell_protection_1': (60, 60, 180), 'spell_protection_2': (40, 40, 200),
+            'spell_protection_3': (20, 20, 220), 'spell_protection_4': (10, 10, 235),
+            'spell_protection_5': (0, 0, 250),
+            'spell_strength_1': (180, 60, 60), 'spell_strength_2': (200, 40, 40),
+            'spell_strength_3': (220, 20, 20), 'spell_strength_4': (235, 10, 10),
+            'spell_strength_5': (250, 0, 0),
+        }
+        for name, color in colors.items():
+            self._generate_buff_spell_book(name, color)
+
+    def generate_tiered_spell_books(self) -> None:
+        """Generate tier 2-5 versions of elemental spell books with tier glow."""
+        bases = {
+            'spell_fireball': (255, 120, 30),
+            'spell_heal': (80, 255, 80),
+            'spell_lightning': (180, 200, 255),
+            'spell_ice': (100, 200, 255),
+        }
+        for base_key, glow_color in bases.items():
+            for tier in range(2, 6):
+                item_key = f"item_{base_key}_{tier}"
+                r, g, b = glow_color
+                glow_alpha = 80 + tier * 30
+                def make(bk=base_key, t=tier, rc=r, gc=g, bc=b, ga=glow_alpha) -> pygame.Surface:
+                    base = self.cache.get(f"item_{bk}")
+                    if base is None:
+                        base = pygame.Surface((20, 20), pygame.SRCALPHA)
+                    s = base.copy()
+                    for x in range(20):
+                        s.set_at((x, 0), (rc, gc, bc, min(255, ga)))
+                        s.set_at((x, 19), (rc, gc, bc, min(255, ga)))
+                    for y in range(20):
+                        s.set_at((0, y), (rc, gc, bc, min(255, ga)))
+                        s.set_at((19, y), (rc, gc, bc, min(255, ga)))
+                    # Tier dots at bottom
+                    dot_y = 17
+                    start_x = 10 - t
+                    for d in range(t):
+                        s.set_at((start_x + d * 2, dot_y), (255, 255, 200, 255))
+                    return s
+                self._get(item_key, make)
+
+    def _generate_stat_weapon(self, base_key: str, tier: int,
+                              base_color: tuple) -> pygame.Surface:
+        """Generate a stat weapon icon with a colored tier glow."""
+        item_key = f"item_{base_key}_{tier}"
+        def make() -> pygame.Surface:
+            # Start from the base weapon texture
+            base = self.cache.get(f"item_{base_key}")
+            if base is None:
+                base = pygame.Surface((20, 20), pygame.SRCALPHA)
+            s = base.copy()
+            w, h = s.get_width(), s.get_height()
+            # Add tier glow border
+            glow_alpha = 80 + tier * 30
+            r, g, b = base_color
+            for x in range(w):
+                s.set_at((x, 0), (r, g, b, min(255, glow_alpha)))
+                s.set_at((x, h - 1), (r, g, b, min(255, glow_alpha)))
+            for y in range(h):
+                s.set_at((0, y), (r, g, b, min(255, glow_alpha)))
+                s.set_at((w - 1, y), (r, g, b, min(255, glow_alpha)))
+            return s
+        return self._get(item_key, make)
+
+    def generate_stat_weapons(self) -> None:
+        # Rare color: blue; Epic color: purple
+        for tier in range(1, 6):
+            color = (80, 140, 255) if tier <= 2 else (180, 60, 255)
+            self._generate_stat_weapon('iron_sword', tier, color)
+            self._generate_stat_weapon('iron_axe', tier, color)
+            self._generate_stat_weapon('mace', tier, color)
+
+    def generate_stat_armors(self) -> None:
+        for tier in range(1, 6):
+            color = (80, 140, 255) if tier <= 2 else (180, 60, 255)
+            self._generate_stat_weapon('iron_armor', tier, color)
+            self._generate_stat_weapon('iron_shield', tier, color)
+
+    def generate_stat_turrets(self) -> None:
+        for tier in range(1, 6):
+            color = (80, 140, 255) if tier <= 2 else (180, 60, 255)
+            self._generate_stat_weapon('turret', tier, color)
+
+    def generate_projectile_lightning(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((12, 12), pygame.SRCALPHA)
+            for y in range(12):
+                for x in range(12):
+                    dx = (x - 6) / 6.0
+                    dy = (y - 6) / 6.0
+                    d2 = dx * dx + dy * dy
+                    if d2 < 1.0:
+                        a = int(180 * (1.0 - d2))
+                        s.set_at((x, y), (180, 200, 255, a))
+            pygame.draw.circle(s, (220, 240, 255, 255), (6, 6), 3)
+            pygame.draw.circle(s, (255, 255, 255, 255), (6, 6), 1)
+            return s
+        return self._get("proj_lightning", make)
+
+    def generate_projectile_ice(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((12, 12), pygame.SRCALPHA)
+            for y in range(12):
+                for x in range(12):
+                    dx = (x - 6) / 6.0
+                    dy = (y - 6) / 6.0
+                    d2 = dx * dx + dy * dy
+                    if d2 < 1.0:
+                        a = int(200 * (1.0 - d2))
+                        s.set_at((x, y), (100, 200, 255, a))
+            pygame.draw.circle(s, (160, 230, 255, 255), (6, 6), 3)
+            pygame.draw.circle(s, (220, 245, 255, 255), (6, 6), 1)
+            return s
+        return self._get("proj_ice", make)
+
+    def generate_projectile_bomb(self) -> pygame.Surface:
+        def make() -> pygame.Surface:
+            s = pygame.Surface((12, 12), pygame.SRCALPHA)
+            pygame.draw.circle(s, (60, 60, 60, 255), (6, 6), 5)
+            pygame.draw.circle(s, (90, 90, 90, 255), (6, 6), 3)
+            # Spark
+            s.set_at((6, 1), (255, 200, 50, 255))
+            s.set_at((7, 1), (255, 150, 30, 200))
+            return s
+        return self._get("proj_bomb", make)
+
+    # ==================================================================
+    # ENCHANTMENT SYSTEM
+    # ==================================================================
+    def generate_enchant_tomes(self) -> None:
+        """Generate item icons for Enchantment Tome I-V."""
+        # Tier colors: 1-2 rare blue, 3-5 epic purple glow
+        for tier in range(1, 6):
+            key = f"item_enchant_tome_{tier}"
+            glow = (80, 140, 255) if tier <= 2 else (180, 60, 255)
+            def make(t=tier, g=glow) -> pygame.Surface:
+                s = pygame.Surface((16, 16), pygame.SRCALPHA)
+                # Book body
+                for y in range(3, 14):
+                    for x in range(3, 13):
+                        s.set_at((x, y), (100, 50, 30, 255))
+                # Book cover (slightly lighter front)
+                for y in range(3, 14):
+                    s.set_at((12, y), (130, 70, 40, 255))
+                # Spine
+                for y in range(3, 14):
+                    s.set_at((3, y), (70, 35, 20, 255))
+                # Pages (white edge)
+                for y in range(5, 12):
+                    s.set_at((4, y), (230, 225, 210, 255))
+                # Rune glow in center
+                cx, cy = 8, 8
+                r, gg, b = g
+                s.set_at((cx, cy), (r, gg, b, 255))
+                s.set_at((cx - 1, cy), (r, gg, b, 200))
+                s.set_at((cx + 1, cy), (r, gg, b, 200))
+                s.set_at((cx, cy - 1), (r, gg, b, 200))
+                s.set_at((cx, cy + 1), (r, gg, b, 200))
+                # Roman numeral dots (tier indicator along bottom)
+                for i in range(t):
+                    dx = 6 + i * 2 - t
+                    if 0 <= dx < 16:
+                        s.set_at((dx, 13), (255, 255, 200, 255))
+                return s
+            self._get(key, make)
+
+    def generate_transfer_tomes(self) -> None:
+        """Generate item icons for Transfer / Removal tomes (boss drops)."""
+        tomes = {
+            'enchant_transfer_tome':  (100, 200, 255),   # cyan
+            'enhance_transfer_tome':  (255, 200, 80),    # gold
+            'superior_transfer_tome': (255, 100, 255),   # magenta
+            'disenchant_tome':        (180, 180, 180),   # silver
+            'unenhance_tome':         (200, 120, 60),    # bronze
+        }
+        for item_id, glow in tomes.items():
+            key = f"item_{item_id}"
+            def make(g=glow) -> pygame.Surface:
+                s = pygame.Surface((16, 16), pygame.SRCALPHA)
+                # Book body (darker than enchant tomes)
+                for y in range(3, 14):
+                    for x in range(3, 13):
+                        s.set_at((x, y), (60, 35, 25, 255))
+                # Cover edge
+                for y in range(3, 14):
+                    s.set_at((12, y), (80, 50, 35, 255))
+                # Spine
+                for y in range(3, 14):
+                    s.set_at((3, y), (40, 22, 14, 255))
+                # Pages
+                for y in range(5, 12):
+                    s.set_at((4, y), (220, 215, 200, 255))
+                # Glow rune (larger cross pattern)
+                cx, cy = 8, 8
+                r, gg, b = g
+                s.set_at((cx, cy), (r, gg, b, 255))
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1),
+                                (-1, -1), (1, -1), (-1, 1), (1, 1)]:
+                    s.set_at((cx + dx, cy + dy), (r, gg, b, 160))
+                return s
+            self._get(key, make)
+
+    def generate_item_enchantment_table(self) -> pygame.Surface:
+        """Inventory icon for the enchantment table item."""
+        def make() -> pygame.Surface:
+            s = pygame.Surface((16, 16), pygame.SRCALPHA)
+            # Table top (dark wood with rune accents)
+            for y in range(4, 8):
+                for x in range(2, 14):
+                    s.set_at((x, y), (80, 50, 35, 255))
+            # Table legs
+            for y in range(8, 14):
+                s.set_at((3, y), (70, 40, 25, 255))
+                s.set_at((4, y), (60, 35, 20, 255))
+                s.set_at((11, y), (70, 40, 25, 255))
+                s.set_at((12, y), (60, 35, 20, 255))
+            # Rune glow on tabletop (purple/blue magic)
+            for x in range(5, 11):
+                s.set_at((x, 5), (120, 80, 200, 180))
+                s.set_at((x, 6), (100, 60, 180, 140))
+            # Center gem
+            s.set_at((7, 5), (180, 100, 255, 255))
+            s.set_at((8, 5), (180, 100, 255, 255))
+            # Edge highlight
+            for x in range(2, 14):
+                s.set_at((x, 4), (100, 65, 45, 255))
+            return s
+        return self._get("item_enchantment_table", make)
+
+    def generate_enchantment_table_placed(self) -> pygame.Surface:
+        """Placed enchantment table texture (32x32). Rounded runed spell bench."""
+        def make() -> pygame.Surface:
+            s = pygame.Surface((32, 32), pygame.SRCALPHA)
+            # Base table body (dark wood, rounded look)
+            for y in range(8, 16):
+                for x in range(3, 29):
+                    # Rounded corners
+                    if y < 10 and (x < 5 or x > 26):
+                        continue
+                    shade = 75 + int(10 * hash_noise(x, y, self.seed))
+                    s.set_at((x, y), (shade, shade // 2 + 10, shade // 3, 255))
+            # Table top surface (slightly lighter)
+            for y in range(6, 10):
+                for x in range(4, 28):
+                    if y < 7 and (x < 6 or x > 25):
+                        continue
+                    shade = 100 + int(8 * hash_noise(x, y, self.seed + 1))
+                    s.set_at((x, y), (shade, shade // 2 + 15, shade // 3 + 5, 255))
+            # Legs
+            for y in range(16, 26):
+                for dx in [(5, 7), (24, 26)]:
+                    for x in range(dx[0], dx[1]):
+                        shade = 60 + int(8 * hash_noise(x, y, self.seed + 2))
+                        s.set_at((x, y), (shade, shade // 2, shade // 3, 255))
+            # Cross brace
+            for x in range(7, 25):
+                s.set_at((x, 20), (70, 40, 25, 255))
+                s.set_at((x, 21), (60, 35, 20, 255))
+            # Rune circle on tabletop (glowing purple/blue)
+            cx, cy = 16, 8
+            for angle_step in range(24):
+                a = angle_step * (3.14159 * 2 / 24)
+                rx = int(cx + 7 * math.cos(a))
+                ry = int(cy + 2.5 * math.sin(a))
+                if 0 <= rx < 32 and 0 <= ry < 32:
+                    s.set_at((rx, ry), (140, 80, 220, 200))
+            # Inner runes (small glowing dots)
+            rune_positions = [(12, 8), (20, 8), (16, 7), (16, 9),
+                              (14, 7), (18, 7), (14, 9), (18, 9)]
+            for rx, ry in rune_positions:
+                s.set_at((rx, ry), (180, 120, 255, 220))
+            # Center gem (bright purple)
+            s.set_at((15, 8), (200, 100, 255, 255))
+            s.set_at((16, 8), (220, 120, 255, 255))
+            s.set_at((16, 7), (200, 100, 255, 230))
+            return s
+        return self._get("enchantment_table_placed", make)
+

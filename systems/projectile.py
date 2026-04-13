@@ -1,0 +1,52 @@
+"""Projectile system — movement, collision, and despawn."""
+import math
+from typing import Any
+
+from core.ecs import EntityManager
+from core.components import Transform, Velocity, Health, AI, Projectile
+
+PROJ_MOB_HIT_RADIUS: float = 20.0
+
+
+class ProjectileSystem:
+    """Move projectiles, check collisions with mobs, despawn on range."""
+
+    def update(self, dt: float, em: EntityManager,
+               on_hit: Any = None) -> None:
+        """on_hit(eid_target, damage, proj_transform, proj_component) callback."""
+        to_remove = []
+        for pid in em.get_entities_with(Transform, Velocity, Projectile):
+            pt = em.get_component(pid, Transform)
+            proj = em.get_component(pid, Projectile)
+            vp = em.get_component(pid, Velocity)
+            moved = math.hypot(vp.vx * dt, vp.vy * dt)
+            proj.distance_traveled += moved
+            if proj.distance_traveled >= proj.max_range:
+                # Bombs explode at max range too
+                if proj.is_bomb and on_hit:
+                    on_hit(-1, proj.damage, pt, proj)
+                to_remove.append(pid)
+                continue
+            # Only player-owned projectiles check collision with mobs.
+            # Enemy projectiles targeting the player are handled separately
+            # by check_enemy_projectile_damage() in game/combat.py.
+            is_player_proj = not em.has_component(proj.owner, AI)
+            if not is_player_proj:
+                continue
+            for mid in em.get_entities_with(Transform, Health, AI):
+                mt = em.get_component(mid, Transform)
+                if math.hypot(mt.x - pt.x, mt.y - pt.y) < PROJ_MOB_HIT_RADIUS:
+                    mh = em.get_component(mid, Health)
+                    if not proj.is_bomb:
+                        mh.damage(proj.damage)
+                    # Aggro the mob when hit by a player projectile
+                    mob_ai = em.get_component(mid, AI)
+                    if mob_ai and proj.owner != mid:
+                        mob_ai.aggro = True
+                        mob_ai.state = "chase"
+                    if on_hit:
+                        on_hit(mid, proj.damage, pt, proj)
+                    to_remove.append(pid)
+                    break
+        for pid in set(to_remove):
+            em.destroy_entity(pid)
