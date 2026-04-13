@@ -100,14 +100,21 @@ class CharacterMenu:
         sy += 26
 
         # Derived stats
-        from systems.damage_calc import calc_damage_reduction, calc_melee_damage
-        from data import ITEM_DATA as _ID, RANGED_DATA as _RD
+        from systems.damage_calc import calc_damage_reduction, calc_melee_damage, calc_ranged_damage
+        from systems.rarity import apply_rarity
+        from core.item_stack import normalize_rarity
+        from core.enhancement import get_base_item_id, get_enhancement_level, RANGED_OFFENSE_BONUS_PER_LEVEL
+        from data import ITEM_DATA as _ID, RANGED_DATA as _RD, AMMO_BONUS_DAMAGE
 
-        # Attack damage
+        # Attack damage (apply rarity to match actual combat damage)
         weapon = equipment.weapon if equipment and equipment.weapon else inventory.get_equipped()
         base_dmg = 5
         if weapon and weapon in _ID and _ID[weapon][2] > 0:
             base_dmg = _ID[weapon][2]
+        w_rarity = normalize_rarity(inventory.get_equipped_rarity())
+        if w_rarity == 'common' and equipment:
+            w_rarity = normalize_rarity(equipment.rarities.get('weapon', 'common'))
+        base_dmg = apply_rarity(base_dmg, w_rarity)
         atk = calc_melee_damage(base_dmg, stats, equipment)
         crit_pct = stats.luck * 2
         surface.blit(self.font_sm.render(
@@ -115,13 +122,23 @@ class CharacterMenu:
             (sx, sy))
         sy += 18
 
-        # Ranged damage (if ranged weapon equipped)
-        if equipment and equipment.ranged and equipment.ranged in _RD:
-            rd = _RD[equipment.ranged]
-            r_dmg = rd['damage'] + stats.agility * 2
-            surface.blit(self.font_sm.render(
-                f"Ranged damage: {r_dmg}", True, ORANGE), (sx, sy))
-            sy += 18
+        # Ranged damage (apply enhancement + rarity to match actual combat)
+        if equipment and equipment.ranged:
+            rdata = _RD.get(equipment.ranged)
+            if not rdata:
+                rdata = _RD.get(get_base_item_id(equipment.ranged))
+            if rdata:
+                base_ranged = rdata['damage']
+                enh_level = get_enhancement_level(equipment.ranged)
+                if enh_level > 0:
+                    base_ranged += enh_level * RANGED_OFFENSE_BONUS_PER_LEVEL
+                r_rarity = normalize_rarity(equipment.rarities.get('ranged', 'common'))
+                base_ranged = apply_rarity(base_ranged, r_rarity)
+                ammo_bonus = AMMO_BONUS_DAMAGE.get(equipment.ammo, 0) if equipment.ammo else 0
+                r_dmg = calc_ranged_damage(base_ranged, ammo_bonus, stats)
+                surface.blit(self.font_sm.render(
+                    f"Ranged damage: {r_dmg}", True, ORANGE), (sx, sy))
+                sy += 18
 
         # Defense
         dr = calc_damage_reduction(equipment)
@@ -168,13 +185,8 @@ class CharacterMenu:
                 if eq_rar != 'common':
                     from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, icon_rect, eq_rar)
-                # Enhancement level border (inner)
-                from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
-                enh_lvl = get_enhancement_level(item_id)
-                if enh_lvl > 0:
-                    enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
-                    inner = icon_rect.inflate(-4, -4)
-                    pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
+                from ui.rarity_display import draw_enhancement_border
+                draw_enhancement_border(surface, icon_rect, item_id)
             # Equip / Unequip button
             btn = pygame.Rect(ex + 225, ey, 20, 20)
             hov = btn.collidepoint(mx, my)

@@ -134,6 +134,7 @@ class TextureGenerator:
         self.generate_buff_spell_books()
         self.generate_tiered_spell_books()
         self.generate_stat_weapons()
+        self.generate_stat_ranged()
         self.generate_stat_armors()
         self.generate_stat_turrets()
         self.generate_projectile_lightning()
@@ -2282,6 +2283,13 @@ class TextureGenerator:
             self._generate_stat_weapon('iron_sword', tier, color)
             self._generate_stat_weapon('iron_axe', tier, color)
             self._generate_stat_weapon('mace', tier, color)
+
+    def generate_stat_ranged(self) -> None:
+        for tier in range(1, 6):
+            color = (80, 140, 255) if tier <= 2 else (180, 60, 255)
+            self._generate_stat_weapon('bow', tier, color)
+            self._generate_stat_weapon('crossbow', tier, color)
+            self._generate_stat_weapon('sling', tier, color)
 
     def generate_stat_armors(self) -> None:
         for tier in range(1, 6):

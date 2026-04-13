@@ -173,5 +173,5 @@ class SplitDialog:
             ench = ench_dict.get(self.slot)
             if ench:
                 inventory.held_enchant = dict(ench)
-            inventory.held_rarity = normalize_rarity(rar_dict.get(self.slot))
+            inventory.held_rarity = normalize_rarity(rar_dict.get(self.slot, 'common'))
         self.close()

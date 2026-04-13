@@ -149,18 +149,12 @@ class InventoryGrid(UIElement):
         if rarity and rarity != 'common':
             from ui.rarity_display import draw_rarity_border
             draw_rarity_border(surface, sr, rarity)
-        # Enchant glow border (overrides rarity border)
-        if enchant:
+        elif enchant:
             from enchantments.effects import ENCHANT_COLORS
             ec = ENCHANT_COLORS.get(enchant['type'], (200, 200, 200))
             pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
-        # Enhancement level inner border
-        from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
-        enh_lvl = get_enhancement_level(item_id)
-        if enh_lvl > 0:
-            enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
-            inner = sr.inflate(-4, -4)
-            pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
+        from ui.rarity_display import draw_enhancement_border
+        draw_enhancement_border(surface, sr, item_id)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (34, 34)),
@@ -175,7 +169,8 @@ class InventoryGrid(UIElement):
             name_color = get_item_color(item_id, rarity)
             if rarity and rarity != 'common':
                 name = f"{rarity.title()} {name}"
-            lines = [name, d[1]]
+            from data.quality import get_stat_description
+            lines = [name, get_stat_description(item_id, rarity)]
             colors = [name_color, WHITE]
             if rarity and rarity != 'common':
                 from ui.rarity_display import insert_rarity_tooltip

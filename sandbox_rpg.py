@@ -584,6 +584,7 @@ class Game:
                         self.show_character = False
                         self.show_chest = False
                         self.active_chest = None
+                        self.chest_ui.split_dialog.close()
                         self.show_enchant_table = False
                         self.active_enchant_table = None
                     else:
@@ -880,6 +881,7 @@ class Game:
                 if self.active_chest == eid:
                     self.show_chest = False
                     self.active_chest = None
+                    self.chest_ui.split_dialog.close()
                 if self.active_enchant_table == eid:
                     self.show_enchant_table = False
                     self.active_enchant_table = None

@@ -16,7 +16,7 @@ def normalize_rarity(rarity: str) -> str:
 
     Every item always has a rarity — ``'common'`` is the baseline.
     """
-    if rarity == 'common':
+    if not rarity:
         return 'common'
     return rarity
 

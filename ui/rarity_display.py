@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 import pygame
 
 from data.quality import get_rarity_color
+from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
 
 
 # ── drawing helpers ───────────────────────────────────────────────────
@@ -24,6 +25,21 @@ def draw_rarity_border(surface: pygame.Surface, rect: pygame.Rect,
         return False
     pygame.draw.rect(surface, get_rarity_color(rarity), rect,
                      2, border_radius=4)
+    return True
+
+
+def draw_enhancement_border(surface: pygame.Surface, rect: pygame.Rect,
+                            item_id: str) -> bool:
+    """Draw a coloured 2 px inner border for enhanced items (+1..+5).
+
+    Returns ``True`` if a border was drawn.
+    """
+    enh_lvl = get_enhancement_level(item_id)
+    if enh_lvl <= 0:
+        return False
+    enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
+    inner = rect.inflate(-4, -4)
+    pygame.draw.rect(surface, enh_color, inner, 2, border_radius=2)
     return True
 
 

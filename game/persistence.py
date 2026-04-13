@@ -201,7 +201,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     eq.rarities = data.get('eq_rarities', {})
     # Normalize equipment rarities from save data
     for k in list(eq.rarities):
-        eq.rarities[k] = normalize_rarity(eq.rarities[k])
+        eq.rarities[k] = normalize_rarity(eq.rarities.get(k, 'common'))
     inv._equipment_ref = eq
     g.daynight.time = data.get('day_time', 0.3)
     g.daynight.day_number = data.get('day_number', 1)
@@ -239,6 +239,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
 # ======================================================================
 
 def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
+    from core.item_stack import normalize_rarity as _nr
     item_id = struct['type']
     rotation = struct.get('rotation', 0)
     eid = g.em.create_entity()
@@ -331,8 +332,6 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
             stor.slot_enchantments[int(s_str)] = e
         for s_str, r in struct.get('storage_rarities', {}).items():
             stor.slot_rarities[int(s_str)] = r
-        # Normalize: every slot gets a rarity, default 'common'
-        from core.item_stack import normalize_rarity as _nr
         for s in stor.slots:
             stor.slot_rarities[s] = _nr(stor.slot_rarities.get(s, 'common'))
         g.em.add_component(eid, stor)
@@ -351,7 +350,7 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
         for s_str, r in struct.get('storage_rarities', {}).items():
             stor.slot_rarities[int(s_str)] = r
         for s in stor.slots:
-            stor.slot_rarities[s] = _nr(stor.slot_rarities.get(s))
+            stor.slot_rarities[s] = _nr(stor.slot_rarities.get(s, 'common'))
         g.em.add_component(eid, stor)
         g.em.add_component(eid, Building('enchantment_table'))
     elif item_id == 'door':

@@ -95,3 +95,50 @@ def get_item_color(item_id: str, rarity: str = 'common') -> Tuple[int, int, int]
     if rarity != 'common':
         return get_rarity_color(rarity)
     return RARITY_COLORS[get_item_quality(item_id)]
+
+
+def get_stat_description(item_id: str, rarity: str = 'common') -> str:
+    """Return the item description with rarity-adjusted stats.
+
+    For weapons/ranged: adjusts displayed damage by rarity multiplier.
+    For armor/shields: adjusts displayed DR by rarity multiplier.
+    Non-equipment items return the static description unchanged.
+    """
+    from data.items import ITEM_DATA, ITEM_CATEGORIES
+    if item_id not in ITEM_DATA:
+        return ''
+    base_desc = ITEM_DATA[item_id][1]
+    cat = ITEM_CATEGORIES.get(item_id, '')
+    if rarity == 'common' or cat not in ('weapon', 'ranged', 'armor', 'shield'):
+        return base_desc
+
+    mult = get_rarity_multiplier(rarity)
+
+    if cat == 'weapon':
+        base_dmg = ITEM_DATA[item_id][2]
+        if base_dmg > 0:
+            actual = int(base_dmg * mult)
+            return f'{base_desc.split(".")[0]}. {actual} damage.'
+        return base_desc
+
+    if cat == 'ranged':
+        from data.combat import RANGED_DATA
+        from core.enhancement import get_base_item_id, get_enhancement_level, RANGED_OFFENSE_BONUS_PER_LEVEL
+        base_id = get_base_item_id(item_id)
+        if base_id in RANGED_DATA:
+            base_dmg = RANGED_DATA[base_id]['damage']
+            enh_lvl = get_enhancement_level(item_id)
+            total_dmg = base_dmg + enh_lvl * RANGED_OFFENSE_BONUS_PER_LEVEL
+            actual = int(total_dmg * mult)
+            return f'{base_desc.split(".")[0]}. {actual} damage.'
+        return base_desc
+
+    if cat in ('armor', 'shield'):
+        from data import ARMOR_VALUES
+        if item_id in ARMOR_VALUES:
+            base_dr = ARMOR_VALUES[item_id]
+            actual = int(base_dr * mult)
+            return f'{base_desc.split(".")[0]}. {actual} DR.'
+        return base_desc
+
+    return base_desc

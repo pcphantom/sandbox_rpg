@@ -14,7 +14,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, GREE
                        QUICK_SAVE_SLOT, CHEST_CAPACITY,
                        AGI_SPEED_BONUS, AGI_SPEED_BONUS_CAP)
 from core.components import Inventory, Health, PlayerStats, Equipment, Storage
-from data import ITEM_DATA, ITEM_CATEGORIES, RECIPES, ARMOR_VALUES, get_item_color
+from data import ITEM_DATA, ITEM_CATEGORIES, RECIPES, ARMOR_VALUES, get_item_color, get_stat_description
 from core.item_stack import normalize_rarity
 from ui.rarity_display import (
     draw_rarity_border, insert_rarity_tooltip,
@@ -130,14 +130,18 @@ class SplitDialog:
 
     def __init__(self) -> None:
         self.active = False
-        self.source: str = ''         # 'hotbar' or 'slots'
+        self.source: str = ''         # 'hotbar', 'slots', or 'chest'
         self.slot: int = 0
         self.item_id: str = ''
         self.total: int = 0
         self.amount: int = 0          # amount to split off
+        self.max_amount: int = 0      # upper bound (total-1 for inv, total for chest)
         self.typing: str = ''         # keyboard buffer
         self.font = pygame.font.SysFont('consolas', 16)
         self.font_sm = pygame.font.SysFont('consolas', 13)
+        # Chest-mode references (set by open_chest)
+        self._chest_storage: Any = None
+        self._chest_inventory: Any = None
 
     def open(self, source: str, slot: int, item_id: str, total: int,
              mx: int, my: int) -> None:
@@ -146,9 +150,29 @@ class SplitDialog:
         self.slot = slot
         self.item_id = item_id
         self.total = total
+        self.max_amount = total - 1   # inventory split must leave ≥1
         self.amount = max(1, total // 2)
         self.typing = ''
+        self._chest_storage = None
+        self._chest_inventory = None
         # Position near the mouse, clamped to screen
+        self.x = min(mx, SCREEN_WIDTH - self.WIDTH - 4)
+        self.y = min(my, SCREEN_HEIGHT - self.HEIGHT - 4)
+
+    def open_chest(self, slot: int, item_id: str, total: int,
+                   mx: int, my: int,
+                   storage: Any, inventory: Any) -> None:
+        """Open split dialog for a chest/storage slot."""
+        self.active = True
+        self.source = 'chest'
+        self.slot = slot
+        self.item_id = item_id
+        self.total = total
+        self.max_amount = total        # can take all from chest
+        self.amount = max(1, total // 2)
+        self.typing = ''
+        self._chest_storage = storage
+        self._chest_inventory = inventory
         self.x = min(mx, SCREEN_WIDTH - self.WIDTH - 4)
         self.y = min(my, SCREEN_HEIGHT - self.HEIGHT - 4)
 
@@ -217,7 +241,7 @@ class SplitDialog:
             return False
 
         if event.type == pygame.MOUSEWHEEL:
-            self.amount = max(1, min(self.total - 1,
+            self.amount = max(1, min(self.max_amount,
                                      self.amount + event.y))
             return True
 
@@ -231,11 +255,11 @@ class SplitDialog:
             if event.key == pygame.K_BACKSPACE:
                 self.typing = self.typing[:-1]
                 if self.typing:
-                    self.amount = max(1, min(self.total - 1, int(self.typing)))
+                    self.amount = max(1, min(self.max_amount, int(self.typing)))
                 return True
             if event.unicode.isdigit():
                 self.typing += event.unicode
-                self.amount = max(1, min(self.total - 1, int(self.typing)))
+                self.amount = max(1, min(self.max_amount, int(self.typing)))
                 return True
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -252,7 +276,7 @@ class SplitDialog:
                 self.amount = max(1, self.amount - 1)
                 return True
             if plus_r.collidepoint(mx, my):
-                self.amount = min(self.total - 1, self.amount + 1)
+                self.amount = min(self.max_amount, self.amount + 1)
                 return True
 
             conf_r = pygame.Rect(r.x + 10, r.bottom - 28, 75, 22)
@@ -268,10 +292,16 @@ class SplitDialog:
         return False
 
     def _confirm(self, inventory: 'Inventory') -> None:
-        """Split: reduce source slot, put split amount into held_item."""
-        if self.amount < 1 or self.amount >= self.total:
+        """Split: reduce source slot, put split amount into held_item.
+        For chest source: transfer chosen amount from storage to inventory."""
+        if self.amount < 1 or self.amount > self.max_amount:
             self.close()
             return
+
+        if self.source == 'chest':
+            self._confirm_chest()
+            return
+
         remain = self.total - self.amount
         storage = inventory.hotbar if self.source == 'hotbar' else inventory.slots
         if self.slot in storage:
@@ -288,6 +318,37 @@ class SplitDialog:
             if ench:
                 inventory.held_enchant = dict(ench)
             inventory.held_rarity = normalize_rarity(rar_dict.get(self.slot, 'common'))
+        self.close()
+
+    def _confirm_chest(self) -> None:
+        """Transfer chosen amount from storage slot into inventory."""
+        storage = self._chest_storage
+        inventory = self._chest_inventory
+        if storage is None or inventory is None:
+            self.close()
+            return
+        if self.slot not in storage.slots:
+            self.close()
+            return
+
+        ench = storage.slot_enchantments.get(self.slot)
+        rar = storage.slot_rarities.get(self.slot, 'common')
+
+        overflow = inventory.add_item_enchanted(
+            self.item_id, ench, self.amount, rar)
+        transferred = self.amount - overflow
+
+        if transferred > 0:
+            remaining = self.total - transferred
+            if remaining > 0:
+                storage.slots[self.slot] = (self.item_id, remaining)
+            else:
+                del storage.slots[self.slot]
+                storage.slot_enchantments.pop(self.slot, None)
+                storage.slot_rarities.pop(self.slot, 'common')
+
+        self._chest_storage = None
+        self._chest_inventory = None
         self.close()
 
 
@@ -574,13 +635,8 @@ class InventoryGrid(UIElement):
             pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
         else:
             draw_rarity_border(surface, sr, rarity)
-        # Enhancement level inner border
-        from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
-        enh_lvl = get_enhancement_level(item_id)
-        if enh_lvl > 0:
-            enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
-            inner = sr.inflate(-4, -4)
-            pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
+        from ui.rarity_display import draw_enhancement_border
+        draw_enhancement_border(surface, sr, item_id)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (34, 34)),
@@ -593,7 +649,7 @@ class InventoryGrid(UIElement):
             d = ITEM_DATA[item_id]
             name = d[0]
             name_color = get_item_color(item_id, rarity)
-            lines = [name, d[1]]
+            lines = [name, get_stat_description(item_id, rarity)]
             colors = [name_color, WHITE]
             insert_rarity_tooltip(lines, colors, rarity)
             if enchant:
@@ -1113,12 +1169,19 @@ class CharacterMenu:
             f"Crit: {crit_pct}%", True, ORANGE), (bx, by))
         by += 18
 
-        if equipment and equipment.ranged and equipment.ranged in _RD:
-            rd = _RD[equipment.ranged]
-            r_dmg = rd['damage'] + stats.agility * 2
-            surface.blit(self.font_sm.render(
-                f"Ranged damage: {r_dmg}", True, ORANGE), (bx, by))
-            by += 18
+        if equipment and equipment.ranged:
+            from core.enhancement import get_base_item_id, get_enhancement_level, RANGED_OFFENSE_BONUS_PER_LEVEL
+            base_ranged_id = get_base_item_id(equipment.ranged)
+            rd = _RD.get(base_ranged_id)
+            if rd:
+                r_dmg = rd['damage']
+                enh_lvl = get_enhancement_level(equipment.ranged)
+                if enh_lvl > 0:
+                    r_dmg += enh_lvl * RANGED_OFFENSE_BONUS_PER_LEVEL
+                r_dmg += stats.agility * 2
+                surface.blit(self.font_sm.render(
+                    f"Ranged damage: {r_dmg}", True, ORANGE), (bx, by))
+                by += 18
 
         dr = calc_damage_reduction(equipment)
         surface.blit(self.font_sm.render(
@@ -1172,13 +1235,8 @@ class CharacterMenu:
                 # Rarity border around icon
                 if eq_rar != 'common':
                     draw_rarity_border(surface, icon_rect, eq_rar)
-                # Enhancement level border (inner)
-                from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
-                enh_lvl = get_enhancement_level(item_id)
-                if enh_lvl > 0:
-                    enh_color = ENHANCEMENT_COLORS.get(enh_lvl, (200, 200, 200))
-                    inner = icon_rect.inflate(-4, -4)
-                    pygame.draw.rect(surface, enh_color, inner, 1, border_radius=2)
+                from ui.rarity_display import draw_enhancement_border
+                draw_enhancement_border(surface, icon_rect, item_id)
             # Equip / Unequip button
             btn = pygame.Rect(ex + 465, ey, 20, 20)
             hov = btn.collidepoint(mx, my)
@@ -1447,6 +1505,7 @@ class ChestUI:
         self.chest_entity: int | None = None
         self.inv_page: int = 0
         self.chest_scroll: int = 0  # top row offset for chest grid
+        self.split_dialog = SplitDialog()
 
     def draw(self, surface: pygame.Surface, storage: Storage,
              inventory: Inventory, tooltip: Tooltip,
@@ -1574,6 +1633,9 @@ class ChestUI:
             surface.blit(lt, (r.centerx - lt.get_width() // 2,
                               r.centery - lt.get_height() // 2))
 
+        # Split dialog overlay (drawn last so it's on top)
+        self.split_dialog.draw(surface)
+
     def _draw_grid(self, surface: pygame.Surface,
                    slots: Dict[int, tuple],
                    enchants: Dict[int, dict],
@@ -1619,8 +1681,11 @@ class ChestUI:
                     name_color = get_item_color(item_id, rar)
                     action = "Click: Move to " + (
                         "Inventory" if side == 'chest' else "Chest")
-                    lines = [name, d[1], action]
+                    lines = [name, get_stat_description(item_id, rar), action]
                     colors = [name_color, WHITE, GRAY]
+                    if side == 'chest' and count > 1:
+                        lines.append("Right-click: Choose amount")
+                        colors.append(GRAY)
                     insert_rarity_tooltip(lines, colors, rar)
                     if ench:
                         prefix = get_enchant_display_prefix(ench)
@@ -1643,6 +1708,10 @@ class ChestUI:
         py = SCREEN_HEIGHT // 2 - ph // 2
         ss = self.slot_size
 
+        # Split dialog takes priority over all other events
+        if self.split_dialog.active:
+            return self.split_dialog.handle_event(event, inventory)
+
         # Scroll wheel — chest side vs inventory page
         if event.type == pygame.MOUSEWHEEL:
             mx, my = pygame.mouse.get_pos()
@@ -1664,6 +1733,27 @@ class ChestUI:
                     self.inv_page = (self.inv_page + 1) % INVENTORY_PAGES
                 return True
 
+        # Right-click on chest slot → open split dialog
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            mx, my = event.pos
+            start_slot = self.chest_scroll * self.cols
+            vis_count = self.VISIBLE_ROWS * self.cols
+            for i in range(min(vis_count, storage.capacity - start_slot)):
+                col = i % self.cols
+                row = i // self.cols
+                x = px + 10 + col * (ss + 4)
+                y = py + 34 + row * (ss + 4)
+                if pygame.Rect(x, y, ss, ss).collidepoint(mx, my):
+                    real = start_slot + i
+                    if real in storage.slots:
+                        iid, cnt = storage.slots[real]
+                        if cnt > 1:
+                            self.split_dialog.open_chest(
+                                real, iid, cnt, mx, my,
+                                storage, inventory)
+                            return True
+            return False
+
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         mx, my = event.pos
@@ -1679,12 +1769,17 @@ class ChestUI:
             if pygame.Rect(x, y, ss, ss).collidepoint(mx, my):
                 real = start_slot + i
                 if real in storage.slots:
-                    from core.item_stack import transfer_slot
-                    transfer_slot(
-                        storage.slots, storage.slot_enchantments,
-                        storage.slot_rarities, real,
-                        inventory.slots, inventory.slot_enchantments,
-                        inventory.slot_rarities, inventory.capacity)
+                    item_id, count = storage.slots[real]
+                    ench = storage.slot_enchantments.get(real)
+                    rar = storage.slot_rarities.get(real, 'common')
+                    overflow = inventory.add_item_enchanted(
+                        item_id, ench, count, rar)
+                    if overflow == 0:
+                        del storage.slots[real]
+                        storage.slot_enchantments.pop(real, None)
+                        storage.slot_rarities.pop(real, 'common')
+                    elif overflow < count:
+                        storage.slots[real] = (item_id, overflow)
                     return True
 
         # Click in inventory grid → move to chest (crafted chests only)
@@ -1742,12 +1837,19 @@ class ChestUI:
         return False
 
     @staticmethod
-    def _move_all(src, dst) -> None:
-        """Move all items from *src* container to *dst*, preserving metadata."""
-        from core.item_stack import transfer_all
-        transfer_all(src.slots, src.slot_enchantments, src.slot_rarities,
-                     dst.slots, dst.slot_enchantments, dst.slot_rarities,
-                     dst.capacity)
+    def _move_all(storage, inventory) -> None:
+        """Move all items from storage into inventory, respecting non-stackable."""
+        for slot in list(storage.slots.keys()):
+            item_id, count = storage.slots[slot]
+            ench = storage.slot_enchantments.get(slot)
+            rar = storage.slot_rarities.get(slot, 'common')
+            overflow = inventory.add_item_enchanted(item_id, ench, count, rar)
+            if overflow == 0:
+                del storage.slots[slot]
+                storage.slot_enchantments.pop(slot, None)
+                storage.slot_rarities.pop(slot, 'common')
+            elif overflow < count:
+                storage.slots[slot] = (item_id, overflow)
 
 
 # ======================================================================
@@ -1757,7 +1859,8 @@ class EnchantmentTableUI:
     """Enchantment table — 3×3 input grid, combine button, + inventory."""
 
     CAPACITY = 9
-    PW, PH = 520, 260
+    PW, PH = 570, 300
+    RESULT_BAR_H = 34   # height of result preview bar at bottom
 
     def __init__(self, textures: Any) -> None:
         self.textures = textures
@@ -1776,10 +1879,12 @@ class EnchantmentTableUI:
     def _grid_origin(self, px: int, py: int) -> Tuple[int, int]:
         return px + 14, py + 30
 
+    def _divider_x(self, px: int) -> int:
+        """X position of the vertical divider between table and inventory."""
+        return px + 14 + self.table_cols * (self.slot_size + 4) + 48
+
     def _inv_origin(self, px: int, py: int) -> Tuple[int, int]:
-        gx, _ = self._grid_origin(px, py)
-        div_x = gx + self.table_cols * (self.slot_size + 4) + 10
-        return div_x + 10, py + 30
+        return self._divider_x(px) + 12, py + 30
 
     # ------------------------------------------------------------------
     def draw(self, surface: pygame.Surface, storage: Storage,
@@ -1787,6 +1892,10 @@ class EnchantmentTableUI:
         px, py = self._panel_rect()
         pw, ph = self.PW, self.PH
         ss = self.slot_size
+        bar_h = self.RESULT_BAR_H
+        content_h = ph - bar_h  # top area above result bar
+
+        # Main panel background
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 15, 30, 240))
         surface.blit(bg, (px, py))
@@ -1821,39 +1930,10 @@ class EnchantmentTableUI:
         surface.blit(ct, (btn_r.centerx - ct.get_width() // 2,
                           btn_r.centery - ct.get_height() // 2))
 
-        # Result preview
-        if result:
-            pvy = btn_y + 32
-            rid = result['result_item']
-            if rid in ITEM_DATA:
-                d = ITEM_DATA[rid]
-                name = d[0]
-                ench = result.get('result_enchant')
-                rr = result.get('result_rarity', 'common')
-                color = get_item_color(rid, rr)
-                if ench:
-                    from enchantments.effects import (
-                        get_enchant_display_prefix, ENCHANT_COLORS,
-                    )
-                    prefix = get_enchant_display_prefix(ench)
-                    if prefix:
-                        name = f"{prefix} {name}"
-                    # Only use enchant color when there's no rarity color
-                    if not rr or rr == 'common':
-                        color = ENCHANT_COLORS.get(ench['type'], WHITE)
-                if rr and rr != 'common':
-                    name = f"{rr.title()} {name}"
-                icon = self.textures.cache.get(f'item_{rid}')
-                if icon:
-                    surface.blit(pygame.transform.scale(icon, (20, 20)),
-                                 (grid_ox, pvy))
-                nt = self.font.render(name, True, color)
-                surface.blit(nt, (grid_ox + 24, pvy + 2))
-
         # ---- Divider ----
-        div_x = grid_ox + 3 * (ss + 4) + 10
+        div_x = self._divider_x(px)
         pygame.draw.line(surface, GRAY,
-                         (div_x, py + 6), (div_x, py + ph - 6), 1)
+                         (div_x, py + 6), (div_x, py + content_h - 4), 1)
 
         # ---- Right: Inventory (paginated) ----
         inv_ox, inv_oy = self._inv_origin(px, py)
@@ -1895,6 +1975,40 @@ class EnchantmentTableUI:
             lt = self.font.render(label, True, WHITE)
             surface.blit(lt, (r.centerx - lt.get_width() // 2,
                               r.centery - lt.get_height() // 2))
+
+        # ---- Bottom result bar ----
+        bar_y = py + content_h
+        bar_rect = pygame.Rect(px + 2, bar_y, pw - 4, bar_h - 2)
+        pygame.draw.line(surface, (120, 80, 150),
+                         (px + 6, bar_y), (px + pw - 6, bar_y), 1)
+        if result:
+            rid = result['result_item']
+            if rid in ITEM_DATA:
+                d = ITEM_DATA[rid]
+                name = d[0]
+                ench = result.get('result_enchant')
+                rr = result.get('result_rarity', 'common')
+                color = get_item_color(rid, rr)
+                if ench:
+                    from enchantments.effects import (
+                        get_enchant_display_prefix, ENCHANT_COLORS,
+                    )
+                    prefix = get_enchant_display_prefix(ench)
+                    if prefix:
+                        name = f"{prefix} {name}"
+                    if not rr or rr == 'common':
+                        color = ENCHANT_COLORS.get(ench['type'], WHITE)
+                if rr and rr != 'common':
+                    name = f"{rr.title()} {name}"
+                icon = self.textures.cache.get(f'item_{rid}')
+                icon_x = px + 14
+                text_x = icon_x + 26
+                center_y = bar_y + (bar_h - 2) // 2
+                if icon:
+                    surface.blit(pygame.transform.scale(icon, (20, 20)),
+                                 (icon_x, center_y - 10))
+                nt = self.font.render(name, True, color)
+                surface.blit(nt, (text_x, center_y - nt.get_height() // 2))
 
     def _draw_table_grid(self, surface: pygame.Surface, storage: Storage,
                          ox: int, oy: int, mx: int, my: int,
@@ -1942,7 +2056,7 @@ class EnchantmentTableUI:
         if sr.collidepoint(mx, my) and item_id in ITEM_DATA:
             d = ITEM_DATA[item_id]
             name = d[0]
-            lines = [name, d[1], action]
+            lines = [name, get_stat_description(item_id, rarity), action]
             colors = [get_item_color(item_id, rarity), WHITE, GRAY]
             insert_rarity_tooltip(lines, colors, rarity)
             if enchant:

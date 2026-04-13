@@ -14,7 +14,7 @@ from data.quality import (
     QUALITY_COLORS, RARITY_COLORS, RARITY_TIERS, RARITY_MULTIPLIERS,
     RARITY_ELIGIBLE_CATEGORIES, RARE_ITEMS, EPIC_ITEMS,
     get_item_quality, get_item_color, get_rarity_color,
-    get_rarity_multiplier, next_rarity,
+    get_rarity_multiplier, next_rarity, get_stat_description,
 )
 from spells import SPELL_DATA, SPELL_RECHARGE
 
@@ -28,5 +28,5 @@ __all__ = [
     'QUALITY_COLORS', 'RARITY_COLORS', 'RARITY_TIERS', 'RARITY_MULTIPLIERS',
     'RARITY_ELIGIBLE_CATEGORIES', 'RARE_ITEMS', 'EPIC_ITEMS',
     'get_item_quality', 'get_item_color', 'get_rarity_color',
-    'get_rarity_multiplier', 'next_rarity',
+    'get_rarity_multiplier', 'next_rarity', 'get_stat_description',
 ]
