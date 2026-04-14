@@ -814,6 +814,105 @@ def generate_item_bomb(gen) -> pygame.Surface:
     return gen._get("item_bomb", make)
 
 
+def generate_item_brilliant_diamond(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((20, 20), pygame.SRCALPHA)
+        pts = [(10, 2), (16, 8), (10, 18), (4, 8)]
+        pygame.draw.polygon(s, (200, 240, 255, 255), pts)
+        pygame.draw.polygon(s, (160, 210, 255, 255), pts, 1)
+        pygame.draw.line(s, (255, 255, 255, 255), (10, 2), (10, 18))
+        pygame.draw.line(s, (255, 255, 255, 255), (4, 8), (16, 8))
+        # Sparkle dots
+        s.set_at((7, 5), (255, 255, 200, 255))
+        s.set_at((13, 5), (255, 255, 200, 255))
+        s.set_at((7, 13), (255, 255, 200, 255))
+        s.set_at((13, 13), (255, 255, 200, 255))
+        return s
+    return gen._get("item_brilliant_diamond", make)
+
+
+def generate_item_titanium_ore(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((20, 20), pygame.SRCALPHA)
+        for y in range(5, 17):
+            for x in range(4, 16):
+                if ((x - 10) ** 2 + (y - 11) ** 2) < 40:
+                    c = 140 + int(30 * hash_noise(x, y, gen.seed + 220))
+                    s.set_at((x, y), (c, c + 10, c + 20, 255))
+        # Bluish titanium flecks
+        for i in range(5):
+            fx = 6 + int(7 * hash_noise(i, 2, gen.seed + 221))
+            fy = 7 + int(7 * hash_noise(2, i, gen.seed + 222))
+            s.set_at((fx, fy), (100, 160, 220, 255))
+        return s
+    return gen._get("item_titanium_ore", make)
+
+
+def generate_item_titanium_ingot(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        for y in range(5, 12):
+            for x in range(3, 13):
+                c = 160 + int(20 * hash_noise(x, y, gen.seed + 230))
+                s.set_at((x, y), (c, c + 10, c + 25, 255))
+            s.set_at((3, y), (130, 140, 160, 255))
+            s.set_at((12, y), (180, 190, 210, 255))
+        return s
+    return gen._get("item_titanium_ingot", make)
+
+
+def generate_item_titanium_axe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        # Handle
+        for y in range(3, 14):
+            s.set_at((7, y), (120, 80, 40, 255))
+        # Titanium axe head (blue-silver)
+        for y in range(2, 7):
+            for x in range(8, 14):
+                if (x - 8) + (y - 2) < 6:
+                    c = 160 + int(20 * hash_noise(x, y, gen.seed + 240))
+                    s.set_at((x, y), (c, c + 10, c + 30, 255))
+        return s
+    return gen._get("item_titanium_axe", make)
+
+
+def generate_item_diamond_axe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        # Handle
+        for y in range(3, 14):
+            s.set_at((7, y), (120, 80, 40, 255))
+        # Diamond axe head (light blue / brilliant)
+        for y in range(2, 7):
+            for x in range(8, 14):
+                if (x - 8) + (y - 2) < 6:
+                    c = 180 + int(20 * hash_noise(x, y, gen.seed + 250))
+                    s.set_at((x, y), (c - 40, c, min(255, c + 30), 255))
+        # Sparkle
+        s.set_at((11, 3), (255, 255, 230, 255))
+        return s
+    return gen._get("item_diamond_axe", make)
+
+
+def generate_item_greater_enchantment_table(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((20, 20), pygame.SRCALPHA)
+        # Table body (dark purple)
+        for y in range(8, 18):
+            for x in range(3, 17):
+                s.set_at((x, y), (60, 30, 80, 255))
+        # Top surface (lighter)
+        for x in range(3, 17):
+            s.set_at((x, 8), (100, 50, 130, 255))
+            s.set_at((x, 9), (90, 40, 120, 255))
+        # Diamond glow center
+        pygame.draw.circle(s, (200, 240, 255, 200), (10, 5), 3)
+        pygame.draw.circle(s, (255, 255, 255, 180), (10, 5), 1)
+        return s
+    return gen._get("item_greater_enchantment_table", make)
+
+
 def _generate_buff_spell_book(gen, name: str,
                                color: tuple) -> pygame.Surface:
     def make() -> pygame.Surface:
@@ -897,6 +996,8 @@ def generate_stat_weapons(gen) -> None:
         _generate_stat_weapon(gen, 'iron_sword', tier, color)
         _generate_stat_weapon(gen, 'iron_axe', tier, color)
         _generate_stat_weapon(gen, 'mace', tier, color)
+        _generate_stat_weapon(gen, 'titanium_axe', tier, color)
+        _generate_stat_weapon(gen, 'diamond_axe', tier, color)
 
 
 def generate_stat_ranged(gen) -> None:

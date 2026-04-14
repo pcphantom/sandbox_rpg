@@ -370,5 +370,6 @@ CAVE_CHEST_LOOT: Dict[str, Any] = {
         ('bomb',                5, 1, 3),
         # -- Materials --
         ('diamond',             6, 1, 3),
+        ('titanium_ore',        4, 1, 2),
     ],
 }

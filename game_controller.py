@@ -886,10 +886,14 @@ PROTECTION_DR_PER_LEVEL: int = 2
 WEAPON_BASE_IRON_SWORD: Tuple[int, int] = (30, 0)
 WEAPON_BASE_IRON_AXE: Tuple[int, int] = (22, 4)
 WEAPON_BASE_MACE: Tuple[int, int] = (26, 0)
+WEAPON_BASE_TITANIUM_AXE: Tuple[int, int] = (33, 6)
+WEAPON_BASE_DIAMOND_AXE: Tuple[int, int] = (44, 8)
 WEAPON_BASES: Dict[str, Tuple[int, int]] = {
-    'iron_sword': WEAPON_BASE_IRON_SWORD,
-    'iron_axe':   WEAPON_BASE_IRON_AXE,
-    'mace':       WEAPON_BASE_MACE,
+    'iron_sword':   WEAPON_BASE_IRON_SWORD,
+    'iron_axe':     WEAPON_BASE_IRON_AXE,
+    'mace':         WEAPON_BASE_MACE,
+    'titanium_axe': WEAPON_BASE_TITANIUM_AXE,
+    'diamond_axe':  WEAPON_BASE_DIAMOND_AXE,
 }
 
 # --- Ranged base damages ---

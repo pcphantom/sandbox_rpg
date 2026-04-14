@@ -57,4 +57,20 @@ ITEMS = [
         'damage': 14, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
         'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
     },
+    {
+        'id': 'titanium_axe',
+        'name': 'Titanium Axe',
+        'desc': '+6 harvest yield. Superior weapon.',
+        'category': 'weapon',
+        'damage': 33, 'harvest_bonus': 6, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+    },
+    {
+        'id': 'diamond_axe',
+        'name': 'Diamond Axe',
+        'desc': '+8 harvest yield. Legendary weapon.',
+        'category': 'weapon',
+        'damage': 44, 'harvest_bonus': 8, 'heal': 0, 'placeable': False,
+        'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+    },
 ]

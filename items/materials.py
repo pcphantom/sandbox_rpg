@@ -81,4 +81,28 @@ ITEMS = [
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
         'can_enchant': False, 'can_enhance': False, 'has_rarity': False,
     },
+    {
+        'id': 'brilliant_diamond',
+        'name': 'Brilliant Diamond',
+        'desc': 'A dazzling gem forged from 9 diamonds.',
+        'category': 'material',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': False,
+    },
+    {
+        'id': 'titanium_ore',
+        'name': 'Titanium Ore',
+        'desc': 'Rare ore found in caves.',
+        'category': 'material',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': False,
+    },
+    {
+        'id': 'titanium_ingot',
+        'name': 'Titanium Ingot',
+        'desc': 'Smelted titanium for superior gear.',
+        'category': 'material',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': False,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': False,
+    },
 ]

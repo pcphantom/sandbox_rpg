@@ -25,7 +25,7 @@ class PauseMenu:
         ov.fill((0, 0, 0, 160))
         surface.blit(ov, (0, 0))
 
-        pw, ph = 360, 430
+        pw, ph = 460, 440
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
@@ -71,9 +71,12 @@ class PauseMenu:
 
         # Save / Load / Delete buttons
         btn_y = sy + 8
-        self._draw_button(surface, px + 40, btn_y, 80, 32, "Save")
-        self._draw_button(surface, px + 140, btn_y, 80, 32, "Load")
-        self._draw_button(surface, px + 240, btn_y, 80, 32, "Delete")
+        btn_w = (pw - 80 - 20) // 3
+        btn_gap = 10
+        bx = px + 40
+        self._draw_button(surface, bx, btn_y, btn_w, 32, "Save")
+        self._draw_button(surface, bx + btn_w + btn_gap, btn_y, btn_w, 32, "Load")
+        self._draw_button(surface, bx + 2 * (btn_w + btn_gap), btn_y, btn_w, 32, "Delete")
 
         # Quit button
         self._draw_button(surface, px + 40, btn_y + 50, pw - 80, 36,
@@ -109,7 +112,7 @@ class PauseMenu:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         mx, my = event.pos
-        pw, ph = 360, 430
+        pw, ph = 460, 440
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
 
@@ -134,13 +137,16 @@ class PauseMenu:
 
         # Save / Load / Delete
         btn_y = sy + 8
-        if pygame.Rect(px + 40, btn_y, 80, 32).collidepoint(mx, my):
+        btn_w = (pw - 80 - 20) // 3
+        btn_gap = 10
+        bx = px + 40
+        if pygame.Rect(bx, btn_y, btn_w, 32).collidepoint(mx, my):
             save_cb(self.selected_slot)
             return True
-        if pygame.Rect(px + 140, btn_y, 80, 32).collidepoint(mx, my):
+        if pygame.Rect(bx + btn_w + btn_gap, btn_y, btn_w, 32).collidepoint(mx, my):
             load_cb(self.selected_slot)
             return True
-        if pygame.Rect(px + 240, btn_y, 80, 32).collidepoint(mx, my):
+        if pygame.Rect(bx + 2 * (btn_w + btn_gap), btn_y, btn_w, 32).collidepoint(mx, my):
             delete_cb(self.selected_slot)
             return True
 

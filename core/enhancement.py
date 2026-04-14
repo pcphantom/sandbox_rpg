@@ -140,9 +140,11 @@ def build_enhanced_weapon_items() -> Dict[str, Tuple[str, str, int, int, int, bo
     """Generate ITEM_DATA entries for all enhanced weapon variants (+1 to +5)."""
     # Display name mappings
     names = {
-        'iron_sword': 'Iron Sword',
-        'iron_axe':   'Iron Axe',
-        'mace':       'Iron Mace',
+        'iron_sword':   'Iron Sword',
+        'iron_axe':     'Iron Axe',
+        'mace':         'Iron Mace',
+        'titanium_axe': 'Titanium Axe',
+        'diamond_axe':  'Diamond Axe',
     }
     # Description tiers
     tier_labels = {1: 'Enhanced', 2: 'Enhanced', 3: 'Fine', 4: 'Superior', 5: 'Masterwork'}

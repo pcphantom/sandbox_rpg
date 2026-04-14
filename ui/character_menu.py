@@ -57,7 +57,7 @@ class CharacterMenu:
              stats: PlayerStats, equipment: Equipment,
              health: Health, inventory: Inventory,
              tooltip: Tooltip) -> None:
-        pw, ph = 520, 420
+        pw, ph = 540, 460
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
@@ -70,7 +70,7 @@ class CharacterMenu:
         surface.blit(title,
                      (px + pw // 2 - title.get_width() // 2, py + 10))
 
-        # Left: Stats
+        # ---- Left column: Stats ----
         sx = px + 20
         sy = py + 50
         surface.blit(self.font.render(
@@ -102,14 +102,18 @@ class CharacterMenu:
             sy += 24
         surface.blit(self.font_sm.render(
             f"Stat points: {stats.stat_points}", True, GRAY), (sx, sy))
-        sy += 26
 
-        # Derived stats
+        # ---- Right column: Bonuses ----
         from systems.damage_calc import calc_damage_reduction, calc_melee_damage, calc_ranged_damage
         from systems.rarity import apply_rarity
         from core.item_stack import normalize_rarity
         from core.enhancement import get_base_item_id, get_enhancement_level, RANGED_OFFENSE_BONUS_PER_LEVEL
         from data import ITEM_DATA as _ID, RANGED_DATA as _RD, AMMO_BONUS_DAMAGE
+
+        bx = px + 270
+        by = py + 50
+        surface.blit(self.font.render("Bonuses", True, YELLOW), (bx, by))
+        by += 26
 
         # Attack damage (apply rarity to match actual combat damage)
         weapon = equipment.weapon if equipment and equipment.weapon else inventory.get_equipped()
@@ -123,9 +127,11 @@ class CharacterMenu:
         atk = calc_melee_damage(base_dmg, stats, equipment)
         crit_pct = stats.luck * 2
         surface.blit(self.font_sm.render(
-            f"Attack damage: {atk}   Crit: {crit_pct}%", True, ORANGE),
-            (sx, sy))
-        sy += 18
+            f"Attack damage: {atk}", True, ORANGE), (bx, by))
+        by += 18
+        surface.blit(self.font_sm.render(
+            f"Crit: {crit_pct}%", True, ORANGE), (bx, by))
+        by += 18
 
         # Ranged damage (apply enhancement + rarity to match actual combat)
         if equipment and equipment.ranged:
@@ -142,25 +148,25 @@ class CharacterMenu:
                 ammo_bonus = AMMO_BONUS_DAMAGE.get(equipment.ammo, 0) if equipment.ammo else 0
                 r_dmg = calc_ranged_damage(base_ranged, ammo_bonus, stats)
                 surface.blit(self.font_sm.render(
-                    f"Ranged damage: {r_dmg}", True, ORANGE), (sx, sy))
-                sy += 18
+                    f"Ranged damage: {r_dmg}", True, ORANGE), (bx, by))
+                by += 18
 
         # Defense
         dr = calc_damage_reduction(equipment)
         surface.blit(self.font_sm.render(
-            f"Defense: {dr}", True, LIGHT_BLUE), (sx, sy))
-        sy += 18
+            f"Defense: {dr}", True, LIGHT_BLUE), (bx, by))
+        by += 18
         speed_bonus = int(min(AGI_SPEED_BONUS_CAP, stats.agility * AGI_SPEED_BONUS) * 100)
         surface.blit(self.font_sm.render(
-            f"Speed bonus: +{speed_bonus}%", True, GRAY), (sx, sy))
-        sy += 18
+            f"Speed bonus: +{speed_bonus}%", True, GRAY), (bx, by))
+        by += 18
         luck_bonus = stats.luck * 10
         surface.blit(self.font_sm.render(
-            f"Harvest luck: +{luck_bonus}%", True, GRAY), (sx, sy))
+            f"Harvest luck: +{luck_bonus}%", True, GRAY), (bx, by))
 
-        # Right: Equipment
-        ex = px + 270
-        ey = py + 50
+        # ---- Bottom: Equipment (full width) ----
+        ex = px + 20
+        ey = py + 260
         surface.blit(self.font.render("Equipment", True, YELLOW), (ex, ey))
         ey += 26
         for attr, label in _EQUIP_SLOTS:
@@ -181,17 +187,17 @@ class CharacterMenu:
             # Icon
             if item_id:
                 icon = self.textures.cache.get(f'item_{item_id}')
-                icon_rect = pygame.Rect(ex + 199, ey - 1, 22, 22)
+                icon_rect = pygame.Rect(ex + 439, ey - 1, 22, 22)
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (20, 20)),
-                                 (ex + 200, ey))
+                                 (ex + 440, ey))
                 # Rarity border around icon (the ONLY item border)
                 eq_rar = equipment.rarities.get(attr, 'common')
                 if eq_rar != 'common':
                     from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, icon_rect, eq_rar)
             # Equip / Unequip button
-            btn = pygame.Rect(ex + 225, ey, 20, 20)
+            btn = pygame.Rect(ex + 465, ey, 20, 20)
             hov = btn.collidepoint(mx, my)
             if item_id:
                 # Unequip
@@ -209,8 +215,8 @@ class CharacterMenu:
                              btn.centery - t.get_height() // 2))
             ey += 28
 
-        # Compatible items from inventory
-        ey += 12
+        # Help text
+        ey += 6
         surface.blit(self.font_sm.render(
             "Click E to equip, x to unequip", True, GRAY), (ex, ey))
 
@@ -365,7 +371,7 @@ class CharacterMenu:
                 self._dropdown_open = False
                 return True
 
-        pw, ph = 520, 420
+        pw, ph = 540, 460
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
 
@@ -380,11 +386,11 @@ class CharacterMenu:
                 return True
             sy += 24
 
-        # Equipment buttons
-        ex = px + 270
-        ey = py + 50 + 26
+        # Equipment buttons (below stats)
+        ex = px + 20
+        ey = py + 260 + 26
         for attr, _label in _EQUIP_SLOTS:
-            btn = pygame.Rect(ex + 225, ey, 20, 20)
+            btn = pygame.Rect(ex + 465, ey, 20, 20)
             if btn.collidepoint(mx, my):
                 item_id = getattr(equipment, attr)
                 if item_id:

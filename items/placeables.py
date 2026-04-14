@@ -81,4 +81,12 @@ ITEMS = [
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': True,
         'can_enchant': False, 'can_enhance': False, 'has_rarity': True,
     },
+    {
+        'id': 'greater_enchantment_table',
+        'name': 'Greater Enchantment Table',
+        'desc': 'Advanced enchanting. [F] to place.',
+        'category': 'placeable',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': True,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': True,
+    },
 ]
