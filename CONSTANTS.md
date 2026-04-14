@@ -123,7 +123,7 @@ Three per-item boolean flags centralize eligibility checks. All consumer modules
 | enchant_tome / transfer_tome | False | False | False |
 | throwable | False | False | False |
 
-*`can_enhance=True` for: iron_sword, iron_axe, mace, iron_armor, iron_shield, turret
+*`can_enhance=True` for: iron_sword, iron_axe, mace, titanium_axe, diamond_axe, iron_armor, iron_shield, turret
 
 ### Enhanced Item Flag Inheritance
 
@@ -943,6 +943,9 @@ Format: `(name, description, damage, harvest_bonus, heal, placeable)`
 | diamond | Diamond | Precious gemstone (rare) |
 | gunpowder | Gunpowder | Explosive powder |
 | iron_ore | Iron Ore | Raw iron, found in caves |
+| brilliant_diamond | Brilliant Diamond | Crafted from 9 diamonds |
+| titanium_ore | Titanium Ore | Rare ore, found in caves |
+| titanium_ingot | Titanium Ingot | Smelted titanium |
 
 ### Consumables
 | ID | Name | Heal | Notes |
@@ -987,6 +990,8 @@ Format: `(name, description, damage, harvest_bonus, heal, placeable)`
 | iron_axe | Iron Axe | 22 | +4 |
 | mace | Iron Mace | 26 | 0 |
 | bone_club | Bone Club | 14 | 0 |
+| titanium_axe | Titanium Axe | 33 | +6 |
+| diamond_axe | Diamond Axe | 44 | +8 |
 
 ### Enhanced Weapons (+1 to +5, generated from `core/enhancement.py`)
 
@@ -997,8 +1002,10 @@ Control variable: `OFFENSE_BONUS_PER_LEVEL = 2` (+2 damage per enhancement level
 | iron_sword (30) | 32 | 34 | 36 | 38 | 40 |
 | iron_axe (22) | 24 | 26 | 28 | 30 | 32 |
 | mace (26) | 28 | 30 | 32 | 34 | 36 |
+| titanium_axe (33) | 35 | 37 | 39 | 41 | 43 |
+| diamond_axe (44) | 46 | 48 | 50 | 52 | 54 |
 
-IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`
+IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`, `titanium_axe_1`..`titanium_axe_5`, `diamond_axe_1`..`diamond_axe_5`
 
 ### Ranged Weapons
 | ID | Name | Damage | Range | Ammo | Speed | Cooldown |
@@ -1048,6 +1055,7 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | chest | Chest | 0 | Yes |
 | door | Door | 0 | Yes |
 | enchantment_table | Enchantment Table | 0 | Yes |
+| greater_enchantment_table | Greater Enchantment Table | 0 | Yes |
 
 ### Tools
 | ID | Name | Damage | Notes |
@@ -1337,6 +1345,19 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 | Door | wood×4, iron×1 |
 | Enchantment Table | iron×6, diamond×2, wood×4 |
 
+### Gems & Advanced Materials
+| Result | Cost |
+|--------|------|
+| Brilliant Diamond | diamond×9 |
+| Titanium Ingot | titanium_ore×2, wood×2 |
+
+### Titanium & Diamond Gear
+| Result | Cost |
+|--------|------|
+| Titanium Axe | titanium_ingot×5, wood×2 |
+| Diamond Axe | titanium_axe×1, brilliant_diamond×8 |
+| Greater Enchantment Table | brilliant_diamond×4, iron×8, wood×6 |
+
 ### Material Processing
 | Result | Cost |
 |--------|------|
@@ -1513,6 +1534,7 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 | `disenchant_tome` | Disenchant Tome | transfer_tome | Remove enchant from item |
 | `unenhance_tome` | Unenhance Tome | transfer_tome | Remove enhancement from item |
 | `enchantment_table` | Enchantment Table | placeable | Crafted, placed in world |
+| `greater_enchantment_table` | Greater Enchantment Table | placeable | Advanced enchanting, crafted |
 
 ### Transfer Tome Drop Sources (Boss-only)
 
@@ -1529,6 +1551,7 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 | Result | Cost |
 |--------|------|
 | Enchantment Table | iron×6, diamond×2, wood×4 |
+| Greater Enchantment Table | brilliant_diamond×4, iron×8, wood×6 |
 
 ### Enchantment Types (`game_controller.py` → `enchantments/effects.py`)
 
@@ -1652,7 +1675,7 @@ Control variable: `PROTECTION_DR_PER_LEVEL = 2` (+2 DR per enchant level, stacks
 
 > **Note**: The old `_ENHANCEABLE_BASES` set in recipes.py has been replaced by the `CAN_ENHANCE` flag dict from the `items/` package.
 
-`iron_sword`, `iron_axe`, `mace`, `iron_armor`, `iron_shield`, `turret`
+`iron_sword`, `iron_axe`, `mace`, `titanium_axe`, `diamond_axe`, `iron_armor`, `iron_shield`, `turret`
 
 ### Combine Recipes (`enchantments/recipes.py: try_combine()`)
 
@@ -1752,7 +1775,7 @@ Mob loot is data-driven via the `drops/` package. The old `MOB_DATA['drops']` ke
 | Key | Value | Purpose |
 |-----|-------|---------|
 | `base` | 5 guaranteed item types | Always placed in chest |
-| `pool` | 50+ weighted `(item_id, weight, min, max)` tuples | Weapons, armor, shields, ranged, ammo, spells, tomes, consumables, materials |
+| `pool` | 50+ weighted `(item_id, weight, min, max)` tuples | Weapons, armor, shields, ranged, ammo, spells, tomes, consumables, materials (incl. titanium_ore) |
 | `min_pool_rolls` | 3 | Minimum extra items from weighted pool |
 | `max_pool_rolls` | 6 | Maximum extra items from weighted pool |
 | `enhanced_chance` | 0.50 | Chance one pool item gets +1..+5 enhancement |
