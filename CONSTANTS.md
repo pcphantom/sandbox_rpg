@@ -20,13 +20,14 @@ This document tracks all global constants, key variables, and data structures us
 | `core/settings.py` | Display/audio settings | load_settings, save_settings |
 | `core/music.py` | MusicManager | Background music |
 | **game/** | Game logic modules | |
-| `game/combat.py` | Combat mechanics, damage, spells, bombs | 16 functions |
-| `game/drawing.py` | All rendering/drawing | 13 functions |
+| `game/combat.py` | Combat mechanics, damage, spells, bombs (god mode check) | 16 functions |
+| `game/drawing.py` | All rendering/drawing + cheats button/help overlay | 15 functions |
 | `game/entities.py` | Entity creation, population, lifecycle | 12 functions |
 | `game/interaction.py` | Interact, placement, crafting, sleep | 8 functions |
 | `game/menus.py` | Main menu, options menu | 6 functions |
-| `game/persistence.py` | Save/load orchestration | 8 functions |
+| `game/persistence.py` | Save/load orchestration (includes cheats_enabled) | 8 functions |
 | `game/save_load.py` | Low-level save file I/O | File operations |
+| `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, levelup |
 | **systems/** | ECS systems | |
 | `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
 | `systems/physics.py` | Physics / collision | PhysicsSystem |
@@ -39,7 +40,7 @@ This document tracks all global constants, key variables, and data structures us
 | `systems/wave.py` | Enemy waves | WaveSystem |
 | `systems/damage_calc.py` | Damage formulas (imports from data/stats) | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
 | **core/** | Core ECS, components, constants, enhancement | |
-| `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
+| `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS. ENHANCEMENT_COLORS import REMOVED (commented out in game_controller.py). |
 | **data/** | Centralised game data/tuning | |
 | `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
@@ -79,7 +80,8 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/chest.py` | ChestUI | Chest storage with stacking rules (see note below) |
 | `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
 | `ui/minimap.py` | Minimap | Minimap drawing |
-| `ui/rarity_display.py` | Rarity/enhancement UI & slot helpers | draw_rarity_border, draw_enhancement_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
+| `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
+| `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
 | **enchantments/** | Enchantment system | |
 | `enchantments/effects.py` | Enchant types, prefixes, colours — imports from `game_controller.py` | ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT, get_enchant_display_prefix |
 | `enchantments/recipes.py` | Enchant combine logic | try_combine |
@@ -261,6 +263,46 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `HUD_RESOURCE_TEXT` | (200, 200, 210) | HUD resource counters |
 | `SPELL_HELP_TEXT` | (255, 180, 80) | Spell targeting help text |
 | `PLACEMENT_UPGRADE_BORDER` | (255, 200, 60) | Placement upgrade preview border |
+
+### Command Bar (F12) Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `CMD_BAR_BG` | (15, 15, 25, 230) | Command bar panel background |
+| `CMD_BAR_BORDER` | (120, 120, 160) | Command bar panel border |
+| `CMD_BAR_INPUT_BG` | (30, 30, 45) | Input field background |
+| `CMD_BAR_INPUT_BORDER` | (100, 100, 140) | Input field border |
+| `CMD_BAR_TEXT` | (220, 220, 240) | Input text color |
+| `CMD_BAR_PLACEHOLDER` | (100, 100, 120) | Placeholder text color |
+| `CMD_BAR_CLOSE_HOVER` | (160, 60, 60) | Close button hover |
+| `CMD_BAR_CLOSE_NORMAL` | (100, 40, 40) | Close button normal |
+| `CMD_BAR_RESULT_OK` | (100, 255, 100) | Success message color |
+| `CMD_BAR_RESULT_ERR` | (255, 100, 100) | Error message color |
+
+### Cheats Button & Help Overlay Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `CHEAT_BTN_BG` | (40, 20, 60, 200) | Cheats button background |
+| `CHEAT_BTN_BORDER` | (140, 80, 200) | Cheats button border |
+| `CHEAT_BTN_HOVER` | (60, 30, 80, 220) | Cheats button hover |
+| `CHEAT_BTN_TEXT` | (200, 150, 255) | Cheats button text |
+| `CHEAT_HELP_BG` | (15, 10, 25, 235) | Cheat help overlay background |
+| `CHEAT_HELP_BORDER` | (140, 80, 200) | Cheat help overlay border |
+| `CHEAT_HELP_TEXT` | (200, 200, 220) | Cheat help overlay text |
+
+### Enhancement Level Colors — COMMENTED OUT (`game_controller.py`)
+
+These are preserved but inactive. Inner borders for enchantment/enhancement are disabled — rarity border is the ONLY item border.
+
+```python
+# ENHANCEMENT_COLOR_1 = (0, 200, 0)      # +1 green
+# ENHANCEMENT_COLOR_2 = (80, 140, 255)    # +2 blue
+# ENHANCEMENT_COLOR_3 = (180, 60, 255)    # +3 purple
+# ENHANCEMENT_COLOR_4 = (255, 215, 0)     # +4 gold
+# ENHANCEMENT_COLOR_5 = (255, 50, 50)     # +5 red
+# ENHANCEMENT_COLORS = {1: ..., 2: ..., 3: ..., 4: ..., 5: ...}
+```
 
 ## Tile Types (`core/constants.py`)
 
@@ -1720,3 +1762,62 @@ Pool items receive boss rarity weights (`RARITY_WEIGHTS_BOSS`). Enhancement tier
 ### Key Function: `roll_loot(table, rng=None, luck_bonus=0.0)`
 
 Returns `list[(item_id, count, rarity_or_None)]` — 3-tuples. Checks `drop_chance`, adds `guaranteed` items, picks `min_items`–`max_items` from weighted pool (no duplicates), then optionally enhances one drop for bosses. Rarity-eligible equipment items get a rarity roll using boss weights (if `enhanced_chance > 0`) or normal weights.
+
+---
+
+## Command Bar & Cheat System
+
+### F12 Command Bar (`ui/command_bar.py`)
+
+Press **F12** to toggle a text input overlay. Type commands and press Enter to execute.
+
+### Cheat Commands (`game/cheats.py`)
+
+| Command | Requires Cheats | Description |
+|---------|-----------------|-------------|
+| `enable cheats` | No | Enables cheat mode (saved to save data) |
+| `help` | No | Lists available commands |
+| `set health <val>` | Yes | Set current HP |
+| `set maxhp <val>` | Yes | Set max HP |
+| `set level <val>` | Yes | Set player level |
+| `set xp <val>` | Yes | Set XP |
+| `set points <val>` | Yes | Set stat points |
+| `set str <val>` | Yes | Set strength |
+| `set agi <val>` | Yes | Set agility |
+| `set vit <val>` | Yes | Set vitality |
+| `set luck <val>` | Yes | Set luck |
+| `set kills <val>` | Yes | Set kill count |
+| `set day <val>` | Yes | Set day number |
+| `give <item_id> [n]` | Yes | Give n items (default 1) |
+| `god` | Yes | Toggle invincibility |
+| `heal` | Yes | Full heal |
+| `kill` | Yes | Kill all enemies |
+| `levelup [n]` | Yes | Level up n times (default 1) |
+
+### Save Data Fields
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `cheats_enabled` | bool | false | Whether cheats are enabled |
+
+### Game State
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `Game.cheats_enabled` | bool | Cheat mode active |
+| `Game.god_mode` | bool | Invincibility (not saved) |
+| `Game.show_cheat_help` | bool | Cheat help overlay visible |
+| `Game.command_bar` | CommandBar | F12 command bar instance |
+
+---
+
+## Border System — Clean Slate
+
+**Rarity border is the ONLY item border.** All other borders (enchantment glow, enhancement inner ring, icon tier glow) have been removed.
+
+- `draw_rarity_border()` in `ui/rarity_display.py` — draws 2px colored border for non-common rarity items
+- `draw_enhancement_border()` — **COMMENTED OUT** (preserved for future use)
+- `ENHANCEMENT_COLORS` dict — **COMMENTED OUT** in `game_controller.py`
+- `ENHANCEMENT_COLOR_1` through `ENHANCEMENT_COLOR_5` — **COMMENTED OUT** in `game_controller.py`
+- Tier glow borders on item icon textures — **REMOVED** from `textures/items.py` (`_generate_stat_weapon`, `generate_tiered_spell_books`)
+- Enchant color fallback borders (drawn when no rarity but has enchant) — **REMOVED** from all UI modules

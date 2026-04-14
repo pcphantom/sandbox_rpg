@@ -66,11 +66,12 @@ RARITY_COLOR_LEGENDARY: Tuple[int, int, int] = (255, 215, 0)
 RARITY_COLOR_MYTHIC: Tuple[int, int, int] = (255, 50, 50)
 
 # --- Enhancement level colors (+1 through +5) ---
-ENHANCEMENT_COLOR_1: Tuple[int, int, int] = (0, 200, 0)
-ENHANCEMENT_COLOR_2: Tuple[int, int, int] = (80, 140, 255)
-ENHANCEMENT_COLOR_3: Tuple[int, int, int] = (180, 60, 255)
-ENHANCEMENT_COLOR_4: Tuple[int, int, int] = (255, 215, 0)
-ENHANCEMENT_COLOR_5: Tuple[int, int, int] = (255, 50, 50)
+# PRESERVED for future use — currently no inner borders are drawn.
+# ENHANCEMENT_COLOR_1: Tuple[int, int, int] = (0, 200, 0)
+# ENHANCEMENT_COLOR_2: Tuple[int, int, int] = (80, 140, 255)
+# ENHANCEMENT_COLOR_3: Tuple[int, int, int] = (180, 60, 255)
+# ENHANCEMENT_COLOR_4: Tuple[int, int, int] = (255, 215, 0)
+# ENHANCEMENT_COLOR_5: Tuple[int, int, int] = (255, 50, 50)
 
 # --- Enchantment element colors ---
 ENCHANT_COLOR_FIRE: Tuple[int, int, int] = (255, 120, 30)
@@ -327,6 +328,33 @@ OPTIONS_BACK_HOVER: Tuple[int, int, int] = (60, 70, 100)
 OPTIONS_BACK_NORMAL: Tuple[int, int, int] = (40, 45, 65)
 OPTIONS_BACK_BORDER: Tuple[int, int, int] = (130, 130, 160)
 OPTIONS_INFO_TEXT: Tuple[int, int, int] = (160, 160, 190)
+
+# --- Command bar (F12) UI ---
+CMD_BAR_BG: Tuple[int, int, int, int] = (15, 15, 25, 230)
+CMD_BAR_BORDER: Tuple[int, int, int] = (120, 120, 160)
+CMD_BAR_INPUT_BG: Tuple[int, int, int] = (30, 30, 45)
+CMD_BAR_INPUT_BORDER: Tuple[int, int, int] = (100, 100, 140)
+CMD_BAR_TEXT: Tuple[int, int, int] = (220, 220, 240)
+CMD_BAR_PLACEHOLDER: Tuple[int, int, int] = (100, 100, 120)
+CMD_BAR_CLOSE_HOVER: Tuple[int, int, int] = (160, 60, 60)
+CMD_BAR_CLOSE_NORMAL: Tuple[int, int, int] = (100, 40, 40)
+CMD_BAR_RESULT_OK: Tuple[int, int, int] = (100, 255, 100)
+CMD_BAR_RESULT_ERR: Tuple[int, int, int] = (255, 100, 100)
+
+# --- Cheats button (below minimap) ---
+CHEAT_BTN_BG: Tuple[int, int, int, int] = (40, 20, 60, 200)
+CHEAT_BTN_BORDER: Tuple[int, int, int] = (140, 80, 200)
+CHEAT_BTN_HOVER: Tuple[int, int, int, int] = (60, 30, 80, 220)
+CHEAT_BTN_TEXT: Tuple[int, int, int] = (200, 150, 255)
+CHEAT_HELP_BG: Tuple[int, int, int, int] = (15, 10, 25, 235)
+CHEAT_HELP_BORDER: Tuple[int, int, int] = (140, 80, 200)
+CHEAT_HELP_TEXT: Tuple[int, int, int] = (200, 200, 220)
+
+# --- Cheats layout dimensions ---
+CHEAT_BTN_WIDTH: int = 110
+CHEAT_BTN_HEIGHT: int = 22
+CHEAT_HELP_WIDTH: int = 420
+CHEAT_HELP_HEIGHT: int = 310
 VOLUME_SLIDER_BG: Tuple[int, int, int] = (30, 30, 50)
 VOLUME_SLIDER_FILL: Tuple[int, int, int] = (70, 160, 255)
 
@@ -845,13 +873,14 @@ TURRET_OFFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
 PROTECTION_DR_PER_LEVEL: int = 2
 # Built from the individual color constants above.
-ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
-    1: ENHANCEMENT_COLOR_1,
-    2: ENHANCEMENT_COLOR_2,
-    3: ENHANCEMENT_COLOR_3,
-    4: ENHANCEMENT_COLOR_4,
-    5: ENHANCEMENT_COLOR_5,
-}
+# PRESERVED for future use — currently no inner borders are drawn.
+# ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
+#     1: ENHANCEMENT_COLOR_1,
+#     2: ENHANCEMENT_COLOR_2,
+#     3: ENHANCEMENT_COLOR_3,
+#     4: ENHANCEMENT_COLOR_4,
+#     5: ENHANCEMENT_COLOR_5,
+# }
 
 # --- Weapon base damages ---
 WEAPON_BASE_IRON_SWORD: Tuple[int, int] = (30, 0)

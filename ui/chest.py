@@ -18,7 +18,7 @@ from core.constants import (
 from core.components import Storage, Inventory
 from data import ITEM_DATA, get_item_color, get_stat_description
 from ui.rarity_display import (
-    draw_rarity_border, insert_rarity_tooltip, draw_enhancement_border,
+    draw_rarity_border, insert_rarity_tooltip,
 )
 from ui.split_dialog import SplitDialog
 
@@ -199,17 +199,11 @@ class ChestUI:
             pygame.draw.rect(surface, UI_SLOT_BORDER_NORMAL, sr, 1, border_radius=4)
             ench = enchants.get(i)
             rar = rarities.get(i, 'common')
+            # Rarity border (the ONLY item border)
             if rar != 'common':
-                draw_rarity_border(surface, sr, rar)
-            elif ench:
-                ec = ENCHANT_COLORS.get(ench['type'], UI_ENCHANT_FALLBACK)
-                pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
-            else:
                 draw_rarity_border(surface, sr, rar)
             if i in slots:
                 item_id, count = slots[i]
-                # Enhancement inner border — unified across all menus
-                draw_enhancement_border(surface, sr, item_id)
                 icon = self.textures.cache.get(f'item_{item_id}')
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (30, 30)),

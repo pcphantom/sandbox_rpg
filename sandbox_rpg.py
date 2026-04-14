@@ -43,6 +43,7 @@ from core.settings import (
     DISPLAY_WINDOWED, DISPLAY_FULLSCREEN, DISPLAY_BORDERLESS,
 )
 from core.music import MusicManager
+from ui.command_bar import CommandBar
 from game import combat as game_combat
 from game import drawing as game_drawing
 from game import entities as game_entities
@@ -208,6 +209,12 @@ class Game:
                                      Tuple[int, int, int], float]] = []
         self.notification: str = ""
         self.notification_timer: float = 0.0
+
+        # Command bar (F12) and cheats
+        self.command_bar = CommandBar()
+        self.cheats_enabled: bool = False
+        self.god_mode: bool = False
+        self.show_cheat_help: bool = False
 
         # Music
         self.music_manager = MusicManager(self.settings)

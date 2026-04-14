@@ -508,6 +508,8 @@ def _get_equipment_enchant_dr(eq: Optional[Equipment]) -> int:
     return total
 
 def check_contact_damage(g: 'Game', pt: Transform) -> None:
+    if g.god_mode:
+        return
     if g.player_hit_cd > 0:
         return
     eq: Equipment = g.em.get_component(g.player_id, Equipment)
@@ -539,6 +541,8 @@ def check_contact_damage(g: 'Game', pt: Transform) -> None:
 
 
 def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
+    if g.god_mode:
+        return
     eq: Equipment = g.em.get_component(g.player_id, Equipment)
     dmg_red = calc_damage_reduction(eq)
     if 'protection' in g.active_buffs:
@@ -599,6 +603,8 @@ def campfire_heal(g: 'Game', dt: float, pt: Transform) -> None:
 
 
 def night_damage(g: 'Game', dt: float, pt: Transform) -> None:
+    if g.god_mode:
+        return
     darkness = g.daynight.get_darkness()
     if darkness <= NIGHT_DARKNESS_THRESHOLD:
         g.night_dmg_timer = 0.0

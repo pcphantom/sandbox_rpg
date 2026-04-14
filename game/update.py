@@ -22,6 +22,9 @@ from enchantments.effects import get_enchant_regen_rate
 
 def update(g, dt: float) -> None:
     """Run one simulation tick.  ``g`` is the :class:`sandbox_rpg.Game` instance."""
+    # Command bar timer update (runs even when no keys are pressed)
+    g.command_bar.update(dt)
+
     keys = pygame.key.get_pressed()
     pv: Velocity = g.em.get_component(g.player_id, Velocity)
     pt: Transform = g.em.get_component(g.player_id, Transform)

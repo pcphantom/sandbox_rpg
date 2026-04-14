@@ -132,12 +132,7 @@ class InventoryGrid(UIElement):
                 surface.blit(pygame.transform.scale(icon, (34, 34)),
                              (mx - 17, my - 17))
             if self.inventory.held_enchant:
-                from enchantments.effects import ENCHANT_COLORS
-                ec = ENCHANT_COLORS.get(self.inventory.held_enchant['type'],
-                                        UI_ENCHANT_FALLBACK)
-                pygame.draw.rect(surface, ec,
-                                 (mx - 19, my - 19, 38, 38), 2,
-                                 border_radius=4)
+                pass  # No enchant border on held items — rarity only
             if count > 1:
                 ct = self.font.render(str(count), True, WHITE)
                 surface.blit(ct, (mx + 8, my + 8))
@@ -150,16 +145,10 @@ class InventoryGrid(UIElement):
                    mx: int, my: int, tooltip: Tooltip,
                    enchant: dict | None = None,
                    rarity: str = 'common') -> None:
-        # Rarity border
+        # Rarity border (the ONLY item border)
         if rarity and rarity != 'common':
             from ui.rarity_display import draw_rarity_border
             draw_rarity_border(surface, sr, rarity)
-        elif enchant:
-            from enchantments.effects import ENCHANT_COLORS
-            ec = ENCHANT_COLORS.get(enchant['type'], UI_ENCHANT_FALLBACK)
-            pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
-        from ui.rarity_display import draw_enhancement_border
-        draw_enhancement_border(surface, sr, item_id)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (34, 34)),

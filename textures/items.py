@@ -853,7 +853,7 @@ def generate_buff_spell_books(gen) -> None:
 
 
 def generate_tiered_spell_books(gen) -> None:
-    """Generate tier 2-5 versions of elemental spell books with tier glow."""
+    """Generate tier 2-5 versions of elemental spell books (plain copy — no border glow)."""
     bases = {
         'spell_fireball': (255, 120, 30),
         'spell_heal': (80, 255, 80),
@@ -863,20 +863,12 @@ def generate_tiered_spell_books(gen) -> None:
     for base_key, glow_color in bases.items():
         for tier in range(2, 6):
             item_key = f"item_{base_key}_{tier}"
-            r, g, b = glow_color
-            glow_alpha = 80 + tier * 30
-            def make(bk=base_key, t=tier, rc=r, gc=g, bc=b, ga=glow_alpha) -> pygame.Surface:
+            def make(bk=base_key, t=tier) -> pygame.Surface:
                 base = gen.cache.get(f"item_{bk}")
                 if base is None:
                     base = pygame.Surface((20, 20), pygame.SRCALPHA)
                 s = base.copy()
-                for x in range(20):
-                    s.set_at((x, 0), (rc, gc, bc, min(255, ga)))
-                    s.set_at((x, 19), (rc, gc, bc, min(255, ga)))
-                for y in range(20):
-                    s.set_at((0, y), (rc, gc, bc, min(255, ga)))
-                    s.set_at((19, y), (rc, gc, bc, min(255, ga)))
-                # Tier dots at bottom
+                # Tier dots at bottom (no border glow)
                 dot_y = 17
                 start_x = 10 - t
                 for d in range(t):
@@ -887,25 +879,14 @@ def generate_tiered_spell_books(gen) -> None:
 
 def _generate_stat_weapon(gen, base_key: str, tier: int,
                           base_color: tuple) -> pygame.Surface:
-    """Generate a stat weapon icon with a colored tier glow."""
+    """Generate a stat weapon icon (plain copy of base — no border glow)."""
     item_key = f"item_{base_key}_{tier}"
     def make() -> pygame.Surface:
         # Start from the base weapon texture
         base = gen.cache.get(f"item_{base_key}")
         if base is None:
             base = pygame.Surface((20, 20), pygame.SRCALPHA)
-        s = base.copy()
-        w, h = s.get_width(), s.get_height()
-        # Add tier glow border
-        glow_alpha = 80 + tier * 30
-        r, g, b = base_color
-        for x in range(w):
-            s.set_at((x, 0), (r, g, b, min(255, glow_alpha)))
-            s.set_at((x, h - 1), (r, g, b, min(255, glow_alpha)))
-        for y in range(h):
-            s.set_at((0, y), (r, g, b, min(255, glow_alpha)))
-            s.set_at((w - 1, y), (r, g, b, min(255, glow_alpha)))
-        return s
+        return base.copy()
     return gen._get(item_key, make)
 
 

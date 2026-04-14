@@ -97,6 +97,10 @@ def render(g: 'Game') -> None:
     pt: Transform = g.em.get_component(g.player_id, Transform)
     g.minimap.draw(g.screen, g.world, pt.x, pt.y, mob_pos, build_pos)
 
+    # Cheats button (below minimap, visible when cheats enabled)
+    if g.cheats_enabled:
+        _draw_cheats_button(g)
+
     # Overlays
     if g.show_chest and g.active_chest is not None:
         stor = g.em.get_component(g.active_chest, Storage)
@@ -140,6 +144,11 @@ def render(g: 'Game') -> None:
         ny = SCREEN_HEIGHT // 2 + 120
         g.screen.blit(nbg, (nx - 10, ny - 4))
         g.screen.blit(ns, (nx, ny))
+    # Command bar overlay (F12)
+    g.command_bar.draw(g.screen)
+    # Cheat help overlay
+    if g.show_cheat_help:
+        _draw_cheat_help(g)
     g.tooltip.draw(g.screen)
     if g.dead:
         draw_death_screen(g)
@@ -393,19 +402,12 @@ def draw_hotbar(g: 'Game') -> None:
                     overlay = pygame.Surface((ss, oh), pygame.SRCALPHA)
                     overlay.fill((40, 40, 40, 160))
                     g.screen.blit(overlay, (x, by))
-            # -- Enchant glow border --
+            # -- Rarity border (the ONLY item border) --
             hb_ench = inv.hotbar_enchantments.get(i)
             hb_rar = inv.hotbar_rarities.get(i, 'common')
-            # Rarity border (outer)
             if hb_rar and hb_rar != 'common':
                 from ui.rarity_display import draw_rarity_border
                 draw_rarity_border(g.screen, rect, hb_rar)
-            elif hb_ench:
-                from enchantments.effects import ENCHANT_COLORS
-                ec = ENCHANT_COLORS.get(hb_ench['type'], UI_ENCHANT_FALLBACK)
-                pygame.draw.rect(g.screen, ec, rect, 2, border_radius=5)
-            from ui.rarity_display import draw_enhancement_border
-            draw_enhancement_border(g.screen, rect, item_id)
             if rect.collidepoint(mx, my) and item_id in ITEM_DATA:
                 d = ITEM_DATA[item_id]
                 name = d[0]
@@ -811,3 +813,77 @@ def draw_boss_glow(g: 'Game') -> None:
                            (radius, radius), radius)
         g.screen.blit(glow_surf, (sx - radius, sy - radius),
                        special_flags=pygame.BLEND_RGBA_ADD)
+
+
+# ======================================================================
+# CHEATS BUTTON & HELP OVERLAY
+# ======================================================================
+
+def _draw_cheats_button(g: 'Game') -> None:
+    """Draw 'Cheats' button below the minimap."""
+    from game_controller import (
+        MINIMAP_SIZE_PX,
+        CHEAT_BTN_BG, CHEAT_BTN_BORDER, CHEAT_BTN_HOVER, CHEAT_BTN_TEXT,
+        CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT,
+    )
+    mx, my = pygame.mouse.get_pos()
+    btn_w, btn_h = CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT
+    btn_x = SCREEN_WIDTH - MINIMAP_SIZE_PX - 15
+    btn_y = 50 + MINIMAP_SIZE_PX + 6
+    r = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+    hover = r.collidepoint(mx, my)
+    bg_c = CHEAT_BTN_HOVER if hover else CHEAT_BTN_BG
+    bg_surf = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
+    bg_surf.fill(bg_c)
+    g.screen.blit(bg_surf, (btn_x, btn_y))
+    pygame.draw.rect(g.screen, CHEAT_BTN_BORDER, r, 1, border_radius=3)
+    label = g.font_sm.render("Cheats Enabled", True, CHEAT_BTN_TEXT)
+    g.screen.blit(label, (r.centerx - label.get_width() // 2,
+                          r.centery - label.get_height() // 2))
+
+
+def _draw_cheat_help(g: 'Game') -> None:
+    """Draw a translucent overlay listing available cheat commands."""
+    from game_controller import (
+        CHEAT_HELP_BG, CHEAT_HELP_BORDER, CHEAT_HELP_TEXT,
+        CHEAT_HELP_WIDTH, CHEAT_HELP_HEIGHT,
+    )
+    pw, ph = CHEAT_HELP_WIDTH, CHEAT_HELP_HEIGHT
+    px = SCREEN_WIDTH // 2 - pw // 2
+    py = SCREEN_HEIGHT // 2 - ph // 2
+    bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
+    bg.fill(CHEAT_HELP_BG)
+    g.screen.blit(bg, (px, py))
+    pygame.draw.rect(g.screen, CHEAT_HELP_BORDER,
+                     (px, py, pw, ph), 2, border_radius=8)
+
+    title = g.font.render("Cheat Commands (F12 to open bar)", True, WHITE)
+    g.screen.blit(title, (px + pw // 2 - title.get_width() // 2, py + 10))
+
+    lines = [
+        "enable cheats      - Enable cheat mode",
+        "set health <val>   - Set HP",
+        "set maxhp <val>    - Set max HP",
+        "set level <val>    - Set player level",
+        "set xp <val>       - Set XP",
+        "set points <val>   - Set stat points",
+        "set str <val>      - Set strength",
+        "set agi <val>      - Set agility",
+        "set vit <val>      - Set vitality",
+        "set luck <val>     - Set luck",
+        "set kills <val>    - Set kill count",
+        "set day <val>      - Set day number",
+        "give <item> [n]    - Give item(s)",
+        "god                - Toggle invincibility",
+        "heal               - Full heal",
+        "kill               - Kill all enemies",
+        "levelup [n]        - Level up n times",
+    ]
+    y = py + 38
+    for line in lines:
+        lt = g.font_sm.render(line, True, CHEAT_HELP_TEXT)
+        g.screen.blit(lt, (px + 16, y))
+        y += 15
+
+    hint = g.font_sm.render("Click or press ESC to close", True, GRAY)
+    g.screen.blit(hint, (px + pw // 2 - hint.get_width() // 2, py + ph - 20))
