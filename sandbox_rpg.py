@@ -99,6 +99,9 @@ class Game:
         self.in_main_menu = True
         self.in_options_menu = False
         self.options_source: str = 'main'  # 'main' or 'pause'
+        self.in_about_menu = False
+        self.about_section: str = ''  # 'game', 'index', 'noobfragged', 'credits'
+        self.about_scroll: int = 0  # scroll position for long text
 
         # Fonts
         self.font = pygame.font.SysFont('consolas', FONT_SIZE_MAIN)
@@ -434,7 +437,14 @@ class Game:
             dt = min(self.clock.tick(FPS) / 1000.0, 0.05)  # Cap at 50ms to prevent velocity spikes
             # Handle global display events
             self._process_display_events()
-            if self.in_options_menu:
+            if self.in_about_menu:
+                from ui.about_menu import handle_about_events, draw_about_menu, draw_about_section
+                handle_about_events(self)
+                if self.about_section:
+                    draw_about_section(self)
+                else:
+                    draw_about_menu(self)
+            elif self.in_options_menu:
                 self._handle_options_events()
                 self._draw_options_menu()
             elif self.in_main_menu:

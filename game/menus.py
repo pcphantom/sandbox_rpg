@@ -210,6 +210,15 @@ def handle_options_events(g: 'Game') -> None:
                 g.settings['music_volume'] = round(vol, 2)
                 save_settings(g.settings)
 
+            # About button
+            about_y = vol_y + 40
+            about_r = pygame.Rect(px + pw // 2 - 80, about_y, 160, 36)
+            if about_r.collidepoint(mx, my):
+                g.in_about_menu = True
+                g.in_options_menu = False
+                g.about_section = ''
+                g.about_scroll = 0
+
             # Back
             back_y = py + ph - 60
             back_r = pygame.Rect(px + pw // 2 - 80, back_y, 160, 40)
@@ -353,6 +362,17 @@ def draw_options_menu(g: 'Game') -> None:
     pct = g.font_sm.render(
         f"{int(g.music_manager.volume * 100)}%", True, WHITE)
     g.screen.blit(pct, (slider_x + slider_w + 10, vol_y + 8))
+
+    # About button
+    about_y = vol_y + 40
+    about_r = pygame.Rect(px + pw // 2 - 80, about_y, 160, 36)
+    hov = about_r.collidepoint(mx, my)
+    bc = OPTIONS_BACK_HOVER if hov else OPTIONS_BACK_NORMAL
+    pygame.draw.rect(g.screen, bc, about_r, border_radius=5)
+    pygame.draw.rect(g.screen, UI_BORDER_NORMAL, about_r, 1, border_radius=5)
+    bt = g.font.render("About", True, WHITE)
+    g.screen.blit(bt, (about_r.centerx - bt.get_width() // 2,
+                       about_r.centery - bt.get_height() // 2))
 
     # Current info
     cur_info = g.font_sm.render(
