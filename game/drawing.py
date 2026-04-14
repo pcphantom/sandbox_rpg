@@ -566,7 +566,7 @@ def draw_hud(g: 'Game') -> None:
     # Controls hint
     if not (g.show_inventory or g.show_crafting
             or g.show_character or g.show_chest
-            or g.paused):
+            or g.show_stone_oven or g.paused):
         controls = [
             "WASD  Move",
             "Space Attack",

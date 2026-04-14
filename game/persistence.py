@@ -22,6 +22,10 @@ from core.constants import (
     DOOR_COLLIDER_W, DOOR_COLLIDER_H,
     LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
+from game_controller import (
+    BEACON_HP, BEACON_LIGHT_RADIUS,
+    STONE_OVEN_HP, STONE_OVEN_SLOTS,
+)
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
     PlayerStats, Equipment, Placeable, LightSource, Storage, Turret,
@@ -383,6 +387,30 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
         g.em.add_component(eid, Collider(
             DOOR_COLLIDER_W, DOOR_COLLIDER_H, True))
         g.em.add_component(eid, Building('door'))
+    elif item_id == 'beacon':
+        g.em.add_component(eid, Renderable(
+            g.textures.get('beacon_placed'), layer=2))
+        g.em.add_component(eid, Collider(64, 64, True))
+        h = Health(struct.get('max_hp', BEACON_HP))
+        h.current = struct.get('hp', h.maximum)
+        g.em.add_component(eid, h)
+        g.em.add_component(eid, LightSource(BEACON_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
+        g.em.add_component(eid, Building('beacon'))
+    elif item_id == 'stone_oven':
+        # Determine if oven was burning (has items being smelted)
+        g.em.add_component(eid, Renderable(
+            g.textures.get('stone_oven_False'), layer=1))
+        g.em.add_component(eid, Collider(32, 32, True))
+        h = Health(struct.get('max_hp', STONE_OVEN_HP))
+        h.current = struct.get('hp', h.maximum)
+        g.em.add_component(eid, h)
+        stor = Storage(STONE_OVEN_SLOTS)
+        for s_str, (iid, c) in struct.get('storage', {}).items():
+            stor.slots[int(s_str)] = (iid, c)
+        for s_str, r in struct.get('storage_rarities', {}).items():
+            stor.slot_rarities[int(s_str)] = r
+        g.em.add_component(eid, stor)
+        g.em.add_component(eid, Building('stone_oven'))
 
 
 # ======================================================================

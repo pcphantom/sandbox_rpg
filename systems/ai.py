@@ -16,6 +16,8 @@ from game_controller import (
     RANGED_RETREAT_SPEED_MULT, RANGED_STRAFE_SPEED_MULT,
     CHASE_MIN_DISTANCE, CHASE_SPEED_MULT,
     STUCK_WANTED_MULT, STUCK_MIN_DISTANCE, STUCK_TIME_THRESHOLD,
+    BEACON_ATTRACT_RADIUS, BEACON_ATTRACT_SPEED_OUTSIDE,
+    BEACON_ATTRACT_SPEED_INSIDE, BEACON_LIGHT_RADIUS,
 )
 
 
@@ -52,10 +54,20 @@ class AISystem:
 
     def update(self, dt: float, em: EntityManager, player_id: int,
                on_ranged_fire: Any = None,
-               night_structure_dmg_mult: int = 1) -> None:
+               night_structure_dmg_mult: int = 1,
+               is_night: bool = False) -> None:
         pt = em.get_component(player_id, Transform)
         if not pt:
             return
+        # Cache beacon positions for attraction logic
+        self._is_night = is_night
+        self._beacon_positions = []
+        if is_night:
+            for bid in em.get_entities_with(Transform, Placeable, Building):
+                bld = em.get_component(bid, Building)
+                if bld.building_type == 'beacon':
+                    bt = em.get_component(bid, Transform)
+                    self._beacon_positions.append((bt.x + 32, bt.y + 32))
         for eid in em.get_entities_with(Transform, Velocity, AI):
             if eid == player_id:
                 continue
@@ -143,6 +155,31 @@ class AISystem:
             if mob_ai.behavior == "wander":
                 if dist < mob_ai.detection_range or mob_ai.aggro:
                     mob_ai.state = "chase"
+                elif self._is_night and self._beacon_positions:
+                    # Beacon attraction at night — override wander
+                    best_beacon = None
+                    best_bdist = BEACON_ATTRACT_RADIUS
+                    for bx, by in self._beacon_positions:
+                        bdist = math.hypot(bx - t.x, by - t.y)
+                        if bdist < best_bdist:
+                            best_bdist = bdist
+                            best_beacon = (bx, by)
+                    if best_beacon is not None and best_bdist > 20:
+                        bx, by = best_beacon
+                        bdx = bx - t.x
+                        bdy = by - t.y
+                        # Inside beacon light → slower approach
+                        if best_bdist < BEACON_LIGHT_RADIUS:
+                            speed_mult = BEACON_ATTRACT_SPEED_INSIDE
+                        else:
+                            speed_mult = BEACON_ATTRACT_SPEED_OUTSIDE
+                        v.vx = (bdx / best_bdist) * mob_ai.speed * speed_mult
+                        v.vy = (bdy / best_bdist) * mob_ai.speed * speed_mult
+                    elif mob_ai.timer <= 0:
+                        angle = random.uniform(0, math.tau)
+                        v.vx = math.cos(angle) * mob_ai.speed
+                        v.vy = math.sin(angle) * mob_ai.speed
+                        mob_ai.timer = random.uniform(WANDER_TIME_MIN, WANDER_TIME_MAX)
                 elif mob_ai.timer <= 0:
                     angle = random.uniform(0, math.tau)
                     v.vx = math.cos(angle) * mob_ai.speed

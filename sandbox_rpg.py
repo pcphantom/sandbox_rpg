@@ -138,6 +138,16 @@ class Game:
 
         # Player
         self.player_id = self._create_player()
+
+        # Day-based respawn tracking (must be set before _populate_world)
+        self._last_resource_respawn_day: int = 1
+        self._last_cave_reset_day: int = 1
+        # Harvested overworld resource grid positions (cleared on respawn day)
+        self.harvested_resources: set = set()
+        # Cave entity snapshots: cave_index -> list of entity dicts
+        # Persists cave state between entries/exits so caves don't reset
+        self.cave_snapshots: Dict[int, list] = {}
+
         self._populate_world()
 
         # UI state
@@ -203,15 +213,6 @@ class Game:
         self.survival_timer = 0.0
         self.sleeping = False
         self.sleep_timer = 0.0
-
-        # Day-based respawn tracking
-        self._last_resource_respawn_day: int = 1
-        self._last_cave_reset_day: int = 1
-        # Harvested overworld resource grid positions (cleared on respawn day)
-        self.harvested_resources: set = set()
-        # Cave entity snapshots: cave_index -> list of entity dicts
-        # Persists cave state between entries/exits so caves don't reset
-        self.cave_snapshots: Dict[int, list] = {}
 
         self.dmg_numbers: List[Tuple[float, float, str,
                                      Tuple[int, int, int], float]] = []
@@ -585,6 +586,8 @@ class Game:
         self.active_chest = None
         self.show_enchant_table = False
         self.active_enchant_table = None
+        self.show_stone_oven = False
+        self.active_stone_oven = None
         self.spell_cooldowns.clear()
         self.active_buffs.clear()
         self.speed_restores.clear()
