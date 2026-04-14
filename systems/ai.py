@@ -20,6 +20,8 @@ from game_controller import (
     BEACON_ATTRACT_SPEED_INSIDE, BEACON_LIGHT_RADIUS,
 )
 
+BEACON_MIN_DISTANCE: float = 20.0  # stop moving when this close to beacon
+
 
 class AISystem:
     def __init__(self) -> None:
@@ -164,7 +166,7 @@ class AISystem:
                         if bdist < best_bdist:
                             best_bdist = bdist
                             best_beacon = (bx, by)
-                    if best_beacon is not None and best_bdist > 20:
+                    if best_beacon is not None and best_bdist > BEACON_MIN_DISTANCE:
                         bx, by = best_beacon
                         bdx = bx - t.x
                         bdy = by - t.y

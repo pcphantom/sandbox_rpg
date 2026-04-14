@@ -38,8 +38,8 @@ class StoneOvenUI:
         # Panel dimensions
         self.pw, self.ph = 300, 240
         # Smelting state per oven entity
-        self._smelt_timers: Dict[int, float] = {}  # eid -> seconds remaining
-        self._smelt_recipe: Dict[int, dict] = {}   # eid -> current recipe dict
+        self._smelt_timers: dict[int, float] = {}  # eid -> seconds remaining
+        self._smelt_recipe: dict[int, dict] = {}   # eid -> current recipe dict
 
     def _find_recipe(self, stor: Storage) -> Optional[dict]:
         """Find the first matching smelting recipe from items in storage."""

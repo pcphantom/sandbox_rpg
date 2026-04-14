@@ -31,7 +31,7 @@ from core.constants import (
     CAVE_MOB_TYPES, CAVE_MOB_COUNT, CAVE_BOSS_TYPES,
     CAVE_ORE_COUNT, CAVE_DIAMOND_COUNT,
     CAVE_HP_MULT, CAVE_DMG_MULT,
-    CHEST_CAPACITY,
+    CHEST_CAPACITY, CHEST_HP_VALUE,
 )
 from core.utils import clamp
 from core.components import (
@@ -520,7 +520,7 @@ def snapshot_cave_entities(g: 'Game') -> list:
                 stor = g.em.get_component(eid, Storage)
                 entry['etype'] = 'chest'
                 entry['hp'] = h.current if h else 0
-                entry['max_hp'] = h.maximum if h else 200
+                entry['max_hp'] = h.maximum if h else CHEST_HP_VALUE
                 entry['storage'] = {
                     str(s): [iid, c]
                     for s, (iid, c) in stor.slots.items()
