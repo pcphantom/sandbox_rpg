@@ -21,6 +21,7 @@ from ui.rarity_display import (
     draw_rarity_border, insert_rarity_tooltip,
 )
 from ui.split_dialog import SplitDialog
+from ui.draggable import DraggableWindow
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -47,25 +48,22 @@ class ChestUI:
         self.inv_page: int = 0
         self.chest_scroll: int = 0  # top row offset for chest grid
         self.split_dialog = SplitDialog()
+        self.dw = DraggableWindow(620, 320, title="Chest")
 
     def draw(self, surface: pygame.Surface, storage: Storage,
              inventory: Inventory, tooltip,
              is_cave_chest: bool = False) -> None:
         pw, ph = 620, 320
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill(UI_CHEST_PANEL_BG)
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, UI_BORDER_PANEL,
-                         (px, py, pw, ph), 2, border_radius=10)
 
         mx, my = pygame.mouse.get_pos()
         ss = self.slot_size
 
         # Left half: Chest
-        title_l = self.title_font.render("Chest", True, ORANGE)
-        surface.blit(title_l, (px + 20, py + 8))
         total_rows = (storage.capacity + self.cols - 1) // self.cols
         max_scroll = max(0, total_rows - self.VISIBLE_ROWS)
         self.chest_scroll = max(0, min(self.chest_scroll, max_scroll))
@@ -174,6 +172,9 @@ class ChestUI:
             surface.blit(lt, (r.centerx - lt.get_width() // 2,
                               r.centery - lt.get_height() // 2))
 
+        # Chrome
+        self.dw.draw_chrome(surface)
+
         # Split dialog overlay (drawn last so it's on top)
         self.split_dialog.draw(surface)
 
@@ -240,9 +241,11 @@ class ChestUI:
     def handle_event(self, event: pygame.event.Event,
                      storage: Storage, inventory: Inventory,
                      is_cave_chest: bool = False) -> bool:
+        if self.dw.handle_event(event):
+            return True
         pw, ph = 620, 320
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
         ss = self.slot_size
 
         # Split dialog takes priority over all other events

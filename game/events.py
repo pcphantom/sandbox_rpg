@@ -237,15 +237,23 @@ def handle_events(g) -> None:
                     event, stor,
                     g.em.get_component(g.player_id, Inventory))
         if g.show_stone_oven:
+            if g.stone_oven_ui.handle_event(event, g):
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN:
                 g.stone_oven_ui.handle_click(g, *event.pos, event.button)
         if g.show_inventory:
             g.inventory_ui.handle_event(event)
+            if g.inventory_ui.dw.close_requested:
+                g._return_held_item()
+                g.show_inventory = False
         if g.show_crafting:
             g.crafting_ui.handle_event(
                 event,
                 g.em.get_component(g.player_id, Inventory),
                 g._craft)
+            if g.crafting_ui.dw.close_requested:
+                g._return_held_item()
+                g.show_crafting = False
         if g.show_character:
             g.character_menu.handle_event(
                 event,

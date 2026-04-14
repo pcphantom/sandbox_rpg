@@ -64,6 +64,7 @@ def interact(g: 'Game') -> None:
             if bld and bld.building_type == 'stone_oven':
                 g.show_stone_oven = True
                 g.active_stone_oven = eid
+                g.show_inventory = True  # Open inventory alongside stone oven
             elif bld and bld.building_type == 'enchantment_table':
                 g.show_enchant_table = True
                 g.active_enchant_table = eid

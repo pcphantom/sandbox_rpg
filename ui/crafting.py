@@ -13,6 +13,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, RED, GREEN, GRAY
 from core.components import Inventory
 from data import ITEM_DATA, RECIPES, get_item_color
 from ui.elements import Tooltip
+from ui.draggable import DraggableWindow
 
 
 class CraftingPanel:
@@ -24,25 +25,23 @@ class CraftingPanel:
         self.font_sm = pygame.font.SysFont('consolas', 13)
         self.title_font = pygame.font.SysFont('consolas', 22, bold=True)
         self.scroll = 0
+        pw = 420
+        pht = 55 + self.SCROLL_VISIBLE * 52 + 30
+        self.dw = DraggableWindow(pw, pht, title="Crafting")
 
     def draw(self, surface: pygame.Surface, inventory: Inventory,
              tooltip: Tooltip) -> None:
-        pw, pht = 420, 55 + self.SCROLL_VISIBLE * 52 + 30
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - pht // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
+        pw, pht = self.dw.w, self.dw.h
         bg = pygame.Surface((pw, pht), pygame.SRCALPHA)
         bg.fill((18, 18, 28, 235))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, UI_BORDER_LIGHT,
-                         (px, py, pw, pht), 2, border_radius=10)
-        title = self.title_font.render("Crafting", True, WHITE)
-        surface.blit(title,
-                     (px + pw // 2 - title.get_width() // 2, py + 10))
         mx, my = pygame.mouse.get_pos()
 
         visible = RECIPES[self.scroll:self.scroll + self.SCROLL_VISIBLE]
         for i, recipe in enumerate(visible):
-            ry = py + 44 + i * 52
+            ry = py + 10 + i * 52
             can = all(inventory.has(it, co)
                       for it, co in recipe['cost'].items())
             btn = pygame.Rect(px + 10, ry, pw - 20, 44)
@@ -79,7 +78,7 @@ class CraftingPanel:
                                  [name_color, WHITE])
 
         # Scroll arrows
-        arrow_y = py + 44 + self.SCROLL_VISIBLE * 52 + 4
+        arrow_y = py + 10 + self.SCROLL_VISIBLE * 52 + 4
         if self.scroll > 0:
             at = self.font_sm.render("^ Scroll Up", True, GRAY)
             surface.blit(at, (px + 10, arrow_y))
@@ -87,20 +86,26 @@ class CraftingPanel:
             at = self.font_sm.render("v Scroll Down", True, GRAY)
             surface.blit(at, (px + pw - 110, arrow_y))
 
+        # Chrome
+        self.dw.draw_chrome(surface)
+
     def handle_event(self, event: pygame.event.Event,
                      inventory: Inventory,
                      craft_callback: Callable) -> bool:
+        # Draggable window chrome
+        if self.dw.handle_event(event):
+            return True
         if event.type == pygame.MOUSEWHEEL:
             self.scroll = max(0, min(len(RECIPES) - self.SCROLL_VISIBLE,
                                      self.scroll - event.y))
             return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            pw, pht = 420, 55 + self.SCROLL_VISIBLE * 52 + 30
-            px = SCREEN_WIDTH // 2 - pw // 2
-            py = SCREEN_HEIGHT // 2 - pht // 2
+            cr = self.dw.content_rect
+            px, py = cr.x, cr.y
+            pw = self.dw.w
             visible = RECIPES[self.scroll:self.scroll + self.SCROLL_VISIBLE]
             for i, recipe in enumerate(visible):
-                ry = py + 44 + i * 52
+                ry = py + 10 + i * 52
                 btn = pygame.Rect(px + 10, ry, pw - 20, 44)
                 if btn.collidepoint(event.pos):
                     craft_callback(recipe)

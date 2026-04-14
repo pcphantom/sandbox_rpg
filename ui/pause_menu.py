@@ -10,6 +10,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, GRAY, SAVE_SLOTS
                             UI_SLOT_BG_NORMAL, UI_TEXT_HIGHLIGHT,
                             UI_SLOT_BORDER_NORMAL, OPTIONS_BACK_HOVER,
                             OPTIONS_BACK_NORMAL, UI_TEXT_MUTED)
+from ui.draggable import DraggableWindow
 
 
 class PauseMenu:
@@ -18,6 +19,7 @@ class PauseMenu:
         self.font = pygame.font.SysFont('consolas', 16)
         self.title_font = pygame.font.SysFont('consolas', 32, bold=True)
         self.font_sm = pygame.font.SysFont('consolas', 13)
+        self.dw = DraggableWindow(460, 440, title="Pause Menu")
 
     def draw(self, surface: pygame.Surface,
              slot_infos: Dict[int, Any]) -> None:
@@ -26,17 +28,11 @@ class PauseMenu:
         surface.blit(ov, (0, 0))
 
         pw, ph = 460, 440
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 20, 35, 240))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, UI_BORDER_PANEL,
-                         (px, py, pw, ph), 2, border_radius=10)
-
-        title = self.title_font.render("PAUSED", True, WHITE)
-        surface.blit(title,
-                     (px + pw // 2 - title.get_width() // 2, py + 16))
 
         # Resume button
         self._draw_button(surface, px + 40, py + 70, pw - 80, 36,
@@ -82,6 +78,9 @@ class PauseMenu:
         self._draw_button(surface, px + 40, btn_y + 50, pw - 80, 36,
                           "Quit Game  [Q]")
 
+        # Chrome
+        self.dw.draw_chrome(surface)
+
     def _draw_button(self, surface: pygame.Surface,
                      x: int, y: int, w: int, h: int,
                      label: str) -> None:
@@ -102,6 +101,8 @@ class PauseMenu:
                      quit_cb: Callable,
                      options_cb: Callable = None) -> bool:
         """Returns True if the event was consumed."""
+        if self.dw.handle_event(event):
+            return True
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 resume_cb()
@@ -113,8 +114,8 @@ class PauseMenu:
             return False
         mx, my = event.pos
         pw, ph = 460, 440
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
 
         # Resume
         if pygame.Rect(px + 40, py + 70, pw - 80, 36).collidepoint(mx, my):

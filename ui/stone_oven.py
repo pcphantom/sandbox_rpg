@@ -26,6 +26,7 @@ from data import ITEM_DATA
 from game_controller import (
     SMELTING_RECIPES, STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
 )
+from ui.draggable import DraggableWindow
 
 
 class StoneOvenUI:
@@ -37,6 +38,10 @@ class StoneOvenUI:
         self.font_sm = pygame.font.SysFont('consolas', 12)
         # Panel dimensions
         self.pw, self.ph = 300, 240
+        # Draggable window — positioned on left side of screen
+        self.dw = DraggableWindow(
+            self.pw, self.ph, title="Stone Oven",
+            start_x=40, start_y=(SCREEN_HEIGHT - self.ph - 22) // 2)
         # Smelting state per oven entity
         self._smelt_timers: dict[int, float] = {}  # eid -> seconds remaining
         self._smelt_recipe: dict[int, dict] = {}   # eid -> current recipe dict
@@ -155,24 +160,24 @@ class StoneOvenUI:
             return
         stor = g.em.get_component(eid, Storage)
 
-        px = (SCREEN_WIDTH - self.pw) // 2
-        py = (SCREEN_HEIGHT - self.ph) // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
+        scale = self.dw.scale
+        pw = self.dw.w
+        ph = self.dw.h
 
         # Panel background
-        panel = pygame.Rect(px, py, self.pw, self.ph)
-        pygame.draw.rect(surface, UI_BG_PANEL, panel)
-        pygame.draw.rect(surface, UI_BORDER_PANEL, panel, 2)
-
-        # Title
-        title = self.font.render("Stone Oven", True, WHITE)
-        surface.blit(title, (px + (self.pw - title.get_width()) // 2, py + 8))
+        panel = pygame.Rect(px, py, pw, ph)
+        bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        bg.fill(UI_BG_PANEL)
+        surface.blit(bg, (px, py))
 
         # Draw 2×2 grid of slots
-        slot_size = 48
-        slot_gap = 6
+        slot_size = int(48 * scale)
+        slot_gap = int(6 * scale)
         grid_w = 2 * slot_size + slot_gap
-        grid_x = px + (self.pw - grid_w) // 2
-        grid_y = py + 36
+        grid_x = px + (pw - grid_w) // 2
+        grid_y = py + int(8 * scale)
 
         for row in range(2):
             for col in range(2):
@@ -187,8 +192,10 @@ class StoneOvenUI:
                     iid, cnt = item
                     tex = self.textures.cache.get(f'item_{iid}')
                     if tex:
-                        scaled = pygame.transform.scale(tex, (32, 32))
-                        surface.blit(scaled, (sx + 8, sy + 8))
+                        icon_size = int(32 * scale)
+                        scaled = pygame.transform.scale(tex, (icon_size, icon_size))
+                        surface.blit(scaled, (sx + (slot_size - icon_size) // 2,
+                                              sy + (slot_size - icon_size) // 2))
                     if cnt > 1:
                         ct_txt = self.font_sm.render(str(cnt), True, WHITE)
                         surface.blit(ct_txt,
@@ -196,7 +203,7 @@ class StoneOvenUI:
                                       sy + slot_size - ct_txt.get_height() - 2))
 
         # Smelting progress
-        info_y = grid_y + 2 * (slot_size + slot_gap) + 10
+        info_y = grid_y + 2 * (slot_size + slot_gap) + int(10 * scale)
         if eid in self._smelt_timers:
             recipe = self._smelt_recipe.get(eid)
             if recipe:
@@ -205,15 +212,15 @@ class StoneOvenUI:
                 total = recipe['time']
                 progress = 1.0 - (remaining / total) if total > 0 else 1.0
                 # Progress bar
-                bar_w = self.pw - 40
-                bar_rect = pygame.Rect(px + 20, info_y, bar_w, 14)
+                bar_w = pw - int(40 * scale)
+                bar_rect = pygame.Rect(px + int(20 * scale), info_y, bar_w, int(14 * scale))
                 pygame.draw.rect(surface, (60, 60, 60), bar_rect)
-                fill_rect = pygame.Rect(px + 20, info_y, int(bar_w * progress), 14)
+                fill_rect = pygame.Rect(px + int(20 * scale), info_y, int(bar_w * progress), int(14 * scale))
                 pygame.draw.rect(surface, ORANGE, fill_rect)
                 pygame.draw.rect(surface, UI_SLOT_BORDER_NORMAL, bar_rect, 1)
                 status = self.font_sm.render(
                     f"Smelting {name}... {remaining:.1f}s", True, WHITE)
-                surface.blit(status, (px + 20, info_y + 18))
+                surface.blit(status, (px + int(20 * scale), info_y + int(18 * scale)))
         else:
             recipe = self._find_recipe(stor)
             if recipe:
@@ -221,12 +228,15 @@ class StoneOvenUI:
                 info = self.font_sm.render(f"Ready to smelt: {name}", True, GREEN)
             else:
                 info = self.font_sm.render("Add ore + wood to smelt", True, UI_TEXT_MUTED)
-            surface.blit(info, (px + 20, info_y))
+            surface.blit(info, (px + int(20 * scale), info_y))
 
         # Instructions
-        instr_y = py + self.ph - 24
-        instr = self.font_sm.render("[ESC] Close    Drag items in/out", True, UI_TEXT_MUTED)
-        surface.blit(instr, (px + (self.pw - instr.get_width()) // 2, instr_y))
+        instr_y = py + ph - int(24 * scale)
+        instr = self.font_sm.render("Drag items in/out", True, UI_TEXT_MUTED)
+        surface.blit(instr, (px + (pw - instr.get_width()) // 2, instr_y))
+
+        # Chrome (title bar, close button, resize handle)
+        self.dw.draw_chrome(surface)
 
     def handle_click(self, g: 'Game', mx: int, my: int,
                      button: int = 1) -> bool:
@@ -245,11 +255,16 @@ class StoneOvenUI:
             from core.components import Inventory
             inv = g.em.get_component(g.player_id, Inventory)
 
-        slot_size = 48
-        slot_gap = 6
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
+        scale = self.dw.scale
+        pw = self.dw.w
+
+        slot_size = int(48 * scale)
+        slot_gap = int(6 * scale)
         grid_w = 2 * slot_size + slot_gap
-        grid_x = (SCREEN_WIDTH - self.pw) // 2 + (self.pw - grid_w) // 2
-        grid_y = (SCREEN_HEIGHT - self.ph) // 2 + 36
+        grid_x = px + (pw - grid_w) // 2
+        grid_y = py + int(8 * scale)
 
         for row in range(2):
             for col in range(2):
@@ -284,3 +299,16 @@ class StoneOvenUI:
                                 g._notify("Only ore and wood can go in the oven!")
                     return True
         return False
+
+    def handle_event(self, event: pygame.event.Event, g: 'Game') -> bool:
+        """Handle draggable window events (drag, close, resize).
+
+        Returns True if the event was consumed.
+        """
+        if not g.show_stone_oven:
+            return False
+        consumed = self.dw.handle_event(event)
+        if self.dw.close_requested:
+            g.show_stone_oven = False
+            g.active_stone_oven = None
+        return consumed

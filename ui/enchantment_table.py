@@ -28,6 +28,7 @@ from data import ITEM_DATA, get_item_color, get_stat_description
 from core.components import Storage, Inventory
 from core.item_stack import normalize_rarity
 from ui.rarity_display import draw_rarity_border, insert_rarity_tooltip
+from ui.draggable import DraggableWindow
 
 
 class EnchantmentTableUI:
@@ -45,11 +46,11 @@ class EnchantmentTableUI:
         self.table_cols = 3
         self.inv_cols = 6
         self.inv_page: int = 0
+        self.dw = DraggableWindow(570, 300, title="Enchantment Table")
 
     # -- layout helpers --
     def _panel_rect(self) -> Tuple[int, int]:
-        return (SCREEN_WIDTH // 2 - self.PW // 2,
-                SCREEN_HEIGHT // 2 - self.PH // 2)
+        return self.dw.content_rect.topleft
 
     def _grid_origin(self, px: int, py: int) -> Tuple[int, int]:
         return px + 14, py + 30
@@ -74,13 +75,9 @@ class EnchantmentTableUI:
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill(UI_ENCHANT_PANEL_BG)
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, UI_ENCHANT_PANEL_BORDER,
-                         (px, py, pw, ph), 2, border_radius=10)
         mx, my = pygame.mouse.get_pos()
 
         # ---- Left: Enchantment Table ----
-        title_l = self.title_font.render("Enchantment Table", True, PURPLE)
-        surface.blit(title_l, (px + 14, py + 6))
         grid_ox, grid_oy = self._grid_origin(px, py)
         self._draw_table_grid(surface, storage, grid_ox, grid_oy,
                               mx, my, tooltip)
@@ -185,6 +182,9 @@ class EnchantmentTableUI:
                 nt = self.font.render(name, True, color)
                 surface.blit(nt, (text_x, center_y - nt.get_height() // 2))
 
+        # Chrome
+        self.dw.draw_chrome(surface)
+
     def _draw_table_grid(self, surface: pygame.Surface, storage: Storage,
                          ox: int, oy: int, mx: int, my: int,
                          tooltip: 'Tooltip') -> None:
@@ -248,6 +248,8 @@ class EnchantmentTableUI:
     # ------------------------------------------------------------------
     def handle_event(self, event: pygame.event.Event,
                      storage: Storage, inventory: Inventory) -> bool:
+        if self.dw.handle_event(event):
+            return True
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         mx, my = event.pos
