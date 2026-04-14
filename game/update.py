@@ -50,8 +50,14 @@ def update(g, dt: float) -> None:
     # Systems tick
     g.movement.update(dt, g.em)
     g.physics.update(dt, g.em, g.world)
+    # Calculate night damage multiplier for structures
+    _struct_night_mult = 1
+    if g.daynight.is_night() and g.in_cave < 0:
+        from data.difficulty import get_profile as _gp
+        _struct_night_mult = int(_gp(g.difficulty).get('night_damage_multiplier', 1))
     g.ai_system.update(dt, g.em, g.player_id,
-                       on_ranged_fire=g._on_enemy_ranged_fire)
+                       on_ranged_fire=g._on_enemy_ranged_fire,
+                       night_structure_dmg_mult=_struct_night_mult)
     g.projectile_system.update(dt, g.em, on_hit=g._on_proj_hit)
     g.trap_system.update(dt, g.em, on_hit=g._on_trap_hit)
     g.turret_system.update(dt, g.em, on_fire=g._on_turret_fire)

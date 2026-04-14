@@ -507,6 +507,42 @@ def _get_equipment_enchant_dr(eq: Optional[Equipment]) -> int:
             total += get_enchant_dr_bonus(ench)
     return total
 
+
+def _is_near_light(g: 'Game', x: float, y: float) -> bool:
+    """Return True if position (x, y) is near a light source."""
+    for eid in g.em.get_entities_with(Transform, LightSource):
+        t = g.em.get_component(eid, Transform)
+        if math.hypot(t.x - x, t.y - y) < LIGHT_SAFETY_RADIUS:
+            return True
+    return False
+
+
+def _get_night_damage_multiplier(g: 'Game', x: float, y: float) -> int:
+    """Return the enemy damage multiplier at night when not in light.
+
+    Returns 1 (no bonus) during the day, inside caves, or when near light.
+    """
+    if not g.daynight.is_night():
+        return 1
+    if g.in_cave >= 0:
+        return 1
+    if _is_near_light(g, x, y):
+        return 1
+    # Also check if player is holding a torch or fire-enchanted weapon
+    inv: Inventory = g.em.get_component(g.player_id, Inventory)
+    eq: Equipment = g.em.get_component(g.player_id, Equipment)
+    if inv.get_equipped() == 'torch' and inv.has('torch'):
+        return 1
+    ench = eq.enchantments.get('weapon') if eq else None
+    if not ench:
+        ench = inv.get_equipped_enchant()
+    if ench and ench.get('type') == 'fire':
+        return 1
+    from data.difficulty import get_profile
+    prof = get_profile(g.difficulty)
+    return int(prof.get('night_damage_multiplier', 1))
+
+
 def check_contact_damage(g: 'Game', pt: Transform) -> None:
     if g.god_mode:
         return
@@ -517,13 +553,14 @@ def check_contact_damage(g: 'Game', pt: Transform) -> None:
     if 'protection' in g.active_buffs:
         dmg_red += int(g.active_buffs['protection'][1])
     dmg_red += _get_equipment_enchant_dr(eq)
+    night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
     for eid in g.em.get_entities_with(Transform, AI):
         t: Transform = g.em.get_component(eid, Transform)
         ai_c: AI = g.em.get_component(eid, AI)
         dist = math.hypot(t.x - pt.x, t.y - pt.y)
         if dist < CONTACT_DAMAGE_RADIUS:
             ph: Health = g.em.get_component(g.player_id, Health)
-            raw = ai_c.contact_damage
+            raw = ai_c.contact_damage * night_mult
             dmg = max(1, raw - dmg_red)
             ph.damage(dmg)
             g.health_bar.set_value(ph.current)
@@ -548,6 +585,7 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
     if 'protection' in g.active_buffs:
         dmg_red += int(g.active_buffs['protection'][1])
     dmg_red += _get_equipment_enchant_dr(eq)
+    night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
     to_remove = []
     for pid in g.em.get_entities_with(Transform, Projectile):
         proj = g.em.get_component(pid, Projectile)
@@ -557,7 +595,7 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
         dist = math.hypot(proj_t.x - pt.x - 10, proj_t.y - pt.y - 14)
         if dist < ENEMY_PROJ_HIT_RADIUS:
             ph: Health = g.em.get_component(g.player_id, Health)
-            dmg = max(1, proj.damage - dmg_red)
+            dmg = max(1, int(proj.damage * night_mult) - dmg_red)
             ph.damage(dmg)
             g.health_bar.set_value(ph.current)
             g.damage_flash = DAMAGE_FLASH_DURATION

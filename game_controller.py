@@ -627,6 +627,7 @@ DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
         'night_dmg_tick_max': 0,     # 0 = no cap
         'xp_mult':          1.0,
         'loot_luck_bonus':  0.0,
+        'night_damage_multiplier': 1,  # enemy damage mult at night outside light
     },
     1: {  # Normal
         'enemy_hp_mult':    1.3,
@@ -645,6 +646,7 @@ DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
         'night_dmg_tick_max': 0,
         'xp_mult':          1.0,
         'loot_luck_bonus':  0.0,
+        'night_damage_multiplier': 2,  # enemy damage mult at night outside light
     },
     2: {  # Hard
         'enemy_hp_mult':    1.8,
@@ -663,6 +665,7 @@ DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
         'night_dmg_tick_max': 0,
         'xp_mult':          1.2,
         'loot_luck_bonus':  0.0,
+        'night_damage_multiplier': 3,  # enemy damage mult at night outside light
     },
     3: {  # Hardcore
         'enemy_hp_mult':    3.5,
@@ -681,6 +684,7 @@ DIFFICULTY_PROFILES: Dict[int, Dict[str, float]] = {
         'night_dmg_tick_max': 0,
         'xp_mult':          1.5,
         'loot_luck_bonus':  0.0,
+        'night_damage_multiplier': 4,  # enemy damage mult at night outside light
     },
 }
 
@@ -722,7 +726,7 @@ AGI_RANGED_DAMAGE_MULT: int = 2
 # --- Vitality ---
 LEVEL_UP_BASE_HP: int = 10
 VIT_HP_BONUS_PER_LEVEL: int = 5
-VITALITY_CAMPFIRE_BONUS_PER: int = 2
+VITALITY_CAMPFIRE_BONUS_PER: int = 1
 
 # --- Luck ---
 CRIT_CHANCE_PER_LUCK: float = 0.01
@@ -780,7 +784,7 @@ DOOR_COLLIDER_W: int = 24
 DOOR_COLLIDER_H: int = 32
 
 # --- Campfire healing ---
-CAMPFIRE_BASE_HEAL: int = 3
+CAMPFIRE_BASE_HEAL: int = 2
 CAMPFIRE_HEAL_RADIUS: float = 120.0
 CAMPFIRE_HEAL_INTERVAL: float = 1.0
 

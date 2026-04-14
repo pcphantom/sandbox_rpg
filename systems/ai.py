@@ -51,7 +51,8 @@ class AISystem:
         return 0
 
     def update(self, dt: float, em: EntityManager, player_id: int,
-               on_ranged_fire: Any = None) -> None:
+               on_ranged_fire: Any = None,
+               night_structure_dmg_mult: int = 1) -> None:
         pt = em.get_component(player_id, Transform)
         if not pt:
             return
@@ -103,6 +104,18 @@ class AISystem:
                             v.vy = (ddy / ddist) * mob_ai.speed
                         elif mob_ai.attack_timer <= 0:
                             raw_dmg = mob_ai.contact_damage
+                            # Apply night damage multiplier if structure is not near light
+                            if night_structure_dmg_mult > 1:
+                                near_light = False
+                                from core.components import LightSource
+                                from game_controller import LIGHT_SAFETY_RADIUS
+                                for lid in em.get_entities_with(Transform, LightSource):
+                                    lt = em.get_component(lid, Transform)
+                                    if math.hypot(lt.x - tt.x, lt.y - tt.y) < LIGHT_SAFETY_RADIUS:
+                                        near_light = True
+                                        break
+                                if not near_light:
+                                    raw_dmg *= night_structure_dmg_mult
                             turr = em.get_component(target, Turret)
                             if turr:
                                 # Enhancement DR from turret level
