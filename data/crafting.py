@@ -91,15 +91,8 @@ RECIPES: List[Dict[str, Any]] = [
     {'name': 'Enchantment Table', 'cost': {'iron': 6, 'diamond': 2, 'wood': 4}, 'gives': 'enchantment_table'},
 
     # =====================================================================
-    # GEMS & ADVANCED MATERIALS
+    # TITANIUM GEAR (Brilliant Diamond, Diamond Axe, Greater Enchant Table are enchant-table-only)
     # =====================================================================
-    {'name': 'Brilliant Diamond', 'cost': {'diamond': 9}, 'gives': 'brilliant_diamond'},
     {'name': 'Titanium Ingot',    'cost': {'titanium_ore': 2, 'wood': 2}, 'gives': 'titanium_ingot'},
-
-    # =====================================================================
-    # TITANIUM & DIAMOND GEAR
-    # =====================================================================
     {'name': 'Titanium Axe',  'cost': {'titanium_ingot': 5, 'wood': 2}, 'gives': 'titanium_axe'},
-    {'name': 'Diamond Axe',   'cost': {'titanium_axe': 1, 'brilliant_diamond': 8}, 'gives': 'diamond_axe'},
-    {'name': 'Greater Enchantment Table', 'cost': {'brilliant_diamond': 4, 'iron': 8, 'wood': 6}, 'gives': 'greater_enchantment_table'},
 ]

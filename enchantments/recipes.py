@@ -11,6 +11,7 @@ The enchantment table has 9 input slots. Valid combinations:
 8. Superior Transfer Tome + source equip + blank equip → transfer both
 9. Disenchant Tome + enchanted equip → remove enchant
 10. Unenhance Tome + enhanced equip → revert to base item
+11. Table-exclusive material recipes (brilliant diamond, diamond axe, greater enchant table)
 
 Returns (result_item_id, result_enchant_or_None, consumed_slot_indices).
 """
@@ -26,6 +27,15 @@ _TRANSFER_TOMES = {
     'enchant_transfer_tome', 'enhance_transfer_tome',
     'superior_transfer_tome', 'disenchant_tome', 'unenhance_tome',
 }
+
+# Material recipes exclusive to the enchantment table.
+# Each entry: {'cost': {item_id: slot_count}, 'gives': result_item_id}
+# Total slot_count per recipe must be <= 9.
+_TABLE_MATERIAL_RECIPES: List[Dict[str, Any]] = [
+    {'cost': {'diamond': 9},                                          'gives': 'brilliant_diamond'},
+    {'cost': {'titanium_axe': 1, 'brilliant_diamond': 8},             'gives': 'diamond_axe'},
+    {'cost': {'enchantment_table': 1, 'diamond': 8},                  'gives': 'greater_enchantment_table'},
+]
 
 
 def _get_base_item(item_id: str) -> Optional[str]:
@@ -110,6 +120,27 @@ def _is_enhanced(item_id: str) -> bool:
     return _get_base_item(item_id) is not None and _get_current_level(item_id) > 0
 
 
+def _try_material_recipe(filled: list) -> Optional[Dict[str, Any]]:
+    """Check if filled slots match a table-exclusive material recipe."""
+    # Count how many slots contain each item_id
+    counts: Dict[str, int] = {}
+    all_indices: List[int] = []
+    for idx, iid in filled:
+        counts[iid] = counts.get(iid, 0) + 1
+        all_indices.append(idx)
+
+    for recipe in _TABLE_MATERIAL_RECIPES:
+        if counts == recipe['cost']:
+            return {
+                'result_item': recipe['gives'],
+                'result_enchant': None,
+                'result_rarity': 'common',
+                'consume': all_indices,
+                'source_enchant_slot': None,
+            }
+    return None
+
+
 def try_combine(slots: Dict[int, Tuple[str, int]],
                 slot_enchantments: Dict[int, Dict[str, Any]],
                 slot_rarities: Optional[Dict[int, str]] = None
@@ -141,6 +172,12 @@ def try_combine(slots: Dict[int, Tuple[str, int]],
     # === Recipe 5: 9-Identical-Item Rarity Upgrade ===
     if len(filled) == 9:
         result = _try_rarity_upgrade(filled, slot_enchantments, slot_rarities)
+        if result is not None:
+            return result
+
+    # === Recipe 11: Table-exclusive material crafting ===
+    if len(filled) >= 2:
+        result = _try_material_recipe(filled)
         if result is not None:
             return result
 
