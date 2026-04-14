@@ -824,9 +824,10 @@ def _draw_cheats_button(g: 'Game') -> None:
     from game_controller import (
         MINIMAP_SIZE_PX,
         CHEAT_BTN_BG, CHEAT_BTN_BORDER, CHEAT_BTN_HOVER, CHEAT_BTN_TEXT,
+        CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT,
     )
     mx, my = pygame.mouse.get_pos()
-    btn_w, btn_h = 110, 22
+    btn_w, btn_h = CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT
     btn_x = SCREEN_WIDTH - MINIMAP_SIZE_PX - 15
     btn_y = 50 + MINIMAP_SIZE_PX + 6
     r = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
@@ -845,8 +846,9 @@ def _draw_cheat_help(g: 'Game') -> None:
     """Draw a translucent overlay listing available cheat commands."""
     from game_controller import (
         CHEAT_HELP_BG, CHEAT_HELP_BORDER, CHEAT_HELP_TEXT,
+        CHEAT_HELP_WIDTH, CHEAT_HELP_HEIGHT,
     )
-    pw, ph = 420, 310
+    pw, ph = CHEAT_HELP_WIDTH, CHEAT_HELP_HEIGHT
     px = SCREEN_WIDTH // 2 - pw // 2
     py = SCREEN_HEIGHT // 2 - ph // 2
     bg = pygame.Surface((pw, ph), pygame.SRCALPHA)

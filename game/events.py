@@ -203,8 +203,9 @@ def handle_events(g) -> None:
                 and event.button == 1 and not g.show_cheat_help):
             from game_controller import (
                 SCREEN_WIDTH as SW, MINIMAP_SIZE_PX,
+                CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT,
             )
-            btn_w, btn_h = 110, 22
+            btn_w, btn_h = CHEAT_BTN_WIDTH, CHEAT_BTN_HEIGHT
             btn_x = SW - MINIMAP_SIZE_PX - 15
             btn_y = 50 + MINIMAP_SIZE_PX + 6
             if pygame.Rect(btn_x, btn_y, btn_w, btn_h).collidepoint(event.pos):

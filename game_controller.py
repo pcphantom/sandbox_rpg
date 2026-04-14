@@ -349,6 +349,12 @@ CHEAT_BTN_TEXT: Tuple[int, int, int] = (200, 150, 255)
 CHEAT_HELP_BG: Tuple[int, int, int, int] = (15, 10, 25, 235)
 CHEAT_HELP_BORDER: Tuple[int, int, int] = (140, 80, 200)
 CHEAT_HELP_TEXT: Tuple[int, int, int] = (200, 200, 220)
+
+# --- Cheats layout dimensions ---
+CHEAT_BTN_WIDTH: int = 110
+CHEAT_BTN_HEIGHT: int = 22
+CHEAT_HELP_WIDTH: int = 420
+CHEAT_HELP_HEIGHT: int = 310
 VOLUME_SLIDER_BG: Tuple[int, int, int] = (30, 30, 50)
 VOLUME_SLIDER_FILL: Tuple[int, int, int] = (70, 160, 255)
 

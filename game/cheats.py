@@ -83,7 +83,7 @@ def _cmd_set(g: 'Game', stat: str, args: list) -> Tuple[bool, str]:
     try:
         val = int(args[0])
     except (ValueError, IndexError):
-        return False, f"Invalid value: {args[0]}"
+        return False, "Invalid or missing value."
 
     if stat == "health" or stat == "hp":
         ph.current = max(1, min(val, ph.maximum))
