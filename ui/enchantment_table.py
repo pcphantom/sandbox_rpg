@@ -27,7 +27,7 @@ from core.constants import (
 from data import ITEM_DATA, get_item_color, get_stat_description
 from core.components import Storage, Inventory
 from core.item_stack import normalize_rarity
-from ui.rarity_display import draw_rarity_border, draw_enhancement_border, insert_rarity_tooltip
+from ui.rarity_display import draw_rarity_border, insert_rarity_tooltip
 
 
 class EnchantmentTableUI:
@@ -212,15 +212,9 @@ class EnchantmentTableUI:
                         enchant: Optional[Dict] = None,
                         rarity: str = 'common') -> None:
         ss = self.slot_size
+        # Rarity border (the ONLY item border)
         if rarity != 'common':
             draw_rarity_border(surface, sr, rarity)
-        elif enchant:
-            from enchantments.effects import ENCHANT_COLORS
-            ec = ENCHANT_COLORS.get(enchant['type'], UI_ENCHANT_FALLBACK)
-            pygame.draw.rect(surface, ec, sr, 2, border_radius=4)
-        else:
-            draw_rarity_border(surface, sr, rarity)
-        draw_enhancement_border(surface, sr, item_id)
         icon = self.textures.cache.get(f'item_{item_id}')
         if icon:
             surface.blit(pygame.transform.scale(icon, (30, 30)),

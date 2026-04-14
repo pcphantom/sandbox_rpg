@@ -66,11 +66,12 @@ RARITY_COLOR_LEGENDARY: Tuple[int, int, int] = (255, 215, 0)
 RARITY_COLOR_MYTHIC: Tuple[int, int, int] = (255, 50, 50)
 
 # --- Enhancement level colors (+1 through +5) ---
-ENHANCEMENT_COLOR_1: Tuple[int, int, int] = (0, 200, 0)
-ENHANCEMENT_COLOR_2: Tuple[int, int, int] = (80, 140, 255)
-ENHANCEMENT_COLOR_3: Tuple[int, int, int] = (180, 60, 255)
-ENHANCEMENT_COLOR_4: Tuple[int, int, int] = (255, 215, 0)
-ENHANCEMENT_COLOR_5: Tuple[int, int, int] = (255, 50, 50)
+# PRESERVED for future use — currently no inner borders are drawn.
+# ENHANCEMENT_COLOR_1: Tuple[int, int, int] = (0, 200, 0)
+# ENHANCEMENT_COLOR_2: Tuple[int, int, int] = (80, 140, 255)
+# ENHANCEMENT_COLOR_3: Tuple[int, int, int] = (180, 60, 255)
+# ENHANCEMENT_COLOR_4: Tuple[int, int, int] = (255, 215, 0)
+# ENHANCEMENT_COLOR_5: Tuple[int, int, int] = (255, 50, 50)
 
 # --- Enchantment element colors ---
 ENCHANT_COLOR_FIRE: Tuple[int, int, int] = (255, 120, 30)
@@ -845,13 +846,14 @@ TURRET_OFFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
 PROTECTION_DR_PER_LEVEL: int = 2
 # Built from the individual color constants above.
-ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
-    1: ENHANCEMENT_COLOR_1,
-    2: ENHANCEMENT_COLOR_2,
-    3: ENHANCEMENT_COLOR_3,
-    4: ENHANCEMENT_COLOR_4,
-    5: ENHANCEMENT_COLOR_5,
-}
+# PRESERVED for future use — currently no inner borders are drawn.
+# ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {
+#     1: ENHANCEMENT_COLOR_1,
+#     2: ENHANCEMENT_COLOR_2,
+#     3: ENHANCEMENT_COLOR_3,
+#     4: ENHANCEMENT_COLOR_4,
+#     5: ENHANCEMENT_COLOR_5,
+# }
 
 # --- Weapon base damages ---
 WEAPON_BASE_IRON_SWORD: Tuple[int, int] = (30, 0)

@@ -10,7 +10,6 @@ from typing import Dict, List, Optional, Tuple
 import pygame
 
 from data.quality import get_rarity_color
-from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
 from core.constants import UI_ENCHANT_FALLBACK
 
 
@@ -29,19 +28,21 @@ def draw_rarity_border(surface: pygame.Surface, rect: pygame.Rect,
     return True
 
 
-def draw_enhancement_border(surface: pygame.Surface, rect: pygame.Rect,
-                            item_id: str) -> bool:
-    """Draw a coloured 2 px inner border for enhanced items (+1..+5).
-
-    Returns ``True`` if a border was drawn.
-    """
-    enh_lvl = get_enhancement_level(item_id)
-    if enh_lvl <= 0:
-        return False
-    enh_color = ENHANCEMENT_COLORS.get(enh_lvl, UI_ENCHANT_FALLBACK)
-    inner = rect.inflate(-4, -4)
-    pygame.draw.rect(surface, enh_color, inner, 2, border_radius=2)
-    return True
+# PRESERVED for future use — inner enhancement border is currently disabled.
+# def draw_enhancement_border(surface: pygame.Surface, rect: pygame.Rect,
+#                             item_id: str) -> bool:
+#     """Draw a coloured 2 px inner border for enhanced items (+1..+5).
+#
+#     Returns ``True`` if a border was drawn.
+#     """
+#     from core.enhancement import get_enhancement_level, ENHANCEMENT_COLORS
+#     enh_lvl = get_enhancement_level(item_id)
+#     if enh_lvl <= 0:
+#         return False
+#     enh_color = ENHANCEMENT_COLORS.get(enh_lvl, UI_ENCHANT_FALLBACK)
+#     inner = rect.inflate(-4, -4)
+#     pygame.draw.rect(surface, enh_color, inner, 2, border_radius=2)
+#     return True
 
 
 def insert_rarity_tooltip(lines: List[str], colors: List[Tuple],

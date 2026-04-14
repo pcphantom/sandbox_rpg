@@ -393,19 +393,12 @@ def draw_hotbar(g: 'Game') -> None:
                     overlay = pygame.Surface((ss, oh), pygame.SRCALPHA)
                     overlay.fill((40, 40, 40, 160))
                     g.screen.blit(overlay, (x, by))
-            # -- Enchant glow border --
+            # -- Rarity border (the ONLY item border) --
             hb_ench = inv.hotbar_enchantments.get(i)
             hb_rar = inv.hotbar_rarities.get(i, 'common')
-            # Rarity border (outer)
             if hb_rar and hb_rar != 'common':
                 from ui.rarity_display import draw_rarity_border
                 draw_rarity_border(g.screen, rect, hb_rar)
-            elif hb_ench:
-                from enchantments.effects import ENCHANT_COLORS
-                ec = ENCHANT_COLORS.get(hb_ench['type'], UI_ENCHANT_FALLBACK)
-                pygame.draw.rect(g.screen, ec, rect, 2, border_radius=5)
-            from ui.rarity_display import draw_enhancement_border
-            draw_enhancement_border(g.screen, rect, item_id)
             if rect.collidepoint(mx, my) and item_id in ITEM_DATA:
                 d = ITEM_DATA[item_id]
                 name = d[0]

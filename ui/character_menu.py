@@ -185,13 +185,11 @@ class CharacterMenu:
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (20, 20)),
                                  (ex + 200, ey))
-                # Rarity border around icon
+                # Rarity border around icon (the ONLY item border)
                 eq_rar = equipment.rarities.get(attr, 'common')
                 if eq_rar != 'common':
                     from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, icon_rect, eq_rar)
-                from ui.rarity_display import draw_enhancement_border
-                draw_enhancement_border(surface, icon_rect, item_id)
             # Equip / Unequip button
             btn = pygame.Rect(ex + 225, ey, 20, 20)
             hov = btn.collidepoint(mx, my)
