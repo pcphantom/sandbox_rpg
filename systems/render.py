@@ -6,8 +6,7 @@ import pygame
 from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from core.ecs import EntityManager
 from core.components import Transform, Renderable
-
-RENDER_CULL_MARGIN: int = 64
+from game_controller import RENDER_CULL_MARGIN
 
 
 class RenderSystem:

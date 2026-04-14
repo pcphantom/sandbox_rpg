@@ -3,7 +3,6 @@
 """Entry point.  All game logic lives in dedicated modules."""
 import pygame
 import random
-import math
 import sys
 from typing import List, Tuple, Dict, Optional, Any
 
@@ -13,68 +12,17 @@ pygame.font.init()
 # -- project imports (order matters: constants first) ----------------------
 from core.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT,
-    FPS, BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY, ORANGE, DARK_GRAY,
-    PURPLE, LIGHT_BLUE,
-    TILE_WATER, TILE_GRASS, TILE_DIRT, TILE_SAND, TILE_STONE_FLOOR,
-    TILE_STONE_WALL, TILE_FOREST, TILE_CAVE_FLOOR, TILE_CAVE_ENTRANCE,
-    QUICK_SAVE_SLOT, INVENTORY_TOTAL_SLOTS,
-    MIN_ATTACK_COOLDOWN, BASE_ATTACK_COOLDOWN, AGILITY_COOLDOWN_REDUCTION,
-    WALL_HP, TURRET_HP, TURRET_RANGE, TURRET_DAMAGE, TURRET_COOLDOWN,
-    CHEST_CAPACITY,
-    CAMPFIRE_BASE_HEAL, CAMPFIRE_HEAL_RADIUS, CAMPFIRE_HEAL_INTERVAL,
-    VITALITY_CAMPFIRE_BONUS_PER,
-    DIFFICULTY_EASY, DIFFICULTY_NORMAL, DIFFICULTY_HARD, DIFFICULTY_HARDCORE,
-    DIFFICULTY_NAMES, DIFFICULTY_MULTIPLIERS,
-    PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
-    CAVE_MOB_TYPES, CAVE_MOB_COUNT, CAVE_BOSS_TYPES,
-    CAVE_ORE_COUNT, CAVE_DIAMOND_COUNT,
-    CAVE_HP_MULT, CAVE_DMG_MULT,
+    FPS, DIFFICULTY_EASY,
     FONT_SIZE_MAIN, FONT_SIZE_SM, FONT_SIZE_LG, FONT_SIZE_XL,
-    PLAYER_BASE_SPEED, PLAYER_FRICTION, PLAYER_COLLIDER_W, PLAYER_COLLIDER_H,
-    AGI_SPEED_BONUS, AGI_SPEED_BONUS_CAP,
-    MOVEMENT_ACCEL_MULT, SPRITE_FLIP_THRESHOLD,
-    STARTING_WOOD, STARTING_STONE, PLAYER_TORCH_LIGHT_RADIUS,
-    BASE_MELEE_DAMAGE, SPEAR_ATTACK_RANGE, WEAPON_ATTACK_RANGE,
-    UNARMED_ATTACK_RANGE, CRIT_CHANCE_PER_LUCK, CRIT_DAMAGE_MULT,
-    MELEE_KNOCKBACK_FORCE, ATTACK_ANIM_DURATION, INTERACT_COOLDOWN,
-    MIN_RANGED_COOLDOWN,
-    CONTACT_DAMAGE_RADIUS, PLAYER_HIT_INVULN, DAMAGE_FLASH_DURATION,
-    HIT_SHAKE_AMOUNT, HIT_SHAKE_DURATION,
-    ENEMY_PROJ_HIT_RADIUS, PROJ_SHAKE_AMOUNT, PROJ_SHAKE_DURATION,
-    INTERACT_RANGE, HARVEST_RANGE, BED_INTERACT_RANGE, LUCK_HARVEST_CHANCE,
-    TREE_COUNT, FOREST_TREE_COUNT, ROCK_COUNT,
-    TRAP_HP, BED_HP, CAMPFIRE_HP, CHEST_HP_VALUE, DOOR_HP,
-    DOOR_COLLIDER_W, DOOR_COLLIDER_H, STONE_WALL_HP_MULT,
-    CAMPFIRE_LIGHT_RADIUS, TORCH_LIGHT_RADIUS,
-    LEVEL_UP_BASE_HP, VIT_HP_BONUS_PER_LEVEL,
-    NOTIFICATION_DURATION, HUD_REFRESH_INTERVAL, DMG_NUMBER_FLOAT_SPEED,
-    MOB_HP_BAR_W, MOB_HP_BAR_H, PLACEABLE_HP_BAR_W, PLACEABLE_HP_BAR_H,
-    HOTBAR_SLOTS, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP,
-    MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    NOTIFICATION_DURATION, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    HUD_HP_BAR_FG, HUD_HP_BAR_BG, HUD_XP_BAR_FG, HUD_XP_BAR_BG,
 )
-from core.utils import clamp, lerp
+from core.utils import clamp
 from core.ecs import EntityManager
 from core.components import (
-    Transform, Velocity, Renderable, Collider, Health, Inventory,
-    LightSource, AI, PlayerStats, Equipment, Projectile, Placeable,
-    Storage, Turret, Building,
+    Transform, Health, Inventory, AI, PlayerStats, Projectile, Turret,
 )
-from data import (
-    ITEM_DATA, ITEM_CATEGORIES, RECIPES, RANGED_DATA, AMMO_BONUS_DAMAGE,
-    ARMOR_VALUES, MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS,
-    WAVE_BOSS_MOBS, SPELL_DATA, SPELL_RECHARGE, BOMB_DATA,
-    get_item_color,
-    # day/night & event constants (split from core.constants during reorg)
-    DAY_LENGTH_BASE, NIGHT_SLEEP_SPEED_MULT,
-    WAVE_SPAWN_RADIUS,
-    MOB_RESPAWN_INTERVAL, MOB_RESPAWN_MIN_DIST, MOB_MAX_COUNT,
-    MOB_RESPAWN_BATCH, RANGED_ENEMY_START_DAY,
-    PER_DAY_SCALE_FACTOR, MOB_SPAWN_ATTEMPTS,
-    GHOST_SPAWN_CHANCE, NIGHT_MOB_SPAWN_CHANCE, DARK_KNIGHT_SPAWN_CHANCE,
-    FOREST_MOB_SPAWN_CHANCE, DIRT_MOB_SPAWN_CHANCE, ORC_SPAWN_CHANCE,
-    GRASS_MOB_SPAWN_CHANCE, WAVE_SPAWN_RADIUS_VARIANCE, WAVE_RANGED_MOB_CHANCE,
-    INITIAL_MOB_SPAWNS,
-)
+from data import DAY_LENGTH_BASE
 from world import World, WorldGenerator
 from world.cave import CaveData
 from core.camera import Camera
@@ -84,9 +32,8 @@ from ui.minimap import Minimap
 from systems import (
     MovementSystem, PhysicsSystem, RenderSystem, DayNightCycle,
     AISystem, ProjectileSystem, TrapSystem, TurretSystem, WaveSystem,
-    calc_melee_damage, calc_ranged_damage, calc_damage_reduction,
 )
-from gui import (
+from ui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
     CharacterMenu, ChestUI, EnchantmentTableUI,
 )
@@ -94,9 +41,7 @@ from core.settings import (
     load_settings, save_settings,
     INTERNAL_WIDTH, INTERNAL_HEIGHT,
     DISPLAY_WINDOWED, DISPLAY_FULLSCREEN, DISPLAY_BORDERLESS,
-    DISPLAY_MODE_NAMES, RESOLUTION_PRESETS,
 )
-from game import save_load
 from core.music import MusicManager
 from game import combat as game_combat
 from game import drawing as game_drawing
@@ -104,6 +49,8 @@ from game import entities as game_entities
 from game import interaction as game_interaction
 from game import menus as game_menus
 from game import persistence as game_persistence
+from game import events as game_events
+from game import update as game_update
 
 # ==========================================================================
 # GAME
@@ -234,9 +181,9 @@ class Game:
         self.enchant_table_ui = EnchantmentTableUI(self.textures)
 
         self.health_bar = ProgressBar(
-            pygame.Rect(20, 16, 200, 18), 100, (210, 50, 50), (40, 15, 15))
+            pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)
         self.xp_bar = ProgressBar(
-            pygame.Rect(20, 38, 200, 12), 50, (70, 160, 255), (20, 30, 50))
+            pygame.Rect(20, 38, 200, 12), 50, HUD_XP_BAR_FG, HUD_XP_BAR_BG)
         self.minimap = Minimap()
 
         # Timers / cooldowns
@@ -252,6 +199,10 @@ class Game:
         self.survival_timer = 0.0
         self.sleeping = False
         self.sleep_timer = 0.0
+
+        # Day-based respawn tracking
+        self._last_resource_respawn_day: int = 1
+        self._last_cave_reset_day: int = 1
 
         self.dmg_numbers: List[Tuple[float, float, str,
                                      Tuple[int, int, int], float]] = []
@@ -510,419 +461,13 @@ class Game:
         game_menus.draw_options_menu(self)
 
     def _handle_events(self) -> None:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-                continue
-
-            # Alt+Enter fullscreen toggle (works in all states)
-            if (event.type == pygame.KEYDOWN
-                    and event.key == pygame.K_RETURN
-                    and (event.mod & pygame.KMOD_ALT)):
-                self._toggle_fullscreen()
-                continue
-
-            # Scale mouse positions from window coords to internal coords
-            if hasattr(event, 'pos'):
-                event.pos = self._scale_mouse_pos(event.pos)
-
-            # --- Dead state ---
-            if self.dead:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_F9:
-                        self._quick_load()
-                    elif event.key == pygame.K_q:
-                        self.running = False
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Check death screen buttons
-                    mx, my = event.pos
-                    btn_w = 200
-                    bx = SCREEN_WIDTH // 2 - btn_w // 2
-                    # Quick Load button
-                    if pygame.Rect(bx, SCREEN_HEIGHT // 2 + 10, btn_w, 36).collidepoint(mx, my):
-                        self._quick_load()
-                    # Load Save button
-                    elif pygame.Rect(bx, SCREEN_HEIGHT // 2 + 56, btn_w, 36).collidepoint(mx, my):
-                        self.paused = True
-                        self.dead = False
-                    # Restart button
-                    elif pygame.Rect(bx, SCREEN_HEIGHT // 2 + 102, btn_w, 36).collidepoint(mx, my):
-                        self._full_restart()
-                continue
-
-            # --- Pause menu ---
-            if self.paused:
-                self.pause_menu.handle_event(
-                    event,
-                    save_cb=self._save_to_slot,
-                    load_cb=self._load_from_slot,
-                    delete_cb=self._delete_slot,
-                    resume_cb=self._resume,
-                    quit_cb=self._quit,
-                    options_cb=self._open_options_from_pause,
-                )
-                continue
-
-            # --- Global hotkeys ---
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    if self.placement_mode:
-                        self.placement_mode = False
-                        self.placement_item = None
-                        self.placement_rarity = 'common'
-                        self.placement_enchant = None
-                        self.placement_slot = None
-                    elif self.spell_targeting:
-                        self.spell_targeting = False
-                        self.spell_item = None
-                    elif (self.show_inventory or self.show_crafting
-                            or self.show_character or self.show_chest
-                            or self.show_enchant_table):
-                        self._return_held_item()
-                        self.show_inventory = False
-                        self.show_crafting = False
-                        self.show_character = False
-                        self.show_chest = False
-                        self.active_chest = None
-                        self.chest_ui.split_dialog.close()
-                        self.show_enchant_table = False
-                        self.active_enchant_table = None
-                    else:
-                        self.paused = True
-                    continue
-                if event.key == pygame.K_i:
-                    if self.show_inventory:
-                        self._return_held_item()
-                    self.show_inventory = not self.show_inventory
-                    self.show_crafting = False
-                    self.show_character = False
-                    self.show_chest = False
-                    self.active_chest = None
-                    self.show_enchant_table = False
-                    self.active_enchant_table = None
-                    continue
-                if event.key == pygame.K_c:
-                    self._return_held_item()
-                    self.show_crafting = not self.show_crafting
-                    self.show_inventory = False
-                    self.show_character = False
-                    self.show_chest = False
-                    self.active_chest = None
-                    self.show_enchant_table = False
-                    self.active_enchant_table = None
-                    continue
-                if event.key == pygame.K_p:
-                    self._return_held_item()
-                    self.show_character = not self.show_character
-                    self.show_inventory = False
-                    self.show_crafting = False
-                    self.show_chest = False
-                    self.active_chest = None
-                    self.show_enchant_table = False
-                    self.active_enchant_table = None
-                    continue
-                if event.key == pygame.K_f:
-                    self._use_equipped_item()
-                    continue
-                if event.key == pygame.K_F5:
-                    self._quick_save()
-                    continue
-                if event.key == pygame.K_F9:
-                    self._quick_load()
-                    continue
-
-                # Number keys 1-6 → hotbar
-                inv = self.em.get_component(self.player_id, Inventory)
-                for n in range(1, 7):
-                    if event.key == getattr(pygame, f'K_{n}'):
-                        inv.equipped_slot = n - 1
-
-            # Mouse-wheel for hotbar (only when no overlay menus are open)
-            if event.type == pygame.MOUSEWHEEL:
-                if (not self.placement_mode and not self.spell_targeting
-                        and not self.show_inventory and not self.show_crafting
-                        and not self.show_character and not self.show_chest
-                        and not self.show_enchant_table):
-                    inv = self.em.get_component(self.player_id, Inventory)
-                    inv.equipped_slot = (inv.equipped_slot - event.y) % 6
-
-            # Placement mode rotation
-            if self.placement_mode and event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    self.placement_rotation = (self.placement_rotation + 1) % 4
-                    continue
-
-            # Placement mode click
-            if self.placement_mode and event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    self._placement_confirm()
-                    continue
-                elif event.button == 3:
-                    self.placement_mode = False
-                    self.placement_item = None
-                    self.placement_rarity = 'common'
-                    self.placement_enchant = None
-                    self.placement_slot = None
-                    continue
-
-            # Spell targeting click
-            if self.spell_targeting and event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    self._spell_cast_at_mouse()
-                    continue
-                elif event.button == 3:
-                    self.spell_targeting = False
-                    self.spell_item = None
-                    continue
-
-            # Overlay event handling
-            if self.show_chest and self.active_chest is not None:
-                stor = self.em.get_component(self.active_chest, Storage)
-                if stor:
-                    is_cave = not self.em.has_component(
-                        self.active_chest, Building)
-                    self.chest_ui.handle_event(
-                        event, stor,
-                        self.em.get_component(self.player_id, Inventory),
-                        is_cave_chest=is_cave)
-            if self.show_enchant_table and self.active_enchant_table is not None:
-                stor = self.em.get_component(self.active_enchant_table, Storage)
-                if stor:
-                    self.enchant_table_ui.handle_event(
-                        event, stor,
-                        self.em.get_component(self.player_id, Inventory))
-            if self.show_inventory:
-                self.inventory_ui.handle_event(event)
-            if self.show_crafting:
-                self.crafting_ui.handle_event(
-                    event,
-                    self.em.get_component(self.player_id, Inventory),
-                    self._craft)
-            if self.show_character:
-                self.character_menu.handle_event(
-                    event,
-                    self.em.get_component(self.player_id, PlayerStats),
-                    self.em.get_component(self.player_id, Equipment),
-                    self.em.get_component(self.player_id, Inventory),
-                )
+        game_events.handle_events(self)
 
     # ======================================================================
     # UPDATE
     # ======================================================================
     def _update(self, dt: float) -> None:
-        keys = pygame.key.get_pressed()
-        pv: Velocity = self.em.get_component(self.player_id, Velocity)
-        pt: Transform = self.em.get_component(self.player_id, Transform)
-        pr: Renderable = self.em.get_component(self.player_id, Renderable)
-        ps: PlayerStats = self.em.get_component(self.player_id, PlayerStats)
-
-        # Movement (AGI speed bonus with cap)
-        agi_bonus = min(AGI_SPEED_BONUS_CAP, ps.agility * AGI_SPEED_BONUS)
-        base_speed = PLAYER_BASE_SPEED * (1.0 + agi_bonus)
-        if keys[pygame.K_w]:
-            pv.vy -= base_speed * dt * MOVEMENT_ACCEL_MULT
-        if keys[pygame.K_s]:
-            pv.vy += base_speed * dt * MOVEMENT_ACCEL_MULT
-        if keys[pygame.K_a]:
-            pv.vx -= base_speed * dt * MOVEMENT_ACCEL_MULT
-        if keys[pygame.K_d]:
-            pv.vx += base_speed * dt * MOVEMENT_ACCEL_MULT
-        if pv.vx < -SPRITE_FLIP_THRESHOLD:
-            pr.flip_x = True
-        elif pv.vx > SPRITE_FLIP_THRESHOLD:
-            pr.flip_x = False
-
-        # Systems tick
-        self.movement.update(dt, self.em)
-        self.physics.update(dt, self.em, self.world)
-        self.ai_system.update(dt, self.em, self.player_id,
-                              on_ranged_fire=self._on_enemy_ranged_fire)
-        self.projectile_system.update(dt, self.em, on_hit=self._on_proj_hit)
-        self.trap_system.update(dt, self.em, on_hit=self._on_trap_hit)
-        self.turret_system.update(dt, self.em, on_fire=self._on_turret_fire)
-        self.daynight.update(dt)
-
-        # Cave daily regeneration — rebuild caves when a new day starts
-        if self.daynight.day_changed:
-            if self.in_cave >= 0:
-                self._exit_cave()
-            self.caves.regenerate(self.daynight.day_number)
-
-        self.music_manager.update(self.daynight.is_night())
-        self.camera.follow(pt.x, pt.y)
-        self.camera.update(dt)
-        self.particles.update(dt)
-
-        # Cave teleport check
-        self._check_cave_teleport(pt)
-
-        # Wave system — disabled inside caves
-        if self.in_cave < 0:
-            wave_req = self.wave_system.update(
-                dt, self.daynight.is_night(), self.daynight.day_number)
-            if wave_req:
-                self._spawn_wave_mobs(
-                    wave_req['count'], wave_req['tier'],
-                    include_ranged=wave_req.get('ranged', False),
-                    include_boss=wave_req.get('boss', False))
-                if self.wave_system.wave_spawned <= wave_req['count']:
-                    self._notify("Defend yourself!", 2.5)
-
-        # Sleeping (bed mechanic) — only speeds night while on bed
-        if self.sleeping:
-            self.sleep_timer -= dt
-            if self.sleep_timer <= 0 or not self.daynight.is_night():
-                self.sleeping = False
-                self.daynight.reset_speed()
-                self._notify("You wake up refreshed.")
-
-        # Cooldowns
-        self.interact_cd = max(0, self.interact_cd - dt)
-        self.attack_cd = max(0, self.attack_cd - dt)
-        self.attack_anim = max(0, self.attack_anim - dt)
-        self.ranged_cd = max(0, self.ranged_cd - dt)
-        self.player_hit_cd = max(0, self.player_hit_cd - dt)
-        self.damage_flash = max(0, self.damage_flash - dt)
-        self.notification_timer = max(0, self.notification_timer - dt)
-        self.cave_teleport_cd = max(0, self.cave_teleport_cd - dt)
-
-        # Spell cooldowns
-        expired_spells = [k for k, v in self.spell_cooldowns.items()
-                          if v - dt <= 0]
-        for k in expired_spells:
-            del self.spell_cooldowns[k]
-        for k in list(self.spell_cooldowns):
-            self.spell_cooldowns[k] -= dt
-
-        # Spell buff ticking
-        expired_buffs = []
-        for effect, (level, value, remaining) in self.active_buffs.items():
-            remaining -= dt
-            if remaining <= 0:
-                expired_buffs.append(effect)
-            else:
-                self.active_buffs[effect] = (level, value, remaining)
-        for effect in expired_buffs:
-            del self.active_buffs[effect]
-            self._notify(f"{effect.title()} buff expired.")
-        # Regen buff: heal 'value' HP per second
-        if 'regen' in self.active_buffs:
-            _, regen_val, _ = self.active_buffs['regen']
-            self.buff_regen_accum += dt
-            if self.buff_regen_accum >= 1.0:
-                self.buff_regen_accum -= 1.0
-                ph_r: Health = self.em.get_component(self.player_id, Health)
-                if ph_r.current < ph_r.maximum:
-                    ph_r.heal(int(regen_val))
-                    self.health_bar.set_value(ph_r.current)
-                    self.dmg_numbers.append(
-                        (pt.x, pt.y - 20, f'+{int(regen_val)}', GREEN, 0.5))
-        else:
-            self.buff_regen_accum = 0.0
-
-        # Armor regen enchant: passive HP/sec while regen-enchanted armor is equipped
-        eq_regen: Equipment = self.em.get_component(self.player_id, Equipment)
-        armor_ench = eq_regen.enchantments.get('armor')
-        from enchantments.effects import get_enchant_regen_rate
-        armor_regen_rate = get_enchant_regen_rate(armor_ench)
-        if armor_regen_rate > 0:
-            self.armor_regen_accum += dt
-            if self.armor_regen_accum >= 1.0:
-                self.armor_regen_accum -= 1.0
-                ph_ar: Health = self.em.get_component(self.player_id, Health)
-                if ph_ar.current < ph_ar.maximum:
-                    ph_ar.heal(armor_regen_rate)
-                    self.health_bar.set_value(ph_ar.current)
-                    self.dmg_numbers.append(
-                        (pt.x, pt.y - 24, f'+{armor_regen_rate}', (50, 255, 50), 0.5))
-        else:
-            self.armor_regen_accum = 0.0
-
-        # Ice slow speed restores
-        self._tick_speed_restores(dt)
-
-        # Melee attack
-        if keys[pygame.K_SPACE] and self.attack_cd == 0:
-            self._attack()
-            cd = max(MIN_ATTACK_COOLDOWN,
-                     BASE_ATTACK_COOLDOWN - ps.agility * AGILITY_COOLDOWN_REDUCTION)
-            self.attack_cd = cd
-            self.attack_anim = ATTACK_ANIM_DURATION
-
-        # Ranged attack (R key)
-        if keys[pygame.K_r] and self.ranged_cd == 0:
-            self._ranged_attack()
-
-        # Interact
-        if keys[pygame.K_e] and self.interact_cd == 0:
-            self._interact()
-            self.interact_cd = INTERACT_COOLDOWN
-
-        # Damage numbers decay
-        self.dmg_numbers = [
-            (x, y - DMG_NUMBER_FLOAT_SPEED * dt, t, c, l - dt)
-            for x, y, t, c, l in self.dmg_numbers if l - dt > 0
-        ]
-
-        # Kill dead mobs
-        for eid in list(self.em.get_entities_with(Health, AI)):
-            h: Health = self.em.get_component(eid, Health)
-            if not h.is_alive():
-                self._on_mob_killed(eid)
-
-        # Kill dead placeables
-        for eid in list(self.em.get_entities_with(Health, Placeable)):
-            if self.em.has_component(eid, AI):
-                continue
-            h = self.em.get_component(eid, Health)
-            if not h.is_alive():
-                td = self.em.get_component(eid, Transform)
-                self.particles.emit(td.x + 10, td.y + 10, 8, GRAY, 40, 0.3)
-                if self.active_chest == eid:
-                    self.show_chest = False
-                    self.active_chest = None
-                    self.chest_ui.split_dialog.close()
-                if self.active_enchant_table == eid:
-                    self.show_enchant_table = False
-                    self.active_enchant_table = None
-                self.em.destroy_entity(eid)
-
-        # Mob contact damage
-        self._check_contact_damage(pt)
-
-        # Enemy projectile damage to player
-        self._check_enemy_projectile_damage(pt)
-
-        # Campfire healing
-        self._campfire_heal(dt, pt)
-
-        # Night damage
-        self._night_damage(dt, pt)
-
-        # Mob respawning — disabled inside caves
-        if self.in_cave < 0:
-            self.mob_spawn_timer += dt
-            _, _, spawn_mult, _ = DIFFICULTY_MULTIPLIERS.get(
-                self.difficulty, (1.0, 1.0, 1.0, 1.0))
-            respawn_interval = MOB_RESPAWN_INTERVAL / spawn_mult
-            if self.mob_spawn_timer > respawn_interval:
-                self.mob_spawn_timer = 0.0
-                mob_count = len(self.em.get_entities_with(AI))
-                if mob_count < MOB_MAX_COUNT:
-                    # Spawn a batch when population is low
-                    batch = min(MOB_RESPAWN_BATCH, MOB_MAX_COUNT - mob_count)
-                    for _ in range(batch):
-                        self._spawn_mob()
-
-        # HUD refresh
-        self.survival_timer += dt
-        if self.survival_timer > HUD_REFRESH_INTERVAL:
-            self.survival_timer = 0.0
-            ph: Health = self.em.get_component(self.player_id, Health)
-            self.health_bar.max_value = ph.maximum
-            self.health_bar.set_value(ph.current)
-            self.xp_bar.max_value = ps.xp_to_next
-            self.xp_bar.set_value(ps.xp)
+        game_update.update(self, dt)
 
     # ======================================================================
     # ACTIONS

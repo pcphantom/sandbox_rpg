@@ -4,16 +4,13 @@ from typing import Any
 
 from core.ecs import EntityManager
 from core.components import Transform, Health, AI, Placeable
-
-TRAP_TRIGGER_RADIUS: float = 24.0
-TRAP_SELF_DAMAGE: int = 10
+from game_controller import (
+    TRAP_TRIGGER_RADIUS, TRAP_SELF_DAMAGE, TRAP_DAMAGE, TRAP_COOLDOWN,
+)
 
 
 class TrapSystem:
     """Damage mobs that step on traps."""
-
-    TRAP_DAMAGE = 15
-    TRAP_COOLDOWN = 1.5
 
     def __init__(self) -> None:
         self._cooldowns: dict[int, float] = {}
@@ -37,12 +34,12 @@ class TrapSystem:
                 mt = em.get_component(mid, Transform)
                 if math.hypot(mt.x - tt.x, mt.y - tt.y) < TRAP_TRIGGER_RADIUS:
                     mh = em.get_component(mid, Health)
-                    mh.damage(self.TRAP_DAMAGE)
-                    self._cooldowns[tid] = self.TRAP_COOLDOWN
+                    mh.damage(TRAP_DAMAGE)
+                    self._cooldowns[tid] = TRAP_COOLDOWN
                     # Degrade trap HP
                     th = em.get_component(tid, Health)
                     if th:
                         th.damage(TRAP_SELF_DAMAGE)
                     if on_hit:
-                        on_hit(mid, self.TRAP_DAMAGE, tt)
+                        on_hit(mid, TRAP_DAMAGE, tt)
                     break

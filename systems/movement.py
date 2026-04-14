@@ -2,8 +2,7 @@
 from core.ecs import EntityManager
 from core.components import Transform, Velocity
 from core.constants import FPS
-
-VELOCITY_DEADZONE: float = 0.5
+from game_controller import VELOCITY_DEADZONE
 
 
 class MovementSystem:

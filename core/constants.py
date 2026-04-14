@@ -1,8 +1,171 @@
-"""Game-wide constants for the sandbox RPG."""
-import os
-from typing import Tuple
+"""Game-wide constants for the sandbox RPG.
 
-# -- Re-export data module constants for backward compatibility ----------------
+All values are sourced from game_controller.py (the single source of truth).
+This module re-exports them so that existing ``from core.constants import X``
+statements throughout the codebase continue to work unchanged.
+"""
+import os
+
+# == Re-export ALL tuning variables from game_controller ==================
+from game_controller import (                                         # noqa: F401
+    # -- Screen / Display --
+    SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, FPS,
+    MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    # -- World generation --
+    WORLD_WIDTH, WORLD_HEIGHT,
+    ELEVATION_SCALE, MOISTURE_SCALE, MOISTURE_OFFSET,
+    ELEVATION_OCTAVES, MOISTURE_OCTAVES,
+    # -- Colours --
+    BLACK, WHITE, YELLOW, RED, GREEN, CYAN, GRAY, DARK_GRAY,
+    ORANGE, PURPLE, DARK_BROWN, LIGHT_BLUE, DARK_GREEN,
+    # -- Rarity tier colors --
+    RARITY_COLOR_COMMON, RARITY_COLOR_RARE, RARITY_COLOR_EPIC,
+    RARITY_COLOR_LEGENDARY, RARITY_COLOR_MYTHIC,
+    RARITY_COLORS,
+    # -- Enhancement level colors --
+    ENHANCEMENT_COLOR_1, ENHANCEMENT_COLOR_2, ENHANCEMENT_COLOR_3,
+    ENHANCEMENT_COLOR_4, ENHANCEMENT_COLOR_5,
+    # -- Enchantment element colors --
+    ENCHANT_COLOR_FIRE, ENCHANT_COLOR_ICE, ENCHANT_COLOR_LIGHTNING,
+    ENCHANT_COLOR_PROTECTION, ENCHANT_COLOR_REGEN, ENCHANT_COLOR_STRENGTH,
+    # -- Spell tier colors --
+    FIREBALL_1_COLOR, FIREBALL_2_COLOR, FIREBALL_3_COLOR,
+    FIREBALL_4_COLOR, FIREBALL_5_COLOR,
+    HEAL_1_COLOR, HEAL_2_COLOR, HEAL_3_COLOR, HEAL_4_COLOR, HEAL_5_COLOR,
+    LIGHTNING_1_COLOR, LIGHTNING_2_COLOR, LIGHTNING_3_COLOR,
+    LIGHTNING_4_COLOR, LIGHTNING_5_COLOR,
+    ICE_1_COLOR, ICE_2_COLOR, ICE_3_COLOR, ICE_4_COLOR, ICE_5_COLOR,
+    STRENGTH_1_COLOR, STRENGTH_2_COLOR, STRENGTH_3_COLOR,
+    STRENGTH_4_COLOR, STRENGTH_5_COLOR,
+    REGEN_1_COLOR, REGEN_2_COLOR, REGEN_3_COLOR,
+    REGEN_4_COLOR, REGEN_5_COLOR,
+    PROTECTION_1_COLOR, PROTECTION_2_COLOR, PROTECTION_3_COLOR,
+    PROTECTION_4_COLOR, PROTECTION_5_COLOR,
+    # -- Boss glow colors --
+    BOSS_GLOW_GOLEM, BOSS_GLOW_LICH, BOSS_GLOW_DRAGON,
+    BOSS_GLOW_NECROMANCER, BOSS_GLOW_TROLL_KING, BOSS_GLOW_DEFAULT,
+    BOSS_GLOW_COLORS,
+    # -- Tile types --
+    TILE_WATER, TILE_SAND, TILE_GRASS, TILE_DIRT,
+    TILE_STONE_FLOOR, TILE_STONE_WALL, TILE_FOREST,
+    TILE_CAVE_FLOOR, TILE_CAVE_ENTRANCE,
+    # -- Cave system --
+    CAVE_COUNT, CAVE_WIDTH, CAVE_HEIGHT,
+    CAVE_WALL_DENSITY, CAVE_SMOOTH_PASSES,
+    CAVE_MOB_TYPES, CAVE_MOB_COUNT,
+    CAVE_BOSS_TYPES, CAVE_ORE_COUNT, CAVE_DIAMOND_COUNT,
+    CAVE_HP_MULT, CAVE_DMG_MULT, CAVE_ENTRANCE_MIN_DIST,
+    # -- Inventory --
+    HOTBAR_CAPACITY, INVENTORY_SLOTS_PER_PAGE, INVENTORY_PAGES,
+    INVENTORY_COLS, INVENTORY_TOTAL_SLOTS,
+    # -- Player --
+    PLAYER_FRICTION, PLAYER_COLLIDER_W, PLAYER_COLLIDER_H,
+    STARTING_WOOD, STARTING_STONE, PLAYER_TORCH_LIGHT_RADIUS,
+    # -- Placement preview --
+    PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
+    # -- Font sizes --
+    FONT_SIZE_MAIN, FONT_SIZE_SM, FONT_SIZE_LG, FONT_SIZE_XL,
+    # -- Melee / Ranged combat --
+    SPEAR_ATTACK_RANGE, WEAPON_ATTACK_RANGE, UNARMED_ATTACK_RANGE,
+    MELEE_KNOCKBACK_FORCE, ATTACK_ANIM_DURATION, INTERACT_COOLDOWN,
+    # -- Contact / projectile damage --
+    CONTACT_DAMAGE_RADIUS, PLAYER_HIT_INVULN,
+    DAMAGE_FLASH_DURATION, HIT_SHAKE_AMOUNT, HIT_SHAKE_DURATION,
+    ENEMY_PROJ_HIT_RADIUS, PROJ_SHAKE_AMOUNT, PROJ_SHAKE_DURATION,
+    # -- Interaction ranges --
+    INTERACT_RANGE, HARVEST_RANGE,
+    # -- World population --
+    TREE_COUNT, FOREST_TREE_COUNT, ROCK_COUNT,
+    # -- Building / placeable HP --
+    WALL_HP, STONE_WALL_HP_MULT, TURRET_HP,
+    TURRET_RANGE, TURRET_DAMAGE, TURRET_COOLDOWN,
+    CHEST_CAPACITY, CHEST_HP_VALUE,
+    TRAP_HP, BED_HP, CAMPFIRE_HP,
+    ENCHANT_TABLE_CAPACITY, ENCHANT_TABLE_HP,
+    DOOR_HP, DOOR_COLLIDER_W, DOOR_COLLIDER_H,
+    CAMPFIRE_BASE_HEAL, CAMPFIRE_HEAL_RADIUS, CAMPFIRE_HEAL_INTERVAL,
+    CAMPFIRE_LIGHT_RADIUS, TORCH_LIGHT_RADIUS, REPAIR_RANGE,
+    # -- HUD --
+    NOTIFICATION_DURATION, HUD_REFRESH_INTERVAL, DMG_NUMBER_FLOAT_SPEED,
+    MOB_HP_BAR_W, MOB_HP_BAR_H, PLACEABLE_HP_BAR_W, PLACEABLE_HP_BAR_H,
+    HOTBAR_SLOTS, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP,
+    # -- Save system --
+    SAVE_SLOTS, QUICK_SAVE_SLOT,
+    # -- UI theme extras --
+    UI_BG_MAIN_MENU, UI_BG_PANEL, UI_BG_PANEL_DARK,
+    UI_BG_BUTTON_NORMAL, UI_BG_BUTTON_HOVER, UI_BG_BUTTON_SELECTED,
+    UI_BORDER_NORMAL, UI_BORDER_PANEL, UI_BORDER_LIGHT, UI_BORDER_DIALOG,
+    UI_BORDER_BUTTON,
+    UI_TEXT_NORMAL, UI_TEXT_MUTED, UI_TEXT_HIGHLIGHT, UI_NOTIFICATION_TEXT,
+    # -- UI slot/grid --
+    UI_SLOT_BG_NORMAL, UI_SLOT_BG_SELECTED, UI_SLOT_BG_HOVER,
+    UI_SLOT_BORDER_NORMAL, UI_SLOT_SEPARATOR,
+    UI_NAV_HOVER, UI_NAV_NORMAL,
+    UI_SAVE_SLOT_SELECTED, UI_SPLIT_BUTTON_NORMAL,
+    # -- UI action buttons --
+    UI_CONFIRM_BUTTON, UI_CANCEL_BUTTON,
+    UI_STAT_BUTTON_HOVER, UI_STAT_BUTTON_NORMAL,
+    UI_UNEQUIP_HOVER, UI_UNEQUIP_NORMAL,
+    UI_EQUIP_HOVER, UI_EQUIP_NORMAL,
+    UI_DROPDOWN_HOVER, UI_DROPDOWN_NORMAL,
+    # -- Crafting --
+    UI_CRAFT_CAN_NORMAL, UI_CRAFT_CAN_HOVER, UI_CRAFT_CAN_BORDER,
+    UI_CRAFT_CANNOT_NORMAL, UI_CRAFT_CANNOT_HOVER, UI_CRAFT_CANNOT_BORDER,
+    # -- Progress bar defaults --
+    UI_PROGRESS_FG, UI_PROGRESS_BG,
+    # -- Drop confirm dialog --
+    UI_DROP_DIALOG_BG, UI_DROP_DIALOG_BORDER,
+    UI_DROP_YES_BUTTON, UI_DROP_NO_BUTTON,
+    # -- Chest UI --
+    UI_CHEST_PANEL_BG, UI_CHEST_SLOT_BG_NORMAL, UI_CHEST_SLOT_BG_HOVER,
+    UI_CHEST_SORT_HOVER, UI_CHEST_SORT_NORMAL, UI_CHEST_SORT_BORDER,
+    UI_CHEST_MOVE_HOVER, UI_CHEST_MOVE_NORMAL, UI_CHEST_MOVE_BORDER,
+    # -- Enchantment table UI --
+    UI_ENCHANT_PANEL_BG, UI_ENCHANT_PANEL_BORDER,
+    UI_ENCHANT_SLOT_BG_NORMAL, UI_ENCHANT_SLOT_BG_HOVER,
+    UI_ENCHANT_SLOT_BORDER,
+    UI_ENCHANT_COMBINE_ACTIVE, UI_ENCHANT_COMBINE_ACTIVE_HOVER,
+    UI_ENCHANT_COMBINE_ACTIVE_BORDER,
+    UI_ENCHANT_COMBINE_INACTIVE, UI_ENCHANT_COMBINE_INACTIVE_BORDER,
+    UI_ENCHANT_DIVIDER, UI_ENCHANT_FALLBACK,
+    # -- Death screen --
+    DEATH_BUTTON_HOVER, DEATH_BUTTON_NORMAL,
+    # -- HUD status --
+    HUD_STATUS_TEXT, HUD_RESOURCE_TEXT,
+    # -- Spell targeting --
+    SPELL_HELP_TEXT,
+    # -- Placement borders --
+    PLACEMENT_UPGRADE_BORDER,
+    # -- Mob / boss / light / particle colors --
+    MOB_HP_BAR_BG, MOB_HP_BAR_FILL,
+    PLACEABLE_HP_BAR_BG, PLACEABLE_HP_BAR_FILL,
+    LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH, LIGHT_COLOR_FIRE_ENCHANT,
+    PARTICLE_COLOR_FIRE, PARTICLE_COLOR_ICE, PARTICLE_COLOR_LIGHTNING_ARC,
+    PARTICLE_COLOR_TREE,
+    PERIOD_COLOR_DAY, PERIOD_COLOR_DAWN, PERIOD_COLOR_DUSK, PERIOD_COLOR_NIGHT,
+    HOTBAR_BG, HOTBAR_BORDER,
+    HOTBAR_SLOT_SELECTED_BG, HOTBAR_SLOT_NORMAL_BG,
+    HOTBAR_SELECTED_BORDER, HOTBAR_NORMAL_BORDER, HOTBAR_SLOT_NUMBER_COLOR,
+    DARKNESS_OVERLAY_TINT, SLEEP_OVERLAY_BG,
+    DEATH_SCREEN_OVERLAY, SPELL_COOLDOWN_OVERLAY, SPELL_TARGET_RETICLE,
+    OPTIONS_BG, OPTIONS_BORDER,
+    OPTIONS_BACK_HOVER, OPTIONS_BACK_NORMAL, OPTIONS_BACK_BORDER,
+    OPTIONS_INFO_TEXT, VOLUME_SLIDER_BG, VOLUME_SLIDER_FILL,
+    HUD_DUSK_WARNING, HUD_WORLD_EDGE_WARNING, HUD_CONTROL_HINT,
+    HUD_BED_PROMPT_BG, HUD_BED_PROMPT_TEXT,
+    HUD_REPAIR_DAMAGED_BG, HUD_REPAIR_DAMAGED_TEXT,
+    HUD_REPAIR_NORMAL_BG, HUD_REPAIR_NORMAL_TEXT,
+    HUD_HP_BAR_FG, HUD_HP_BAR_BG, HUD_XP_BAR_FG, HUD_XP_BAR_BG,
+    ATTACK_ARC_COLOR, STONE_WALL_OVERLAY, STONE_WALL_BORDER,
+    MINIMAP_COLOR_WATER, MINIMAP_COLOR_SAND, MINIMAP_COLOR_GRASS,
+    MINIMAP_COLOR_DIRT, MINIMAP_COLOR_STONE_FLOOR, MINIMAP_COLOR_STONE_WALL,
+    MINIMAP_COLOR_FOREST, MINIMAP_COLOR_CAVE_FLOOR,
+    MINIMAP_COLOR_CAVE_ENTRANCE, MINIMAP_COLOR_PLAYER, MINIMAP_SIZE_PX,
+    PLACEMENT_UPGRADE_PREVIEW_COLOR, PLACEMENT_VALID_BORDER, PLACEMENT_INVALID_BORDER,
+    BOMB_COLOR,
+)
+
+# == Re-export data module constants for backward compatibility ============
 from data.day_night import (                                          # noqa: F401
     DAY_LENGTH_BASE, NIGHT_SLEEP_SPEED_MULT,
     TIME_NIGHT_END, TIME_DAY_START, TIME_DAY_END, TIME_NIGHT_START,
@@ -30,71 +193,8 @@ from data.day_events import (                                         # noqa: F4
     ORC_SPAWN_CHANCE, GHOST_SPAWN_CHANCE, DARK_KNIGHT_SPAWN_CHANCE,
     NIGHT_MOB_SPAWN_CHANCE,
     INITIAL_MOB_SPAWNS,
+    RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS,
 )
-
-# -- Display -------------------------------------------------------------------
-SCREEN_WIDTH: int = 1280
-SCREEN_HEIGHT: int = 720
-TILE_SIZE: int = 32
-WORLD_WIDTH: int = 200
-WORLD_HEIGHT: int = 150
-FPS: int = 60
-
-# -- Colours -------------------------------------------------------------------
-BLACK:  Tuple[int, int, int] = (0, 0, 0)
-WHITE:  Tuple[int, int, int] = (255, 255, 255)
-YELLOW: Tuple[int, int, int] = (255, 255, 80)
-RED:    Tuple[int, int, int] = (255, 60, 60)
-GREEN:  Tuple[int, int, int] = (60, 220, 80)
-CYAN:   Tuple[int, int, int] = (80, 200, 255)
-GRAY:   Tuple[int, int, int] = (160, 160, 170)
-DARK_GRAY:   Tuple[int, int, int] = (80, 80, 90)
-ORANGE:      Tuple[int, int, int] = (255, 160, 60)
-PURPLE:      Tuple[int, int, int] = (160, 80, 200)
-DARK_BROWN:  Tuple[int, int, int] = (60, 35, 15)
-LIGHT_BLUE:  Tuple[int, int, int] = (140, 200, 255)
-DARK_GREEN:  Tuple[int, int, int] = (30, 80, 30)
-
-# -- Tile types ----------------------------------------------------------------
-TILE_WATER:       int = 0
-TILE_SAND:        int = 1
-TILE_GRASS:       int = 2
-TILE_DIRT:        int = 3
-TILE_STONE_FLOOR: int = 4
-TILE_STONE_WALL:  int = 5
-TILE_FOREST:      int = 6
-TILE_CAVE_FLOOR:  int = 7
-TILE_CAVE_ENTRANCE: int = 8
-
-# -- Cave system ---------------------------------------------------------------
-CAVE_COUNT: int = 3                  # number of caves per map
-CAVE_WIDTH: int = 60                 # cave interior width in tiles
-CAVE_HEIGHT: int = 45               # cave interior height in tiles
-CAVE_WALL_DENSITY: float = 0.48     # cellular automata initial wall chance
-CAVE_SMOOTH_PASSES: int = 5         # CA smoothing iterations
-CAVE_MOB_TYPES: tuple = ('skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith')
-CAVE_MOB_COUNT: int = 15            # mobs per cave
-CAVE_BOSS_TYPES: tuple = ('boss_golem', 'boss_lich', 'boss_dragon', 'boss_necromancer', 'boss_troll_king')
-CAVE_ORE_COUNT: int = 8             # iron ore nodes per cave
-CAVE_DIAMOND_COUNT: int = 3         # diamond nodes per cave
-CAVE_HP_MULT: float = 1.5           # extra HP multiplier for cave mobs
-CAVE_DMG_MULT: float = 1.3          # extra damage multiplier for cave mobs
-CAVE_ENTRANCE_MIN_DIST: float = 800.0  # min px distance between cave entrances
-
-# -- Save system ---------------------------------------------------------------
-_PROJECT_ROOT: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SAVE_DIR: str = os.path.join(_PROJECT_ROOT, "save")
-SAVE_SLOTS: int = 4          # 0 = quick-save, 1-3 = manual
-QUICK_SAVE_SLOT: int = 0
-
-# -- Inventory -----------------------------------------------------------------
-HOTBAR_CAPACITY: int = 6
-INVENTORY_SLOTS_PER_PAGE: int = 24
-INVENTORY_PAGES: int = 4
-INVENTORY_COLS: int = 6
-INVENTORY_TOTAL_SLOTS: int = INVENTORY_SLOTS_PER_PAGE * INVENTORY_PAGES  # 96
-
-# -- Stats & Combat (re-exported from data.stats) ------------------------------
 from data.stats import (                                              # noqa: F401
     STAT_POINTS_PER_LEVEL,
     STR_DAMAGE_MULT, BASE_MELEE_DAMAGE, BASE_MELEE_DAMAGE_MIN,
@@ -108,130 +208,17 @@ from data.stats import (                                              # noqa: F4
     LEVEL_UP_BASE_HP, VIT_HP_BONUS_PER_LEVEL, VITALITY_CAMPFIRE_BONUS_PER,
     CRIT_CHANCE_PER_LUCK, CRIT_DAMAGE_MULT, LUCK_HARVEST_CHANCE,
 )
-
-# -- Sleep (re-exported from data.day_night) ------------------------------------
-
-# -- World Generation ----------------------------------------------------------
-ELEVATION_SCALE: float = 0.045
-MOISTURE_SCALE: float = 0.06
-MOISTURE_OFFSET: float = 500.0
-ELEVATION_OCTAVES: int = 6
-MOISTURE_OCTAVES: int = 4
-
-# -- Building system -----------------------------------------------------------
-WALL_HP: int = 100
-TURRET_HP: int = 80
-TURRET_RANGE: float = 200.0
-TURRET_DAMAGE: int = 8
-TURRET_COOLDOWN: float = 1.5
-
-# Per-enhancement-level turret scaling (from centralized enhancement module)
-from core.enhancement import (                                        # noqa: F401
-    TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR,
-)
-CHEST_CAPACITY: int = 96
-REPAIR_RANGE: float = 60.0                    # max distance to repair a structure
-CAMPFIRE_BASE_HEAL: int = 3               # base HP healed per tick near campfire
-CAMPFIRE_HEAL_RADIUS: float = 120.0       # proximity radius for campfire healing (px)
-CAMPFIRE_HEAL_INTERVAL: float = 1.0       # seconds between campfire heal ticks
-# VITALITY_CAMPFIRE_BONUS_PER re-exported from data.stats above
-
-# -- Wave system (re-exported from data.day_events) ----------------------------
-
-# -- Day/Night timing (re-exported from data.day_night) ------------------------
-
-# -- Difficulty (re-exported from data.difficulty) -----------------------------
 from data.difficulty import (                                          # noqa: F401
     DIFFICULTY_EASY, DIFFICULTY_NORMAL, DIFFICULTY_HARD, DIFFICULTY_HARDCORE,
     DIFFICULTY_NAMES, DIFFICULTY_MULTIPLIERS, DIFFICULTY_PROFILES,
     get_profile as get_difficulty_profile,
 )
 
-# -- Mob respawn (re-exported from data.day_events) ----------------------------
+# -- Enhancement re-exports ------------------------------------------------
+from core.enhancement import (                                        # noqa: F401
+    TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR,
+)
 
-# -- Ranged enemies (re-exported from data.day_events) -------------------------
-
-# -- Placement preview ---------------------------------------------------------
-PLACEMENT_PREVIEW_COLOR: Tuple[int, int, int, int] = (60, 220, 80, 120)
-PLACEMENT_INVALID_COLOR: Tuple[int, int, int, int] = (220, 60, 60, 120)
-
-# -- Font sizes ----------------------------------------------------------------
-FONT_SIZE_MAIN: int = 16
-FONT_SIZE_SM: int = 13
-FONT_SIZE_LG: int = 22
-FONT_SIZE_XL: int = 48
-
-# -- Player (base speed, agility etc. re-exported from data.stats above) -------
-PLAYER_FRICTION: float = 0.82
-PLAYER_COLLIDER_W: int = 20
-PLAYER_COLLIDER_H: int = 28
-STARTING_WOOD: int = 5
-STARTING_STONE: int = 3
-PLAYER_TORCH_LIGHT_RADIUS: int = 110
-
-# -- Melee / Ranged combat tuning (stat scaling re-exported from data.stats) ---
-SPEAR_ATTACK_RANGE: float = 65.0
-WEAPON_ATTACK_RANGE: float = 55.0
-UNARMED_ATTACK_RANGE: float = 38.0
-MELEE_KNOCKBACK_FORCE: float = 200.0
-ATTACK_ANIM_DURATION: float = 0.18
-INTERACT_COOLDOWN: float = 0.25
-
-# -- Contact / projectile damage -----------------------------------------------
-CONTACT_DAMAGE_RADIUS: float = 28.0
-PLAYER_HIT_INVULN: float = 0.5
-DAMAGE_FLASH_DURATION: float = 0.15
-HIT_SHAKE_AMOUNT: float = 4.0
-HIT_SHAKE_DURATION: float = 0.2
-ENEMY_PROJ_HIT_RADIUS: float = 20.0
-PROJ_SHAKE_AMOUNT: float = 3.0
-PROJ_SHAKE_DURATION: float = 0.15
-
-# -- Night damage (re-exported from data.day_night) ----------------------------
-
-# -- Interaction ranges --------------------------------------------------------
-INTERACT_RANGE: float = 50.0
-HARVEST_RANGE: float = 50.0
-# BED_INTERACT_RANGE re-exported from data/day_night.py above
-# LUCK_HARVEST_CHANCE re-exported from data/stats.py above
-
-# -- Mob spawning tuning (re-exported from data.day_events) --------------------
-
-# -- World population ----------------------------------------------------------
-TREE_COUNT: int = 350
-FOREST_TREE_COUNT: int = 150
-ROCK_COUNT: int = 200
-
-# -- Building / placeable HP ---------------------------------------------------
-TRAP_HP: int = 40
-BED_HP: int = 80
-CAMPFIRE_HP: int = 60
-CHEST_HP_VALUE: int = 60
-ENCHANT_TABLE_CAPACITY: int = 9
-ENCHANT_TABLE_HP: int = 60
-DOOR_HP: int = 50
-DOOR_COLLIDER_W: int = 24
-DOOR_COLLIDER_H: int = 32
-STONE_WALL_HP_MULT: float = 1.5
-CAMPFIRE_LIGHT_RADIUS: int = 180
-TORCH_LIGHT_RADIUS: int = 120
-
-# -- Level up (re-exported from data.stats) ------------------------------------
-
-# -- HUD -----------------------------------------------------------------------
-NOTIFICATION_DURATION: float = 2.5
-HUD_REFRESH_INTERVAL: float = 0.5
-DMG_NUMBER_FLOAT_SPEED: float = 40.0
-MOB_HP_BAR_W: int = 28
-MOB_HP_BAR_H: int = 4
-PLACEABLE_HP_BAR_W: int = 28
-PLACEABLE_HP_BAR_H: int = 3
-HOTBAR_SLOTS: int = 6
-HOTBAR_SLOT_SIZE: int = 48
-HOTBAR_SLOT_GAP: int = 6
-
-# -- Window limits -------------------------------------------------------------
-MIN_WINDOW_WIDTH: int = 640
-MIN_WINDOW_HEIGHT: int = 480
-
-# -- Initial mob population (re-exported from data.day_events) -----------------
+# -- Save system (path derived from project root, not from game_controller) --
+_PROJECT_ROOT: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAVE_DIR: str = os.path.join(_PROJECT_ROOT, "save")

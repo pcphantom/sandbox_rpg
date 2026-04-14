@@ -5,13 +5,17 @@ Control variables are declared at the top for easy tuning.
 """
 from typing import Dict, Any
 
+from game_controller import (
+    FIREBALL_1_COLOR, FIREBALL_2_COLOR, FIREBALL_3_COLOR,
+    FIREBALL_4_COLOR, FIREBALL_5_COLOR,
+)
+
 # -- Fireball I ----------------------------------------------------------------
 FIREBALL_1_COOLDOWN: float = 3.0       # seconds between casts
 FIREBALL_1_DAMAGE: int = 60            # base damage on hit
 FIREBALL_1_RANGE: float = 400.0        # max projectile travel distance (px)
 FIREBALL_1_SPEED: float = 350.0        # projectile speed (px/s)
 FIREBALL_1_RADIUS: float = 80.0        # AoE splash radius (px)
-FIREBALL_1_COLOR = (255, 120, 30)      # particle / projectile tint
 
 # -- Fireball II ---------------------------------------------------------------
 FIREBALL_2_COOLDOWN: float = 2.5
@@ -19,7 +23,6 @@ FIREBALL_2_DAMAGE: int = 90
 FIREBALL_2_RANGE: float = 450.0
 FIREBALL_2_SPEED: float = 380.0
 FIREBALL_2_RADIUS: float = 100.0
-FIREBALL_2_COLOR = (255, 140, 40)
 
 # -- Fireball III --------------------------------------------------------------
 FIREBALL_3_COOLDOWN: float = 2.0
@@ -27,7 +30,6 @@ FIREBALL_3_DAMAGE: int = 130
 FIREBALL_3_RANGE: float = 500.0
 FIREBALL_3_SPEED: float = 420.0
 FIREBALL_3_RADIUS: float = 120.0
-FIREBALL_3_COLOR = (255, 160, 50)
 
 # -- Fireball IV ---------------------------------------------------------------
 FIREBALL_4_COOLDOWN: float = 1.6
@@ -35,7 +37,6 @@ FIREBALL_4_DAMAGE: int = 180
 FIREBALL_4_RANGE: float = 550.0
 FIREBALL_4_SPEED: float = 460.0
 FIREBALL_4_RADIUS: float = 140.0
-FIREBALL_4_COLOR = (255, 180, 60)
 
 # -- Fireball V ----------------------------------------------------------------
 FIREBALL_5_COOLDOWN: float = 1.2
@@ -43,7 +44,6 @@ FIREBALL_5_DAMAGE: int = 240
 FIREBALL_5_RANGE: float = 600.0
 FIREBALL_5_SPEED: float = 500.0
 FIREBALL_5_RADIUS: float = 160.0
-FIREBALL_5_COLOR = (255, 200, 80)
 
 # Assembled spell data keyed by item_id
 FIREBALL_SPELLS: Dict[str, Dict[str, Any]] = {

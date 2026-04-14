@@ -8,7 +8,7 @@ Usage:
 """
 from __future__ import annotations
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from drops.common import (
     ENHANCEMENT_ODDS,
@@ -66,10 +66,11 @@ def maybe_enhance(item_id: str, rng: random.Random) -> str:
 def roll_loot(table: Dict[str, Any],
               rng: random.Random | None = None,
               luck_bonus: float = 0.0
-              ) -> List[Tuple[str, int, Optional[str]]]:
+              ) -> List[Tuple[str, int, str]]:
     """Roll drops from a loot table.
 
-    Returns a list of (item_id, count, rarity_or_None) tuples.
+    Returns a list of (item_id, count, rarity) tuples.
+    Rarity is always a valid tier string (``'common'`` minimum, never None).
     *luck_bonus* is forwarded to `roll_rarity` to boost non-common weights.
     """
     if rng is None:
@@ -80,7 +81,7 @@ def roll_loot(table: Dict[str, Any],
 
     is_boss = table.get('enhanced_chance', 0.0) > 0
 
-    results: List[Tuple[str, int, Optional[str]]] = []
+    results: List[Tuple[str, int, str]] = []
 
     # Guaranteed drops (bosses)
     for item_id, lo, hi in table.get('guaranteed', []):

@@ -3,6 +3,7 @@ import random
 
 from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT
 from core.utils import clamp, lerp
+from game_controller import CAMERA_LERP_FACTOR
 
 
 class Camera:
@@ -34,8 +35,8 @@ class Camera:
         self.y = clamp(self.y, 0, max_y)
 
     def update(self, dt: float) -> None:
-        self.x = lerp(self.x, self.target_x, 0.12)
-        self.y = lerp(self.y, self.target_y, 0.12)
+        self.x = lerp(self.x, self.target_x, CAMERA_LERP_FACTOR)
+        self.y = lerp(self.y, self.target_y, CAMERA_LERP_FACTOR)
         max_x = max(0, self.world_w * TILE_SIZE - self.width)
         max_y = max(0, self.world_h * TILE_SIZE - self.height)
         self.x = clamp(self.x, 0, max_x)

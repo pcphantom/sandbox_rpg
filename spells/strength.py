@@ -6,35 +6,35 @@ Control variables are declared at the top for easy tuning.
 """
 from typing import Dict, Any
 
+from game_controller import (
+    STRENGTH_1_COLOR, STRENGTH_2_COLOR, STRENGTH_3_COLOR,
+    STRENGTH_4_COLOR, STRENGTH_5_COLOR,
+)
+
 # -- Strength I ----------------------------------------------------------------
 STRENGTH_1_COOLDOWN: float = 5.0       # seconds between casts
 STRENGTH_1_DURATION: float = 60.0      # buff duration in seconds
 STRENGTH_1_VALUE: int = 3              # bonus flat damage while active
-STRENGTH_1_COLOR = (255, 100, 80)      # particle tint
 
 # -- Strength II ---------------------------------------------------------------
 STRENGTH_2_COOLDOWN: float = 5.0
 STRENGTH_2_DURATION: float = 60.0
 STRENGTH_2_VALUE: int = 6
-STRENGTH_2_COLOR = (255, 120, 100)
 
 # -- Strength III --------------------------------------------------------------
 STRENGTH_3_COOLDOWN: float = 5.0
 STRENGTH_3_DURATION: float = 60.0
 STRENGTH_3_VALUE: int = 10
-STRENGTH_3_COLOR = (255, 140, 120)
 
 # -- Strength IV ---------------------------------------------------------------
 STRENGTH_4_COOLDOWN: float = 5.0
 STRENGTH_4_DURATION: float = 60.0
 STRENGTH_4_VALUE: int = 15
-STRENGTH_4_COLOR = (255, 160, 140)
 
 # -- Strength V ----------------------------------------------------------------
 STRENGTH_5_COOLDOWN: float = 5.0
 STRENGTH_5_DURATION: float = 60.0
 STRENGTH_5_VALUE: int = 20
-STRENGTH_5_COLOR = (255, 180, 160)
 
 # Assembled spell data keyed by item_id
 STRENGTH_SPELLS: Dict[str, Dict[str, Any]] = {

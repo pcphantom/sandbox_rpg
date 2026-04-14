@@ -4,35 +4,18 @@ Rarity is a per-slot attribute on equipment items (weapons, armor, shields,
 tools, placeables, ranged).  It multiplies the base stats of the item.
 Non-equipment items (spells, tomes, materials, consumables) use the legacy
 intrinsic quality sets for display color only.
+
+All tuning constants are sourced from game_controller.py.
 """
 from typing import Dict, Optional, Tuple
 
-# ── Rarity tiers (ordered lowest → highest) ─────────────────────────
-RARITY_TIERS = ('common', 'rare', 'epic', 'legendary', 'mythic')
-
-RARITY_COLORS: Dict[str, Tuple[int, int, int]] = {
-    'common':    (255, 255, 255),   # White
-    'rare':      (80, 140, 255),    # Blue
-    'epic':      (180, 60, 255),    # Purple
-    'legendary': (255, 215, 0),     # Gold
-    'mythic':    (255, 50, 50),     # Red
-}
-
-RARITY_MULTIPLIERS: Dict[str, float] = {
-    'common':    1.0,
-    'rare':      1.5,
-    'epic':      2.0,
-    'legendary': 2.5,
-    'mythic':    3.0,
-}
+from game_controller import (                                         # noqa: F401
+    RARITY_TIERS, RARITY_COLORS, RARITY_MULTIPLIERS,
+    RARITY_ELIGIBLE_CATEGORIES,
+)
 
 # Backward-compat alias used by a few older references
 QUALITY_COLORS = RARITY_COLORS
-
-# ── Equipment categories that can bear rarity ────────────────────────
-RARITY_ELIGIBLE_CATEGORIES = frozenset({
-    'weapon', 'armor', 'shield', 'tool', 'placeable', 'ranged',
-})
 
 
 def next_rarity(rarity: str) -> Optional[str]:

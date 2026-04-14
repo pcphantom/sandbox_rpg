@@ -23,6 +23,7 @@ from core.constants import (
     ENEMY_PROJ_HIT_RADIUS, PROJ_SHAKE_AMOUNT, PROJ_SHAKE_DURATION,
     MIN_RANGED_COOLDOWN, AGI_RANGED_SPEED_BONUS, AGI_RANGED_SPEED_BONUS_CAP,
     PLAYER_TORCH_LIGHT_RADIUS,
+    PARTICLE_COLOR_FIRE, PARTICLE_COLOR_ICE, PARTICLE_COLOR_LIGHTNING_ARC,
 )
 from data.day_night import (
     NIGHT_DAMAGE_BASE, NIGHT_DAMAGE_INCREASE, NIGHT_DAMAGE_INCREASE_FREQ,
@@ -135,7 +136,7 @@ def _apply_enchant_on_hit(g: 'Game', target_eid: int, target_t: Transform,
     etype = ench['type']
     if etype == 'fire':
         g.particles.emit(target_t.x + 12, target_t.y + 10,
-                         5, (255, 120, 30), 40, 0.3)
+                         5, PARTICLE_COLOR_FIRE, 40, 0.3)
     elif etype == 'ice':
         from enchantments.effects import get_enchant_slow_factor, get_enchant_slow_duration
         ai_c: AI = g.em.get_component(target_eid, AI)
@@ -146,7 +147,7 @@ def _apply_enchant_on_hit(g: 'Game', target_eid: int, target_t: Transform,
             ai_c.speed *= factor
             schedule_speed_restore(g, target_eid, original_speed, duration)
         g.particles.emit(target_t.x + 12, target_t.y + 10,
-                         5, (100, 200, 255), 40, 0.3)
+                         5, PARTICLE_COLOR_ICE, 40, 0.3)
     elif etype == 'lightning':
         from enchantments.effects import get_enchant_arc_radius, get_enchant_arc_damage_frac
         arc_radius = get_enchant_arc_radius(ench)
@@ -160,9 +161,9 @@ def _apply_enchant_on_hit(g: 'Game', target_eid: int, target_t: Transform,
                 oh: Health = g.em.get_component(oeid, Health)
                 oh.damage(arc_dmg)
                 g.dmg_numbers.append(
-                    (ot.x, ot.y - 16, str(arc_dmg), (180, 200, 255), 0.6))
+                    (ot.x, ot.y - 16, str(arc_dmg), PARTICLE_COLOR_LIGHTNING_ARC, 0.6))
                 g.particles.emit(ot.x + 12, ot.y + 10,
-                                 4, (180, 200, 255), 30, 0.2)
+                                 4, PARTICLE_COLOR_LIGHTNING_ARC, 30, 0.2)
                 break  # Arc to one nearby target
 
 
@@ -310,7 +311,7 @@ def on_proj_hit(g: 'Game', target_eid: int, damage: int,
                 'speed', ai_c.speed / slow_factor)
             schedule_speed_restore(g, target_eid, original_speed, slow_dur)
             g.particles.emit(
-                proj_t.x, proj_t.y, 8, (100, 200, 255), 50, 0.4)
+                proj_t.x, proj_t.y, 8, PARTICLE_COLOR_ICE, 50, 0.4)
 
 
 # ======================================================================
@@ -457,12 +458,12 @@ def on_turret_fire(g: 'Game', target_eid: int, damage: int,
     if arc_mobs:
         for _mid, arc_dmg, mt2 in arc_mobs:
             g.dmg_numbers.append(
-                (mt2.x, mt2.y - 16, str(arc_dmg), (180, 200, 255), 0.6))
-            g.particles.emit(mt2.x, mt2.y, 4, (180, 200, 255), 50, 0.2)
+                (mt2.x, mt2.y - 16, str(arc_dmg), PARTICLE_COLOR_LIGHTNING_ARC, 0.6))
+            g.particles.emit(mt2.x, mt2.y, 4, PARTICLE_COLOR_LIGHTNING_ARC, 50, 0.2)
 
     # Ice enchant slow visual
     if etype == 'ice':
-        g.particles.emit(target_t.x, target_t.y, 5, (100, 200, 255), 30, 0.3)
+        g.particles.emit(target_t.x, target_t.y, 5, PARTICLE_COLOR_ICE, 30, 0.3)
 
 
 def on_enemy_ranged_fire(g: 'Game', mob_eid: int, mob_t: Transform,
@@ -629,7 +630,16 @@ def night_damage(g: 'Game', dt: float, pt: Transform) -> None:
     day = max(1, g.daynight.day_number)
     dmg = NIGHT_DAMAGE_BASE + NIGHT_DAMAGE_INCREASE * ((day - 1) // max(1, NIGHT_DAMAGE_INCREASE_FREQ))
     from data.difficulty import get_profile
-    dmg = int(dmg * get_profile(g.difficulty)['night_dmg_mult'])
+    prof = get_profile(g.difficulty)
+    dmg = int(dmg * prof['night_dmg_mult'])
+    # Per-day flat bonus
+    dmg += int((day - 1) * prof['night_dmg_per_day'])
+    # Enforce min/max bounds from difficulty profile
+    tick_min = int(prof['night_dmg_tick_min'])
+    tick_max = int(prof['night_dmg_tick_max'])
+    dmg = max(dmg, tick_min)
+    if tick_max > 0:
+        dmg = min(dmg, tick_max)
     ph.damage(dmg)
     g.health_bar.set_value(ph.current)
     g.damage_flash = 0.1

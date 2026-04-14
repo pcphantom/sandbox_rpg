@@ -6,28 +6,34 @@ from typing import Dict, Tuple
 import pygame
 
 from core.constants import (SCREEN_WIDTH, TILE_SIZE, TILE_WATER, TILE_SAND,
-                       TILE_GRASS, TILE_DIRT, TILE_STONE_FLOOR,
-                       TILE_STONE_WALL, TILE_FOREST, TILE_CAVE_FLOOR,
-                       TILE_CAVE_ENTRANCE, BLACK, WHITE, RED,
-                       CYAN, GREEN)
+                            TILE_GRASS, TILE_DIRT, TILE_STONE_FLOOR,
+                            TILE_STONE_WALL, TILE_FOREST, TILE_CAVE_FLOOR,
+                            TILE_CAVE_ENTRANCE, BLACK, WHITE, RED,
+                            CYAN, GREEN,
+                            MINIMAP_COLOR_WATER, MINIMAP_COLOR_SAND,
+                            MINIMAP_COLOR_GRASS, MINIMAP_COLOR_DIRT,
+                            MINIMAP_COLOR_STONE_FLOOR, MINIMAP_COLOR_STONE_WALL,
+                            MINIMAP_COLOR_FOREST, MINIMAP_COLOR_CAVE_FLOOR,
+                            MINIMAP_COLOR_CAVE_ENTRANCE, MINIMAP_COLOR_PLAYER,
+                            MINIMAP_SIZE_PX)
 from world.generator import World
 
 
 TILE_COLORS: Dict[int, Tuple[int, int, int]] = {
-    TILE_WATER:          (30, 80, 180),
-    TILE_SAND:           (210, 190, 140),
-    TILE_GRASS:          (45, 120, 50),
-    TILE_DIRT:           (100, 75, 45),
-    TILE_STONE_FLOOR:    (110, 110, 120),
-    TILE_STONE_WALL:     (55, 55, 65),
-    TILE_FOREST:         (25, 80, 30),
-    TILE_CAVE_FLOOR:     (60, 55, 50),
-    TILE_CAVE_ENTRANCE:  (200, 160, 60),
+    TILE_WATER:         MINIMAP_COLOR_WATER,
+    TILE_SAND:          MINIMAP_COLOR_SAND,
+    TILE_GRASS:         MINIMAP_COLOR_GRASS,
+    TILE_DIRT:          MINIMAP_COLOR_DIRT,
+    TILE_STONE_FLOOR:   MINIMAP_COLOR_STONE_FLOOR,
+    TILE_STONE_WALL:    MINIMAP_COLOR_STONE_WALL,
+    TILE_FOREST:        MINIMAP_COLOR_FOREST,
+    TILE_CAVE_FLOOR:    MINIMAP_COLOR_CAVE_FLOOR,
+    TILE_CAVE_ENTRANCE: MINIMAP_COLOR_CAVE_ENTRANCE,
 }
 
-# Minimap is 160 × 160 pixels, each pixel = 1 tile → shows 80-tile radius.
-MAP_PX = 160
-VIEW_RADIUS = MAP_PX // 2        # tiles visible in each direction
+# Minimap is MINIMAP_SIZE_PX × MINIMAP_SIZE_PX pixels, each pixel = 1 tile.
+MAP_PX = MINIMAP_SIZE_PX
+VIEW_RADIUS = 20
 
 
 class Minimap:
@@ -85,5 +91,5 @@ class Minimap:
         dx = SCREEN_WIDTH - self.size - 15
         dy = 50
         screen.blit(self.surface, (dx, dy))
-        pygame.draw.rect(screen, (180, 180, 200),
+        pygame.draw.rect(screen, MINIMAP_COLOR_CAVE_ENTRANCE,
                          (dx, dy, self.size, self.size), 2)

@@ -8,9 +8,10 @@ This document tracks all global constants, key variables, and data structures us
 
 | Module | Purpose | Key Contents |
 |--------|---------|-----------|
+| `game_controller.py` | **Single source of truth** for ALL game tuning variables | ~450+ symbols, every constant in the game |
 | `sandbox_rpg.py` | Game class, main loop, event/update routing | Game class (entry point) |
 | **core/** | Core engine modules | |
-| `core/constants.py` | Game-wide constants | ~240 constants |
+| `core/constants.py` | Re-exports from `game_controller.py` + data modules | ~240 re-exported constants |
 | `core/components.py` | ECS component definitions | 15 component types |
 | `core/item_stack.py` | Centralised item identity, stacking, transfer, sort | normalize_rarity, items_match, add_to_slots, remove_from_slots, sort_slots, transfer_slot, transfer_all |
 | `core/ecs.py` | EntityManager | Core ECS |
@@ -27,28 +28,28 @@ This document tracks all global constants, key variables, and data structures us
 | `game/persistence.py` | Save/load orchestration | 8 functions |
 | `game/save_load.py` | Low-level save file I/O | File operations |
 | **systems/** | ECS systems | |
-| `systems/movement.py` | Movement | MovementSystem |
+| `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
 | `systems/physics.py` | Physics / collision | PhysicsSystem |
-| `systems/render.py` | Render | RenderSystem |
+| `systems/render.py` | Render — imports from `game_controller.py` | RenderSystem |
 | `systems/day_night.py` | Day/night cycle | DayNightCycle |
-| `systems/ai.py` | AI behaviour | AISystem |
-| `systems/projectile.py` | Projectiles | ProjectileSystem |
-| `systems/trap.py` | Traps | TrapSystem |
+| `systems/ai.py` | AI behaviour — imports from `game_controller.py` | AISystem |
+| `systems/projectile.py` | Projectiles — imports from `game_controller.py` | ProjectileSystem |
+| `systems/trap.py` | Traps — imports from `game_controller.py` | TrapSystem |
 | `systems/turret.py` | Turrets | TurretSystem |
 | `systems/wave.py` | Enemy waves | WaveSystem |
 | `systems/damage_calc.py` | Damage formulas (imports from data/stats) | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
 | **core/** | Core ECS, components, constants, enhancement | |
-| `core/enhancement.py` | Centralized enhancement scaling (single source of truth) | OFFENSE_BONUS_PER_LEVEL, RANGED_OFFENSE_BONUS_PER_LEVEL, DEFENSE_BONUS_PER_LEVEL, TURRET_OFFENSE_BONUS_PER_LEVEL, TURRET_DEFENSE_BONUS_PER_LEVEL, PROTECTION_DR_PER_LEVEL, ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
+| `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | ENHANCEMENT_COLORS, WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS |
 | **data/** | Centralised game data/tuning | |
 | `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
-| `data/combat.py` | Combat data | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
-| `data/mobs.py` | Mob definitions | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
-| `data/day_night.py` | Day/night timing, sleep, all time controls | DAY_LENGTH_BASE, SLEEP_DURATION, SLEEP_SPEED_MULT, BED_INTERACT_RANGE, etc. |
-| `data/stats.py` | All stat scaling constants | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
-| `data/day_events.py` | Spawn/wave tuning | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS |
-| `data/difficulty.py` | Difficulty profiles & multipliers (single source of truth) | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
-| `data/quality.py` | Item quality/rarity | QUALITY_COLORS, get_item_quality, get_item_color |
+| `data/combat.py` | Combat data — re-exports from `game_controller.py` | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
+| `data/mobs.py` | Mob definitions — boss glow colors from `game_controller.py` | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
+| `data/day_night.py` | Day/night timing — re-exports from `game_controller.py` | DAWN_BEGINS, DAY_BEGINS, DUSK_BEGINS, NIGHT_BEGINS, TIME_*, flash/banner vars, sleep vars, night damage vars |
+| `data/stats.py` | Player stat tuning — re-exports from `game_controller.py` | AGI_SPEED_BONUS, STR_DAMAGE_MULT, CRIT_CHANCE_PER_LUCK, etc. |
+| `data/day_events.py` | Spawn/wave tuning — re-exports from `game_controller.py` | MOB_RESPAWN_*, WAVE_*, INITIAL_MOB_SPAWNS, RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS |
+| `data/difficulty.py` | Difficulty profiles — re-exports from `game_controller.py` + helpers | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
+| `data/quality.py` | Item quality/rarity — re-exports from `game_controller.py` + helpers | RARITY_TIERS, RARITY_COLORS, RARITY_MULTIPLIERS, RARITY_ELIGIBLE_CATEGORIES, QUALITY_COLORS, get_item_quality, get_item_color |
 | **items/** | Modular item definitions with control flags | |
 | `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
 | `items/materials.py` | Material items (wood, stone, iron, etc.) | ITEMS list |
@@ -65,25 +66,27 @@ This document tracks all global constants, key variables, and data structures us
 | **world/** | World generation | |
 | `world/generator.py` | Overworld terrain | World, WorldGenerator |
 | `world/cave.py` | Cave interiors, daily regeneration | CaveData, generate_cave_interior, CaveData.regenerate() |
-| **gui.py** | Main GUI panels (root) | InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI |
-| **ui/** | Modular GUI (mirrors gui.py) | |
+| **gui.py** | **DELETED** — replaced by ui/ package | *(see ui/ modules below)* |
+| **ui/** | All GUI panels (modular) | |
+| `ui/__init__.py` | Re-exports all UI classes | UIElement, ProgressBar, Tooltip, SplitDialog, DropConfirmDialog, InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI, Minimap |
 | `ui/elements.py` | UIElement, ProgressBar, Tooltip | Base widgets |
 | `ui/split_dialog.py` | SplitDialog | Stack splitting |
-| `gui.py` | DropConfirmDialog | Drop item confirmation prompt |
+| `ui/drop_confirm.py` | DropConfirmDialog | Drop item confirmation prompt |
 | `ui/inventory.py` | InventoryGrid | Inventory panel |
 | `ui/crafting.py` | CraftingPanel | Crafting panel |
 | `ui/pause_menu.py` | PauseMenu | Pause/save/load |
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown |
+| `ui/chest.py` | ChestUI | Chest storage with stacking rules (see note below) |
+| `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
 | `ui/minimap.py` | Minimap | Minimap drawing |
+| `ui/rarity_display.py` | Rarity/enhancement UI & slot helpers | draw_rarity_border, draw_enhancement_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
 | **enchantments/** | Enchantment system | |
-| `enchantments/effects.py` | Enchant types, prefixes, colours | ENCHANT_PREFIX, ENCHANT_COLORS, get_enchant_display_prefix |
+| `enchantments/effects.py` | Enchant types, prefixes, colours — imports from `game_controller.py` | ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT, get_enchant_display_prefix |
 | `enchantments/recipes.py` | Enchant combine logic | try_combine |
 | **drops/** | Loot tables | LOOT_TABLES, roll_loot, CAVE_CHEST_LOOT |
 | **systems/** | Centralized game systems | |
 | `systems/rarity.py` | Rarity stat application & drop rolling | apply_rarity, roll_rarity |
 | `systems/damage_calc.py` | Damage/DR formulas | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
-| **ui/** | Modular GUI panels | |
-| `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border, insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity |
 | **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE |
 | **rendering/** | Rendering utilities | |
 | `rendering/particles.py` | Particle effects | ParticleSystem |
@@ -140,7 +143,7 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `WORLD_HEIGHT` | 150 | World height in tiles |
 | `FPS` | 60 | Target frames per second |
 
-## Colour Constants (`core/constants.py`)
+## Colour Constants (`game_controller.py`)
 
 | Constant | RGB Value | Usage |
 |----------|-----------|-------|
@@ -157,6 +160,107 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `DARK_BROWN` | (60, 35, 15) | Wood textures |
 | `LIGHT_BLUE` | (140, 200, 255) | Water accents |
 | `DARK_GREEN` | (30, 80, 30) | Forest textures |
+
+### UI Theme Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_BG_MAIN_MENU` | (15, 15, 30) | Main menu background |
+| `UI_BG_PANEL` | (25, 25, 40, 230) | Standard panel background |
+| `UI_BG_BUTTON_NORMAL` | (30, 30, 50) | Button normal state |
+| `UI_BG_BUTTON_HOVER` | (50, 50, 75) | Button hover state |
+| `UI_BG_BUTTON_SELECTED` | (80, 80, 120) | Button selected state |
+| `UI_BORDER_NORMAL` | (100, 100, 130) | Standard border |
+| `UI_BORDER_PANEL` | (140, 140, 170) | Panel border |
+| `UI_BORDER_LIGHT` | (130, 130, 155) | Light panel border (inventory, crafting) |
+| `UI_BORDER_DIALOG` | (160, 160, 200) | Dialog border (character menu, split dialog) |
+| `UI_BORDER_BUTTON` | (160, 160, 180) | Action button border (split dialog) |
+| `UI_TEXT_NORMAL` | (200, 200, 220) | Standard text |
+| `UI_TEXT_MUTED` | (130, 130, 160) | Muted/secondary text |
+| `UI_TEXT_HIGHLIGHT` | (200, 200, 240) | Highlighted text, selected borders |
+| `UI_NOTIFICATION_TEXT` | (220, 220, 240) | Notification/item name text |
+
+### UI Slot/Grid Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_SLOT_BG_NORMAL` | (45, 45, 60) | Inventory/pause slot background |
+| `UI_SLOT_BG_SELECTED` | (80, 80, 110) | Selected slot background |
+| `UI_SLOT_BG_HOVER` | (70, 70, 95) | Hovered slot in chest/enchant grids |
+| `UI_SLOT_BORDER_NORMAL` | (100, 100, 120) | Slot border |
+| `UI_SLOT_SEPARATOR` | (80, 80, 100) | Separator line (inventory hotbar/grid) |
+| `UI_NAV_HOVER` | (70, 70, 100) | Nav button hover |
+| `UI_NAV_NORMAL` | (50, 50, 70) | Nav button normal |
+| `UI_SAVE_SLOT_SELECTED` | (70, 70, 110) | Save slot selected |
+| `UI_SPLIT_BUTTON_NORMAL` | (55, 55, 75) | Split dialog button normal |
+| `UI_ENCHANT_FALLBACK` | (200, 200, 200) | Fallback for unknown enchant/enhancement levels |
+
+### UI Action Button Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_CONFIRM_BUTTON` | (60, 120, 60) | Confirm action |
+| `UI_CANCEL_BUTTON` | (120, 60, 60) | Cancel action |
+| `UI_STAT_BUTTON_HOVER` | (70, 110, 70) | Stat+ button hover |
+| `UI_STAT_BUTTON_NORMAL` | (50, 80, 50) | Stat+ button normal |
+| `UI_UNEQUIP_HOVER` | (110, 50, 50) | Unequip button hover |
+| `UI_UNEQUIP_NORMAL` | (80, 40, 40) | Unequip button normal |
+| `UI_EQUIP_HOVER` | (50, 80, 50) | Equip button hover |
+| `UI_EQUIP_NORMAL` | (40, 60, 40) | Equip button normal |
+| `UI_DROPDOWN_HOVER` | (55, 65, 95) | Dropdown row hover |
+| `UI_DROPDOWN_NORMAL` | (35, 35, 55) | Dropdown row normal |
+
+### Crafting Panel Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `UI_CRAFT_CAN_NORMAL` | (60, 90, 60) | Craftable recipe normal |
+| `UI_CRAFT_CAN_HOVER` | (80, 120, 80) | Craftable recipe hover |
+| `UI_CRAFT_CAN_BORDER` | (100, 180, 100) | Craftable recipe border |
+| `UI_CRAFT_CANNOT_NORMAL` | (55, 35, 35) | Non-craftable recipe normal |
+| `UI_CRAFT_CANNOT_HOVER` | (75, 50, 50) | Non-craftable recipe hover |
+| `UI_CRAFT_CANNOT_BORDER` | (140, 60, 60) | Non-craftable recipe border |
+
+### Chest UI Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_CHEST_PANEL_BG` | (20, 20, 35, 240) | Chest panel background |
+| `UI_CHEST_SLOT_BG_NORMAL` | (50, 50, 65) | Chest slot normal |
+| `UI_CHEST_SLOT_BG_HOVER` | (70, 70, 95) | Chest slot hover |
+| `UI_CHEST_SORT_HOVER` | (70, 100, 70) | Sort button hover |
+| `UI_CHEST_SORT_NORMAL` | (50, 70, 50) | Sort button normal |
+| `UI_CHEST_SORT_BORDER` | (100, 160, 100) | Sort button border |
+| `UI_CHEST_MOVE_HOVER` | (100, 70, 70) | Move-all button hover |
+| `UI_CHEST_MOVE_NORMAL` | (70, 50, 50) | Move-all button normal |
+| `UI_CHEST_MOVE_BORDER` | (160, 100, 100) | Move-all button border |
+
+### Enchantment Table UI Colors (`game_controller.py`)
+
+| Constant | RGBA Value | Usage |
+|----------|------------|-------|
+| `UI_ENCHANT_PANEL_BG` | (20, 15, 30, 240) | Enchant panel background |
+| `UI_ENCHANT_PANEL_BORDER` | (140, 100, 170) | Enchant panel border |
+| `UI_ENCHANT_SLOT_BG_NORMAL` | (40, 30, 55) | Enchant grid slot normal |
+| `UI_ENCHANT_SLOT_BG_HOVER` | (60, 45, 80) | Enchant grid slot hover |
+| `UI_ENCHANT_SLOT_BORDER` | (120, 80, 160) | Enchant grid slot border |
+| `UI_ENCHANT_COMBINE_ACTIVE` | (55, 95, 55) | Combine button active normal |
+| `UI_ENCHANT_COMBINE_ACTIVE_HOVER` | (75, 130, 75) | Combine button active hover |
+| `UI_ENCHANT_COMBINE_ACTIVE_BORDER` | (100, 200, 100) | Combine button active border |
+| `UI_ENCHANT_COMBINE_INACTIVE` | (40, 40, 50) | Combine button inactive |
+| `UI_ENCHANT_COMBINE_INACTIVE_BORDER` | (75, 75, 90) | Combine button inactive border |
+| `UI_ENCHANT_DIVIDER` | (120, 80, 150) | Enchant panel divider |
+
+### Death Screen / HUD Colors (`game_controller.py`)
+
+| Constant | RGB Value | Usage |
+|----------|-----------|-------|
+| `DEATH_BUTTON_HOVER` | (60, 60, 90) | Death screen respawn button hover |
+| `DEATH_BUTTON_NORMAL` | (40, 40, 60) | Death screen respawn button normal |
+| `HUD_STATUS_TEXT` | (180, 210, 255) | HUD status line text |
+| `HUD_RESOURCE_TEXT` | (200, 200, 210) | HUD resource counters |
+| `SPELL_HELP_TEXT` | (255, 180, 80) | Spell targeting help text |
+| `PLACEMENT_UPGRADE_BORDER` | (255, 200, 60) | Placement upgrade preview border |
 
 ## Tile Types (`core/constants.py`)
 
@@ -190,13 +294,22 @@ Enhanced variants (e.g., `iron_sword_3`, `turret_5`) automatically inherit flags
 | `CAVE_DMG_MULT` | 1.3 | Extra damage multiplier for cave mobs |
 | `CAVE_ENTRANCE_MIN_DIST` | 800.0 | Min px distance between cave entrances |
 
-### Cave Daily Regeneration
+### Cave Regeneration (per difficulty)
 
-Caves regenerate automatically when a new day starts (`DayNightCycle.day_changed` flag).
+Caves regenerate on a schedule controlled by `CAVE_RESET_DAYS` in `game_controller.py`:
+
+| Difficulty | `CAVE_RESET_DAYS` | Behaviour |
+|-----------|-------------------|-----------|
+| Easy | 1 | Caves rebuild every day |
+| Normal | 1 | Caves rebuild every day |
+| Hard | 2 | Caves rebuild every 2 days |
+| Hardcore | 3 | Caves rebuild every 3 days |
+
 - `CaveData.regenerate(day_number)` rebuilds all cave interiors using `seed + day_number * 99991` as the seed, producing different layouts each day.
 - `boss_alive` and `chest_looted` lists are reset so bosses and chests reappear.
 - If the player is inside a cave when the day changes, they are automatically exited first.
 - Cave entrances on the overworld remain in the same positions.
+- Tracked via `Game._last_cave_reset_day` (saved/loaded).
 
 ### Cave Chest Behaviour
 
@@ -230,9 +343,29 @@ Caves regenerate automatically when a new day starts (`DayNightCycle.day_changed
 | `INVENTORY_COLS` | 6 | Columns in inventory grid |
 | `INVENTORY_TOTAL_SLOTS` | 96 | Total main inventory capacity (24×4) |
 
-## Stat Scaling (`data/stats.py`, re-exported via `core/constants.py`)
+### Chest vs Inventory Stacking Rules
 
-Single source of truth for ALL stat effects. Change this file to tune stat balance.
+**THIS IS INTENTIONAL — DO NOT "FIX" IT:**
+
+Items that do **NOT** stack in the player inventory (books, weapons, armor, etc.) **DO** stack inside chests, as long as the items are *identical* — same `item_id`, same enchant dict, same enhancement level, and same rarity tier.
+
+This lets the player compact their storage while the inventory keeps items separate for quick equip/swap.
+
+- **Player inventory** (`core/components.py: Inventory`): Non-stackable items (weapons, armor, books, tomes) occupy one slot each, even if identical.
+- **Chest storage** (`core/components.py: Storage`): Identical non-stackable items can stack. Identity is checked via `core/item_stack.items_match(id_a, enchant_a, rarity_a, id_b, enchant_b, rarity_b)`.
+- **ChestUI** (`ui/chest.py`): Simply delegates to `Storage` component. Does not enforce stacking rules itself.
+- **EnchantmentTableUI** (`ui/enchantment_table.py`): Always places exactly 1 item per table slot (NEVER stacks on the enchant table).
+
+| Storage Type | Stacks Identical Non-Stackables? | Enforced By |
+|-------------|--------------------------------|-------------|
+| Player inventory | No | `Inventory.add_item_enchanted()` |
+| Crafted chests | Yes (if items_match) | `Storage` component + `transfer_slot()` |
+| Cave chests | Yes (loot drops) | `Storage` component |
+| Enchant table | Never (always qty=1) | `EnchantmentTableUI.handle_event()` |
+
+## Stat Scaling (`game_controller.py` → `data/stats.py` → `core/constants.py`)
+
+Single source of truth for ALL stat effects. Change `game_controller.py` to tune stat balance.
 
 ### Strength
 
@@ -282,7 +415,7 @@ Single source of truth for ALL stat effects. Change this file to tune stat balan
 | `MOVEMENT_ACCEL_MULT` | 10 | Movement acceleration responsiveness |
 | `SPRITE_FLIP_THRESHOLD` | 5.0 | Velocity threshold for sprite flip |
 
-## Sleep / Time Controls (`data/day_night.py`, re-exported via `core/constants.py`)
+## Sleep / Time Controls (`game_controller.py` → `data/day_night.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -330,9 +463,9 @@ Single source of truth for ALL stat effects. Change this file to tune stat balan
 | `CAMPFIRE_LIGHT_RADIUS` | 180 | Campfire light radius in px |
 | `TORCH_LIGHT_RADIUS` | 120 | Placed torch light radius in px |
 
-## Enhancement Scaling (`core/enhancement.py`)
+## Enhancement Scaling (`game_controller.py` → `core/enhancement.py`)
 
-Single source of truth for all enhancement-level scaling. Turrets get BOTH offense (damage) AND defense (DR) bonuses.
+Single source of truth for all enhancement-level scaling. Control variables declared in `game_controller.py`, builder functions in `core/enhancement.py`. Turrets get BOTH offense (damage) AND defense (DR) bonuses.
 
 ### Control Variables
 
@@ -378,7 +511,7 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 |-----------|---------|-------------|---------------|-------------|
 | Total DR | 10 | 12 | 16 | 20 |
 
-## Wave System (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Wave System (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -394,43 +527,50 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 | `WAVE_SPAWN_BATCH` | 3 | Mobs per batch tick |
 | `WAVE_RANGED_MOB_CHANCE` | 0.25 | Chance a wave mob is ranged |
 
-## Day/Night Timing (`data/day_night.py`, re-exported via `data/__init__.py`)
+## Day/Night Timing (`game_controller.py` → `data/day_night.py` → `core/constants.py`)
 
-### Cycle Constants (`data/day_night.py`, re-exported via `data/__init__.py`)
+All time-of-day values are set in `game_controller.py` as `(hour, minute)` tuples on a 24-hour clock.
+Engine fractions (`TIME_*`) are auto-derived — never edit them directly.
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 4× slower than original 240.0 |
-
-### Time Thresholds (`data/day_night.py`)
+### Cycle Constants
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `TIME_NIGHT_END` | 0.22 | Night → Dawn transition |
-| `TIME_DAY_START` | 0.30 | Dawn → Day transition |
-| `TIME_DAY_END` | 0.70 | Day → Dusk transition |
-| `TIME_NIGHT_START` | 0.78 | Dusk → Night transition |
+| `DAY_LENGTH_BASE` | 960.0 | Full day-night cycle length (seconds). 16 real minutes = 1 game day |
 
-### Banner / Flash Constants (`data/day_night.py`)
+### Period Schedule (24-hour clock)
+
+| Period | Begins At | Variable | Engine Fraction |
+|--------|-----------|----------|-----------------|
+| Dawn | 05:17 | `DAWN_BEGINS = (5, 17)` | `TIME_NIGHT_END ≈ 0.2201` |
+| Day | 07:12 | `DAY_BEGINS = (7, 12)` | `TIME_DAY_START = 0.3000` |
+| Dusk | 16:48 | `DUSK_BEGINS = (16, 48)` | `TIME_DAY_END = 0.7000` |
+| Night | 18:43 | `NIGHT_BEGINS = (18, 43)` | `TIME_NIGHT_START ≈ 0.7799` |
+
+To change when a period starts, edit the `(hour, minute)` tuple in `game_controller.py`.
+
+### Banner / Flash Constants
+
+Each period transition shows a banner. The time each appears is the period threshold above.
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `DAY_FLASH_DURATION` | 3.0 | Seconds the "Day X" banner is visible |
+| `DAY_FLASH_TEXT` | "Day {day}" | Banner at DAY_BEGINS (07:12) |
+| `DAY_FLASH_DURATION` | 3.0 | Seconds visible |
 | `DAY_FLASH_FADE_DIVISOR` | 1.0 | Alpha = timer / this (lower = fades slower) |
-| `DAY_FLASH_TEXT` | "Day {day}" | Banner text ({day} replaced at runtime) |
 | `DAY_FLASH_COLOR` | (255, 255, 200) | Banner text colour |
-| `NIGHT_FLASH_DURATION` | 2.5 | Seconds the night warning is visible |
-| `NIGHT_FLASH_FADE_DIVISOR` | 0.8 | Alpha = timer / this |
-| `NIGHT_FLASH_TEXT` | "Night falls — Defend!" | Night warning text |
+| `NIGHT_FLASH_TEXT` | "Night falls — Defend!" | Banner at NIGHT_BEGINS (18:43) |
+| `NIGHT_FLASH_DURATION` | 2.5 | Seconds visible |
+| `NIGHT_FLASH_FADE_DIVISOR` | 0.8 | Alpha control |
 | `NIGHT_FLASH_COLOR` | (255, 120, 80) | Night warning colour |
+| `DAWN_FLASH_TEXT` | "" | Banner at DAWN_BEGINS (empty = disabled) |
+| `DAWN_FLASH_DURATION` | 2.0 | Seconds visible |
+| `DAWN_FLASH_COLOR` | (255, 220, 150) | Dawn message colour |
+| `DUSK_FLASH_TEXT` | "Dusk approaches..." | Banner at DUSK_BEGINS (16:48) |
+| `DUSK_FLASH_DURATION` | 2.0 | Seconds visible |
+| `DUSK_FLASH_COLOR` | (255, 180, 100) | Dusk message colour |
 | `SLEEP_OVERLAY_TEXT` | "Sleeping... Zzz" | Sleeping overlay text |
 | `SLEEP_OVERLAY_COLOR` | (180, 180, 255) | Sleeping overlay colour |
-| `DAWN_FLASH_DURATION` | 2.0 | Dawn message display time (seconds) |
-| `DAWN_FLASH_TEXT` | "" | Dawn message (empty = disabled) |
-| `DAWN_FLASH_COLOR` | (255, 220, 150) | Dawn message colour |
-| `DUSK_FLASH_DURATION` | 2.0 | Dusk message display time (seconds) |
-| `DUSK_FLASH_TEXT` | "Dusk approaches..." | Dusk message text |
-| `DUSK_FLASH_COLOR` | (255, 180, 100) | Dusk message colour |
 | `NIGHT_DARKNESS_THRESHOLD` | 0.5 | Darkness level above which night damage applies |
 
 ### AI Aggro (`systems.py`)
@@ -442,12 +582,12 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 
 ### Day/Night Periods
 
-| Period | Time Range | Description |
-|--------|-----------|-------------|
-| Night | 0.00–0.22, 0.78–1.00 | Dark, enemies deal night damage to unlit players |
-| Dawn | 0.22–0.30 | Transition, lighting ramps up |
-| Day | 0.30–0.70 | Full daylight |
-| Dusk | 0.70–0.78 | "Dusk approaches..." warning displayed |
+| Period | Clock Time | Engine Range | Description |
+|--------|-----------|--------------|-------------|
+| Night | 00:00–05:17, 18:43–24:00 | 0.00–0.22, 0.78–1.00 | Dark, enemies deal night damage to unlit players |
+| Dawn | 05:17–07:12 | 0.22–0.30 | Transition, lighting ramps up |
+| Day | 07:12–16:48 | 0.30–0.70 | Full daylight |
+| Dusk | 16:48–18:43 | 0.70–0.78 | "Dusk approaches..." warning displayed |
 
 ### Key Methods (`DayNightCycle` in `systems.py`)
 
@@ -457,7 +597,7 @@ Single source of truth for all enhancement-level scaling. Turrets get BOTH offen
 | `is_sleepable()` | `t < TIME_NIGHT_END or t >= TIME_DAY_END` (allows sleep during Dusk+Night) |
 | `day_changed` | `bool` flag — True the frame day_number increments, False otherwise |
 
-## Difficulty System (`data/difficulty.py`, re-exported via `core/constants.py`)
+## Difficulty System (`game_controller.py` → `data/difficulty.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -475,13 +615,34 @@ Full dict-based profiles with named keys. Access: `DIFFICULTY_PROFILES[level]['e
 |-----|------|--------|------|----------|---------|
 | `enemy_hp_mult` | 1.0 | 1.3 | 1.8 | 3.5 | Multiplier on mob base HP |
 | `enemy_dmg_mult` | 1.0 | 1.3 | 1.8 | 3.0 | Multiplier on mob base damage |
-| `spawn_rate_mult` | 1.0 | 1.2 | 1.5 | 4.0 | Mob respawn frequency multiplier |
-| `wave_count_mult` | 1.0 | 1.3 | 1.8 | 4.0 | Night wave mob count multiplier |
+| `enemy_hp_per_day` | 0.03 | 0.05 | 0.08 | 0.12 | Daily mob HP growth (HP *= 1 + day × this) |
+| `enemy_dmg_per_day` | 0.02 | 0.05 | 0.08 | 0.10 | Daily mob DMG growth (DMG *= 1 + day × this) |
 | `boss_hp_mult` | 1.0 | 1.0 | 1.3 | 2.0 | Boss HP multiplier (stacks with enemy_hp) |
 | `boss_dmg_mult` | 1.0 | 1.0 | 1.2 | 1.5 | Boss damage multiplier (stacks with enemy_dmg) |
+| `boss_hp_per_day` | 0.02 | 0.04 | 0.06 | 0.10 | Daily boss HP growth (on top of enemy growth) |
+| `boss_dmg_per_day` | 0.01 | 0.03 | 0.05 | 0.08 | Daily boss DMG growth (on top of enemy growth) |
+| `spawn_rate_mult` | 1.0 | 1.2 | 1.5 | 4.0 | Mob respawn frequency multiplier |
+| `wave_count_mult` | 1.0 | 1.3 | 1.8 | 4.0 | Night wave mob count multiplier |
 | `night_dmg_mult` | 1.0 | 1.0 | 1.5 | 2.0 | Night darkness damage multiplier |
+| `night_dmg_per_day` | 0.0 | 0.5 | 1.0 | 2.0 | Flat night damage added per day |
+| `night_dmg_tick_min` | 1 | 1 | 2 | 5 | Minimum night damage per tick (floor) |
+| `night_dmg_tick_max` | 0 | 0 | 0 | 0 | Maximum night damage per tick (0 = no cap) |
 | `xp_mult` | 1.0 | 1.0 | 1.2 | 1.5 | XP earned multiplier |
-| `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat rarity roll bonus (multiplies non-common weights by 1+bonus) |
+| `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat bonus to rarity roll weights |
+
+### Resource Respawn (`RESOURCE_RESPAWN_DAYS`)
+
+Controls how often overworld trees and rocks replenish (per difficulty).
+
+| Difficulty | Days | Behaviour |
+|-----------|------|-----------|
+| Easy | 3 | Every 3 days |
+| Normal | 7 | Every 7 days |
+| Hard | 14 | Every 14 days |
+| Hardcore | 0 | Never — resources are finite |
+
+Tracked via `Game._last_resource_respawn_day` (saved/loaded).
+`game/entities.py: respawn_resources()` places new trees/rocks at seed-consistent positions, skipping tiles already occupied.
 
 ### Legacy Tuple Format (`DIFFICULTY_MULTIPLIERS`)
 
@@ -498,15 +659,18 @@ Backward-compatible: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_coun
 
 | Multiplier | Applied in | How |
 |------------|-----------|-----|
-| `enemy_hp_mult` / `enemy_dmg_mult` | `game/entities.py: create_mob()` | Scales HP, contact_damage, ranged_damage |
-| `boss_hp_mult` / `boss_dmg_mult` | `game/entities.py: create_mob()` | Additional scale inside `if data.get('boss')` block |
+| `enemy_hp_mult` / `enemy_hp_per_day` | `game/entities.py: create_mob()` | Scales HP: `base * enemy_hp_mult * (1 + days * enemy_hp_per_day)` |
+| `enemy_dmg_mult` / `enemy_dmg_per_day` | `game/entities.py: create_mob()` | Scales DMG: `base * enemy_dmg_mult * (1 + days * enemy_dmg_per_day)` |
+| `boss_hp_mult` / `boss_hp_per_day` | `game/entities.py: create_mob()` | Additional scale inside boss block (stacks with enemy growth) |
+| `boss_dmg_mult` / `boss_dmg_per_day` | `game/entities.py: create_mob()` | Additional scale inside boss block |
 | `spawn_rate_mult` | `sandbox_rpg.py` (respawn) | Divides `MOB_RESPAWN_INTERVAL` |
 | `wave_count_mult` | `systems/wave.py` | Multiplies wave mob count |
-| `night_dmg_mult` | `game/combat.py: night_damage()` | Multiplies computed night damage |
+| `night_dmg_mult` / `night_dmg_per_day` | `game/combat.py: night_damage()` | Multiplies + adds flat per-day to night damage |
+| `night_dmg_tick_min` / `night_dmg_tick_max` | `game/combat.py: night_damage()` | Enforces min/max bounds on night tick damage |
 | `xp_mult` | `game/entities.py: on_mob_killed()` | Multiplies XP before `check_level_up()` |
 | `loot_luck_bonus` | Wired into `roll_rarity()` via `roll_loot(luck_bonus=)` | Multiplies non-common rarity weights by `(1 + luck_bonus)` |
 
-## Mob Respawn (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Mob Respawn (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -515,7 +679,7 @@ Backward-compatible: `(enemy_hp_mult, enemy_dmg_mult, spawn_rate_mult, wave_coun
 | `MOB_MAX_COUNT` | 80 | Max mobs alive at once |
 | `MOB_RESPAWN_BATCH` | 3 | Mobs to spawn per respawn tick |
 
-## Ranged Enemies (`data/day_events.py`, re-exported via `data/__init__.py`)
+## Ranged Enemies (`game_controller.py` → `data/day_events.py` → `core/constants.py`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
@@ -925,27 +1089,29 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 |----|--------|--------|-------|-------|------|
 | bomb | 50 | 80.0 | 300.0 | 250.0 | 0.0 |
 
-## Quality / Rarity System (`data/quality.py`)
+## Quality / Rarity System (`game_controller.py` → `data/quality.py`)
 
 ### Rarity Tiers
 
-Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and enchantment. It multiplies base stats of equipment items.
+Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and enchantment. It multiplies base stats of equipment items. All tier constants are declared in `game_controller.py`.
 
-**CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps `None` → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
+**CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps falsy values → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
 
-| Tier | Color Name | RGB | Stat Multiplier |
-|------|-----------|-----|-----------------|
-| common | White | (255, 255, 255) | 1.0× (100%) |
-| rare | Blue | (100, 150, 255) | 1.5× (150%) |
-| epic | Purple | (180, 80, 255) | 2.0× (200%) |
-| legendary | Gold | (255, 215, 0) | 2.5× (250%) |
-| mythic | Red | (255, 60, 60) | 3.0× (300%) |
+| Tier | Color Constant | RGB | Stat Multiplier |
+|------|---------------|-----|-----------------|
+| common | `RARITY_COLOR_COMMON` | (255, 255, 255) | 1.0× (100%) |
+| rare | `RARITY_COLOR_RARE` | (80, 140, 255) | 1.5× (150%) |
+| epic | `RARITY_COLOR_EPIC` | (180, 60, 255) | 2.0× (200%) |
+| legendary | `RARITY_COLOR_LEGENDARY` | (255, 215, 0) | 2.5× (250%) |
+| mythic | `RARITY_COLOR_MYTHIC` | (255, 50, 50) | 3.0× (300%) |
 
-### Rarity-Eligible Categories (`data/quality.py: RARITY_ELIGIBLE_CATEGORIES`)
+### Derived Dicts (game_controller.py)
 
-> **Note**: `RARITY_ELIGIBLE_CATEGORIES` is retained for backward compat but `HAS_RARITY` (from `items/` package) is now the primary source of truth used by `roll_rarity()` and `_is_rarity_eligible()`.
-
-`weapon`, `armor`, `shield`, `tool`, `placeable`, `ranged`
+| Dict | Purpose |
+|------|---------|
+| `RARITY_COLORS` | Maps tier string → RGB tuple, built from individual color constants |
+| `RARITY_MULTIPLIERS` | Maps tier string → stat multiplier |
+| `RARITY_ELIGIBLE_CATEGORIES` | frozenset of categories that can bear rarity |
 
 ### Rarity Functions (`data/quality.py`)
 
@@ -954,7 +1120,7 @@ Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and encha
 | `get_rarity_color(rarity)` | Returns RGB tuple for tier (default White) |
 | `get_rarity_multiplier(rarity)` | Returns float multiplier (default 1.0) |
 | `next_rarity(rarity)` | Returns next tier or None if mythic |
-| `get_item_color(item_id, rarity=None)` | Returns display color; rarity overrides intrinsic quality |
+| `get_item_color(item_id, rarity='common')` | Returns display color; rarity overrides intrinsic quality |
 
 ### Rarity Stat Effects
 
@@ -962,8 +1128,8 @@ All stat applications centralised in `systems/rarity.py`:
 
 | Function | Purpose |
 |----------|---------|
-| `apply_rarity(base, rarity)` | Returns `int(base * multiplier)`, no-op for None/common |
-| `roll_rarity(item_id, is_boss, rng, luck_bonus=0.0)` | Rolls rarity tier for eligible items, None for non-eligible |
+| `apply_rarity(base, rarity)` | Returns `int(base * multiplier)`, no-op for common |
+| `roll_rarity(item_id, is_boss, rng, luck_bonus=0.0)` | Rolls rarity tier for eligible items, `'common'` for non-eligible |
 
 | System | Usage |
 |--------|-------|
@@ -1322,7 +1488,9 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 |--------|------|
 | Enchantment Table | iron×6, diamond×2, wood×4 |
 
-### Enchantment Types (`enchantments/effects.py`)
+### Enchantment Types (`game_controller.py` → `enchantments/effects.py`)
+
+All enchantment tuning constants are declared in `game_controller.py`, imported by `enchantments/effects.py`.
 
 | Type | Applies To | Source | Effect |
 |------|-----------|--------|--------|
@@ -1331,7 +1499,40 @@ Count defaults to 1 if omitted. See full list in Recipes section below.
 | `lightning` | weapon | spell_lightning + equipment | Bonus lightning damage + arc to nearby mob on hit |
 | `protection` | armor/shield | any spell + armor/shield | Bonus damage reduction |
 
-### Enchantment Bonus Damage (`enchantments/effects.py: FIRE/ICE/LIGHTNING_BONUS_DAMAGE`)
+### Enchantment Color Dict (`game_controller.py: ENCHANT_COLORS`)
+
+| Key | Color Constant | RGB |
+|-----|---------------|-----|
+| `fire` | `ENCHANT_COLOR_FIRE` | (255, 120, 30) |
+| `ice` | `ENCHANT_COLOR_ICE` | (100, 200, 255) |
+| `lightning` | `ENCHANT_COLOR_LIGHTNING` | (180, 200, 255) |
+| `protection` | `ENCHANT_COLOR_PROTECTION` | (80, 255, 120) |
+| `regen` | `ENCHANT_COLOR_REGEN` | (50, 255, 50) |
+| `strength` | `ENCHANT_COLOR_STRENGTH` | (255, 80, 80) |
+
+### Enchantment Prefix Dict (`game_controller.py: ENCHANT_PREFIX`)
+
+| Key | Prefix |
+|-----|--------|
+| `fire` | Flaming |
+| `ice` | Frozen |
+| `lightning` | Shocking |
+| `protection` | Warded |
+| `regen` | Regenerating |
+| `strength` | Mighty |
+
+### Spell-to-Enchant Mapping (`game_controller.py: SPELL_TO_ENCHANT`)
+
+| Spell Prefix | Enchant Type |
+|-------------|-------------|
+| `spell_fireball` | fire |
+| `spell_ice` | ice |
+| `spell_lightning` | lightning |
+| `spell_protection` | protection |
+| `spell_regen` | regen |
+| `spell_strength` | strength |
+
+### Enchantment Bonus Damage (`game_controller.py: FIRE/ICE/LIGHTNING_BONUS_DAMAGE`)
 
 | Level | Fire | Ice | Lightning |
 |-------|------|-----|-----------|

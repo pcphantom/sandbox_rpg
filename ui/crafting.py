@@ -5,7 +5,11 @@ from typing import Any, Callable
 
 import pygame
 
-from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, RED, GREEN, GRAY
+from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, RED, GREEN, GRAY,
+                            UI_BORDER_LIGHT, UI_CRAFT_CAN_NORMAL,
+                            UI_CRAFT_CAN_HOVER, UI_CRAFT_CAN_BORDER,
+                            UI_CRAFT_CANNOT_NORMAL, UI_CRAFT_CANNOT_HOVER,
+                            UI_CRAFT_CANNOT_BORDER)
 from core.components import Inventory
 from data import ITEM_DATA, RECIPES, get_item_color
 from ui.elements import Tooltip
@@ -29,7 +33,7 @@ class CraftingPanel:
         bg = pygame.Surface((pw, pht), pygame.SRCALPHA)
         bg.fill((18, 18, 28, 235))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, (130, 130, 155),
+        pygame.draw.rect(surface, UI_BORDER_LIGHT,
                          (px, py, pw, pht), 2, border_radius=10)
         title = self.title_font.render("Crafting", True, WHITE)
         surface.blit(title,
@@ -44,11 +48,11 @@ class CraftingPanel:
             btn = pygame.Rect(px + 10, ry, pw - 20, 44)
             hov = btn.collidepoint(mx, my)
             if can:
-                bc = (60, 90, 60) if not hov else (80, 120, 80)
-                bd = (100, 180, 100)
+                bc = UI_CRAFT_CAN_NORMAL if not hov else UI_CRAFT_CAN_HOVER
+                bd = UI_CRAFT_CAN_BORDER
             else:
-                bc = (55, 35, 35) if not hov else (75, 50, 50)
-                bd = (140, 60, 60)
+                bc = UI_CRAFT_CANNOT_NORMAL if not hov else UI_CRAFT_CANNOT_HOVER
+                bd = UI_CRAFT_CANNOT_BORDER
             pygame.draw.rect(surface, bc, btn, border_radius=5)
             pygame.draw.rect(surface, bd, btn, 1, border_radius=5)
             icon = self.textures.cache.get(f"item_{recipe['gives']}")

@@ -8,24 +8,15 @@ from core.components import (Transform, Velocity, Collider, Health,
                              AI, Placeable, Turret, Building)
 from enchantments.effects import get_enchant_dr_bonus
 from core.enhancement import enhanced_turret_dr
-
-AI_PROBE_STEP_MULT: float = 0.75
-MOB_STRUCTURE_ATTACK_CD: float = 1.5
-CHASE_DETECT_MULT: float = 0.7
-WANDER_TIME_MIN: float = 1.5
-WANDER_TIME_MAX: float = 3.5
-CHASE_DISENGAGE_MULT: float = 2.0
-AGGRO_DISENGAGE_MULT: float = 2.0
-AGGRO_BOSS_DISENGAGE_MULT: float = 3.0
-RANGED_MIN_DISTANCE: float = 60.0
-RANGED_RETREAT_DISTANCE: float = 100.0
-RANGED_RETREAT_SPEED_MULT: float = 0.5
-RANGED_STRAFE_SPEED_MULT: float = 0.6
-CHASE_MIN_DISTANCE: float = 5.0
-CHASE_SPEED_MULT: float = 1.3
-STUCK_WANTED_MULT: float = 0.3
-STUCK_MIN_DISTANCE: float = 30.0
-STUCK_TIME_THRESHOLD: float = 0.3
+from game_controller import (
+    AI_PROBE_STEP_MULT, MOB_STRUCTURE_ATTACK_CD,
+    CHASE_DETECT_MULT, WANDER_TIME_MIN, WANDER_TIME_MAX,
+    CHASE_DISENGAGE_MULT, AGGRO_DISENGAGE_MULT, AGGRO_BOSS_DISENGAGE_MULT,
+    RANGED_MIN_DISTANCE, RANGED_RETREAT_DISTANCE,
+    RANGED_RETREAT_SPEED_MULT, RANGED_STRAFE_SPEED_MULT,
+    CHASE_MIN_DISTANCE, CHASE_SPEED_MULT,
+    STUCK_WANTED_MULT, STUCK_MIN_DISTANCE, STUCK_TIME_THRESHOLD,
+)
 
 
 class AISystem:

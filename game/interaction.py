@@ -28,6 +28,7 @@ from core.constants import (
     CAMPFIRE_LIGHT_RADIUS,
     SLEEP_DURATION, NIGHT_SLEEP_SPEED_MULT,
     PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
+    PARTICLE_COLOR_TREE, LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
@@ -116,7 +117,7 @@ def interact(g: 'Game') -> None:
             inv.add_item('wood', random.randint(2, 4) + bonus + luck_bonus)
             inv.add_item('stick', 1)
             th = g.em.get_component(nearest, Transform)
-            g.particles.emit(th.x + 20, th.y + 30, 8, (80, 50, 30), 40, 0.3)
+            g.particles.emit(th.x + 20, th.y + 30, 8, PARTICLE_COLOR_TREE, 40, 0.3)
         else:
             inv.add_item('stone',
                          random.randint(2, 3) + bonus + luck_bonus)
@@ -508,13 +509,13 @@ def place_item(g: 'Game', item_id: str,
         g.em.add_component(eid, Renderable(
             g.textures.get('campfire_True'), layer=2))
         g.em.add_component(eid, LightSource(
-            CAMPFIRE_LIGHT_RADIUS, (255, 160, 80), 1.0))
+            CAMPFIRE_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
         g.em.add_component(eid, Health(apply_rarity(CAMPFIRE_HP, rarity)))
         g.em.add_component(eid, Building('campfire'))
     elif item_id == 'torch':
         g.em.add_component(eid, Renderable(
             g.textures.get('torch_placed'), layer=2))
-        g.em.add_component(eid, LightSource(120, (255, 180, 60), 0.8))
+        g.em.add_component(eid, LightSource(120, LIGHT_COLOR_TORCH, 0.8))
         g.em.add_component(eid, Health(apply_rarity(30, rarity)))
         g.em.add_component(eid, Building('torch'))
     elif item_id == 'trap':
