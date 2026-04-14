@@ -117,6 +117,8 @@ def render(g: 'Game') -> None:
                 g.screen, stor,
                 g.em.get_component(g.player_id, Inventory),
                 g.tooltip)
+    if g.show_stone_oven:
+        g.stone_oven_ui.draw(g.screen, g)
     if g.show_inventory:
         g.inventory_ui.draw(g.screen, g.tooltip)
     if g.show_crafting:
@@ -564,7 +566,7 @@ def draw_hud(g: 'Game') -> None:
     # Controls hint
     if not (g.show_inventory or g.show_crafting
             or g.show_character or g.show_chest
-            or g.paused):
+            or g.show_stone_oven or g.paused):
         controls = [
             "WASD  Move",
             "Space Attack",

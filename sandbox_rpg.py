@@ -35,7 +35,7 @@ from systems import (
 )
 from ui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
-    CharacterMenu, ChestUI, EnchantmentTableUI,
+    CharacterMenu, ChestUI, EnchantmentTableUI, StoneOvenUI,
 )
 from core.settings import (
     load_settings, save_settings,
@@ -138,6 +138,16 @@ class Game:
 
         # Player
         self.player_id = self._create_player()
+
+        # Day-based respawn tracking (must be set before _populate_world)
+        self._last_resource_respawn_day: int = 1
+        self._last_cave_reset_day: int = 1
+        # Harvested overworld resource grid positions (cleared on respawn day)
+        self.harvested_resources: set = set()
+        # Cave entity snapshots: cave_index -> list of entity dicts
+        # Persists cave state between entries/exits so caves don't reset
+        self.cave_snapshots: Dict[int, list] = {}
+
         self._populate_world()
 
         # UI state
@@ -148,6 +158,8 @@ class Game:
         self.active_chest: Optional[int] = None
         self.show_enchant_table = False
         self.active_enchant_table: Optional[int] = None
+        self.show_stone_oven = False
+        self.active_stone_oven: Optional[int] = None
         self.tooltip = Tooltip()
 
         # Placement preview mode
@@ -180,6 +192,7 @@ class Game:
         self.character_menu = CharacterMenu(self.textures)
         self.chest_ui = ChestUI(self.textures)
         self.enchant_table_ui = EnchantmentTableUI(self.textures)
+        self.stone_oven_ui = StoneOvenUI(self.textures)
 
         self.health_bar = ProgressBar(
             pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)
@@ -200,10 +213,6 @@ class Game:
         self.survival_timer = 0.0
         self.sleeping = False
         self.sleep_timer = 0.0
-
-        # Day-based respawn tracking
-        self._last_resource_respawn_day: int = 1
-        self._last_cave_reset_day: int = 1
 
         self.dmg_numbers: List[Tuple[float, float, str,
                                      Tuple[int, int, int], float]] = []
@@ -360,14 +369,20 @@ class Game:
         pt.y = eyp - TILE_SIZE  # slightly above exit
         self.camera.follow(pt.x, pt.y)
         self.camera.snap()
-        # Populate cave
-        self._populate_cave(cave_index)
+        # Populate cave — restore snapshot if exists, otherwise fresh populate
+        if cave_index in self.cave_snapshots:
+            game_entities.restore_cave_snapshot(self, cave_index,
+                                                self.cave_snapshots[cave_index])
+        else:
+            self._populate_cave(cave_index)
         self.cave_teleport_cd = 1.5
         self._notify(f"Entered cave {cave_index + 1}...")
 
     def _exit_cave(self) -> None:
         """Teleport player back to overworld."""
         cave_index = self.in_cave
+        # Snapshot cave entities before destroying them
+        self.cave_snapshots[cave_index] = game_entities.snapshot_cave_entities(self)
         # Destroy cave entities
         self._destroy_non_player_entities()
         self.cave_entities.clear()
@@ -546,6 +561,8 @@ class Game:
         self.in_cave = -1
         self.overworld = None
         self.cave_entities.clear()
+        self.harvested_resources.clear()
+        self.cave_snapshots.clear()
         # Restore physics for overworld
         self.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
         self.player_id = self._create_player()
@@ -569,6 +586,8 @@ class Game:
         self.active_chest = None
         self.show_enchant_table = False
         self.active_enchant_table = None
+        self.show_stone_oven = False
+        self.active_stone_oven = None
         self.spell_cooldowns.clear()
         self.active_buffs.clear()
         self.speed_restores.clear()
@@ -628,6 +647,8 @@ class Game:
         # If player dies in a cave, exit to overworld first
         if self.in_cave >= 0:
             cave_index = self.in_cave
+            # Snapshot cave state before leaving
+            self.cave_snapshots[cave_index] = game_entities.snapshot_cave_entities(self)
             self._destroy_non_player_entities()
             self.cave_entities.clear()
             assert self.overworld is not None

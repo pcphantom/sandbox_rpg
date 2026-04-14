@@ -69,7 +69,7 @@ This document tracks all global constants, key variables, and data structures us
 | `world/cave.py` | Cave interiors, daily regeneration | CaveData, generate_cave_interior, CaveData.regenerate() |
 | **gui.py** | **DELETED** — replaced by ui/ package | *(see ui/ modules below)* |
 | **ui/** | All GUI panels (modular) | |
-| `ui/__init__.py` | Re-exports all UI classes | UIElement, ProgressBar, Tooltip, SplitDialog, DropConfirmDialog, InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI, Minimap |
+| `ui/__init__.py` | Re-exports all UI classes | UIElement, ProgressBar, Tooltip, SplitDialog, DropConfirmDialog, InventoryGrid, CraftingPanel, PauseMenu, CharacterMenu, ChestUI, EnchantmentTableUI, StoneOvenUI, Minimap |
 | `ui/elements.py` | UIElement, ProgressBar, Tooltip | Base widgets |
 | `ui/split_dialog.py` | SplitDialog | Stack splitting |
 | `ui/drop_confirm.py` | DropConfirmDialog | Drop item confirmation prompt |
@@ -79,6 +79,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown (540×460) — **DO NOT MODIFY dimensions or layout** |
 | `ui/chest.py` | ChestUI | Chest storage with stacking rules (620×320) — **DO NOT MODIFY dimensions** |
 | `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
+| `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting interface |
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
@@ -440,7 +441,7 @@ Single source of truth for ALL stat effects. Change `game_controller.py` to tune
 |----------|-------|---------|
 | `LEVEL_UP_BASE_HP` | 10 | Base HP increase per level |
 | `VIT_HP_BONUS_PER_LEVEL` | 5 | Extra HP per VIT point on level up |
-| `VITALITY_CAMPFIRE_BONUS_PER` | 2 | +1 campfire heal per this many VIT |
+| `VITALITY_CAMPFIRE_BONUS_PER` | 1 | +1 campfire heal per this many VIT |
 
 ### Luck
 
@@ -490,10 +491,10 @@ Single source of truth for ALL stat effects. Change `game_controller.py` to tune
 | `TURRET_COOLDOWN` | 1.5 | Turret fire cooldown |
 | `CHEST_CAPACITY` | 96 | Chest storage slots |
 | `REPAIR_RANGE` | 60.0 | Max distance to repair a structure with hammer |
-| `CAMPFIRE_BASE_HEAL` | 3 | Base HP healed per tick near campfire |
+| `CAMPFIRE_BASE_HEAL` | 2 | Base HP healed per tick near campfire |
 | `CAMPFIRE_HEAL_RADIUS` | 120.0 | Proximity radius for campfire healing (px) |
 | `CAMPFIRE_HEAL_INTERVAL` | 1.0 | Seconds between campfire heal ticks |
-| `VITALITY_CAMPFIRE_BONUS_PER` | 2 | +1 heal per this many vitality points |
+| `VITALITY_CAMPFIRE_BONUS_PER` | 1 | +1 heal per this many vitality points |
 | `TRAP_HP` | 40 | Spike trap hit points |
 | `BED_HP` | 80 | Bed hit points |
 | `CAMPFIRE_HP` | 60 | Campfire hit points |
@@ -505,6 +506,14 @@ Single source of truth for ALL stat effects. Change `game_controller.py` to tune
 | `ENCHANT_TABLE_CAPACITY` | 9 | Enchantment table storage slots |
 | `ENCHANT_TABLE_HP` | 60 | Enchantment table hit points |
 | `CAMPFIRE_LIGHT_RADIUS` | 180 | Campfire light radius in px |
+| `BEACON_LIGHT_RADIUS` | 720 | Beacon light radius in px (4× campfire) |
+| `STONE_OVEN_LIGHT_RADIUS` | 120 | Stone oven light radius (only when burning) |
+| `BEACON_HP` | 120 | Beacon hit points |
+| `BEACON_ATTRACT_RADIUS` | 1440.0 | Distance enemies start moving toward beacon at night |
+| `BEACON_ATTRACT_SPEED_OUTSIDE` | 0.3 | Speed mult for enemies outside beacon light |
+| `BEACON_ATTRACT_SPEED_INSIDE` | 0.5 | Speed mult for enemies inside beacon light |
+| `STONE_OVEN_HP` | 80 | Stone oven hit points |
+| `STONE_OVEN_SLOTS` | 4 | Number of slots in stone oven (2×2 grid) |
 | `TORCH_LIGHT_RADIUS` | 120 | Placed torch light radius in px |
 
 ## Enhancement Scaling (`game_controller.py` → `core/enhancement.py`)
@@ -673,6 +682,7 @@ Full dict-based profiles with named keys. Access: `DIFFICULTY_PROFILES[level]['e
 | `night_dmg_tick_max` | 0 | 0 | 0 | 0 | Maximum night damage per tick (0 = no cap) |
 | `xp_mult` | 1.0 | 1.0 | 1.2 | 1.5 | XP earned multiplier |
 | `loot_luck_bonus` | 0.0 | 0.0 | 0.0 | 0.0 | Flat bonus to rarity roll weights |
+| `night_damage_multiplier` | 1 | 2 | 3 | 4 | Enemy damage mult at night when NOT in light |
 
 ### Resource Respawn (`RESOURCE_RESPAWN_DAYS`)
 
@@ -1058,6 +1068,8 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | door | Door | 0 | Yes |
 | enchantment_table | Enchantment Table | 0 | Yes |
 | greater_enchantment_table | Greater Enchantment Table | 0 | Yes |
+| beacon | Beacon | 0 | Yes |
+| stone_oven | Stone Oven | 0 | Yes |
 
 ### Tools
 | ID | Name | Damage | Notes |
@@ -1345,13 +1357,20 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 | Turret | wood×8, stone×5, iron×3 |
 | Chest | wood×8, iron×2 |
 | Door | wood×4, iron×1 |
+| Beacon | wood×25, stone×10 |
+| Stone Oven | stone×8, wood×2 |
 | Enchantment Table | iron×6, diamond×2, wood×4 |
 
 ### Gems & Advanced Materials
 | Result | Cost |
 |--------|------|
 | Brilliant Diamond | diamond×9 |
-| Titanium Ingot | titanium_ore×2, wood×2 |
+
+### Stone Oven Smelting Recipes
+| Result | Ore Cost | Wood Cost | Smelt Time |
+|--------|----------|-----------|------------|
+| Iron Ingot | iron_ore×1 | wood×2 | 10s |
+| Titanium Ingot | titanium_ore×1 | wood×2 | 30s |
 
 ### Titanium & Diamond Gear
 | Result | Cost |
@@ -1365,7 +1384,6 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 |--------|------|
 | Sticks ×5 | wood×1 |
 | Iron Ingot | stone×4, wood×2 |
-| Iron from Ore | iron_ore×2, wood×1 |
 | Cloth | stick×3, berry×1 |
 | Leather | bone×2, berry×1 |
 

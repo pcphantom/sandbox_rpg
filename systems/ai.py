@@ -16,7 +16,11 @@ from game_controller import (
     RANGED_RETREAT_SPEED_MULT, RANGED_STRAFE_SPEED_MULT,
     CHASE_MIN_DISTANCE, CHASE_SPEED_MULT,
     STUCK_WANTED_MULT, STUCK_MIN_DISTANCE, STUCK_TIME_THRESHOLD,
+    BEACON_ATTRACT_RADIUS, BEACON_ATTRACT_SPEED_OUTSIDE,
+    BEACON_ATTRACT_SPEED_INSIDE, BEACON_LIGHT_RADIUS,
 )
+
+BEACON_MIN_DISTANCE: float = 20.0  # stop moving when this close to beacon
 
 
 class AISystem:
@@ -51,10 +55,21 @@ class AISystem:
         return 0
 
     def update(self, dt: float, em: EntityManager, player_id: int,
-               on_ranged_fire: Any = None) -> None:
+               on_ranged_fire: Any = None,
+               night_structure_dmg_mult: int = 1,
+               is_night: bool = False) -> None:
         pt = em.get_component(player_id, Transform)
         if not pt:
             return
+        # Cache beacon positions for attraction logic
+        self._is_night = is_night
+        self._beacon_positions = []
+        if is_night:
+            for bid in em.get_entities_with(Transform, Placeable, Building):
+                bld = em.get_component(bid, Building)
+                if bld.building_type == 'beacon':
+                    bt = em.get_component(bid, Transform)
+                    self._beacon_positions.append((bt.x + 32, bt.y + 32))
         for eid in em.get_entities_with(Transform, Velocity, AI):
             if eid == player_id:
                 continue
@@ -103,6 +118,18 @@ class AISystem:
                             v.vy = (ddy / ddist) * mob_ai.speed
                         elif mob_ai.attack_timer <= 0:
                             raw_dmg = mob_ai.contact_damage
+                            # Apply night damage multiplier if structure is not near light
+                            if night_structure_dmg_mult > 1:
+                                near_light = False
+                                from core.components import LightSource
+                                from game_controller import LIGHT_SAFETY_RADIUS
+                                for lid in em.get_entities_with(Transform, LightSource):
+                                    lt = em.get_component(lid, Transform)
+                                    if math.hypot(lt.x - tt.x, lt.y - tt.y) < LIGHT_SAFETY_RADIUS:
+                                        near_light = True
+                                        break
+                                if not near_light:
+                                    raw_dmg *= night_structure_dmg_mult
                             turr = em.get_component(target, Turret)
                             if turr:
                                 # Enhancement DR from turret level
@@ -130,6 +157,31 @@ class AISystem:
             if mob_ai.behavior == "wander":
                 if dist < mob_ai.detection_range or mob_ai.aggro:
                     mob_ai.state = "chase"
+                elif self._is_night and self._beacon_positions:
+                    # Beacon attraction at night — override wander
+                    best_beacon = None
+                    best_bdist = BEACON_ATTRACT_RADIUS
+                    for bx, by in self._beacon_positions:
+                        bdist = math.hypot(bx - t.x, by - t.y)
+                        if bdist < best_bdist:
+                            best_bdist = bdist
+                            best_beacon = (bx, by)
+                    if best_beacon is not None and best_bdist > BEACON_MIN_DISTANCE:
+                        bx, by = best_beacon
+                        bdx = bx - t.x
+                        bdy = by - t.y
+                        # Inside beacon light → slower approach
+                        if best_bdist < BEACON_LIGHT_RADIUS:
+                            speed_mult = BEACON_ATTRACT_SPEED_INSIDE
+                        else:
+                            speed_mult = BEACON_ATTRACT_SPEED_OUTSIDE
+                        v.vx = (bdx / best_bdist) * mob_ai.speed * speed_mult
+                        v.vy = (bdy / best_bdist) * mob_ai.speed * speed_mult
+                    elif mob_ai.timer <= 0:
+                        angle = random.uniform(0, math.tau)
+                        v.vx = math.cos(angle) * mob_ai.speed
+                        v.vy = math.sin(angle) * mob_ai.speed
+                        mob_ai.timer = random.uniform(WANDER_TIME_MIN, WANDER_TIME_MAX)
                 elif mob_ai.timer <= 0:
                     angle = random.uniform(0, math.tau)
                     v.vx = math.cos(angle) * mob_ai.speed

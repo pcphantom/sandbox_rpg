@@ -89,4 +89,20 @@ ITEMS = [
         'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': True,
         'can_enchant': False, 'can_enhance': False, 'has_rarity': True,
     },
+    {
+        'id': 'beacon',
+        'name': 'Beacon',
+        'desc': 'Large light. Attracts enemies at night. [F] to place.',
+        'category': 'placeable',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': True,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': True,
+    },
+    {
+        'id': 'stone_oven',
+        'name': 'Stone Oven',
+        'desc': 'Smelt ore into ingots. [F] to place, [E] to use.',
+        'category': 'placeable',
+        'damage': 0, 'harvest_bonus': 0, 'heal': 0, 'placeable': True,
+        'can_enchant': False, 'can_enhance': False, 'has_rarity': True,
+    },
 ]

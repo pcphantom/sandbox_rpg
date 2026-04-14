@@ -183,6 +183,9 @@ class CharacterMenu:
                     name = f"{prefix} {name}"
                     name_color = ENCHANT_COLORS.get(eq_ench['type'], WHITE)
             surface.blit(self.font.render(f"{label}: ", True, GRAY), (ex, ey))
+            # Show ammo count next to equipped ammo name
+            if attr == 'ammo' and item_id and equipment.ammo_count > 0:
+                name = f"{name} x{equipment.ammo_count}"
             surface.blit(self.font.render(name, True, name_color), (ex + 80, ey))
             # Icon
             if item_id:

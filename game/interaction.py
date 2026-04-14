@@ -30,6 +30,10 @@ from core.constants import (
     PLACEMENT_PREVIEW_COLOR, PLACEMENT_INVALID_COLOR,
     PARTICLE_COLOR_TREE, LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
+from game_controller import (
+    BEACON_LIGHT_RADIUS, BEACON_HP,
+    STONE_OVEN_HP, STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
+)
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
     AI, PlayerStats, Equipment, Placeable, LightSource, Storage, Turret,
@@ -51,13 +55,16 @@ def interact(g: 'Game') -> None:
     inv: Inventory = g.em.get_component(g.player_id, Inventory)
     px, py = pt.x + 10, pt.y + 14
 
-    # Storage interaction (Chest / Enchantment Table)
+    # Storage interaction (Chest / Enchantment Table / Stone Oven)
     for eid in g.em.get_entities_with(Transform, Storage):
         ct = g.em.get_component(eid, Transform)
         if math.hypot(ct.x - px, ct.y - py) < INTERACT_RANGE:
             bld = (g.em.get_component(eid, Building)
                    if g.em.has_component(eid, Building) else None)
-            if bld and bld.building_type == 'enchantment_table':
+            if bld and bld.building_type == 'stone_oven':
+                g.show_stone_oven = True
+                g.active_stone_oven = eid
+            elif bld and bld.building_type == 'enchantment_table':
                 g.show_enchant_table = True
                 g.active_enchant_table = eid
             else:
@@ -123,6 +130,12 @@ def interact(g: 'Game') -> None:
                          random.randint(2, 3) + bonus + luck_bonus)
             th = g.em.get_component(nearest, Transform)
             g.particles.emit(th.x + 14, th.y + 10, 8, GRAY, 40, 0.3)
+        # Track harvested overworld resource positions (skip cave resources)
+        if g.in_cave < 0 and not (pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item):
+            th_h = g.em.get_component(nearest, Transform)
+            gx = int(th_h.x // TILE_SIZE)
+            gy = int(th_h.y // TILE_SIZE)
+            g.harvested_resources.add((gx, gy))
         g.em.destroy_entity(nearest)
 
 
@@ -561,6 +574,21 @@ def place_item(g: 'Game', item_id: str,
         g.em.add_component(eid, Collider(
             DOOR_COLLIDER_W, DOOR_COLLIDER_H, True))
         g.em.add_component(eid, Building('door'))
+    elif item_id == 'beacon':
+        g.em.add_component(eid, Renderable(
+            g.textures.get('beacon_placed'), layer=2))
+        g.em.add_component(eid, Collider(64, 64, True))
+        g.em.add_component(eid, Health(apply_rarity(BEACON_HP, rarity)))
+        g.em.add_component(eid, LightSource(
+            BEACON_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
+        g.em.add_component(eid, Building('beacon'))
+    elif item_id == 'stone_oven':
+        g.em.add_component(eid, Renderable(
+            g.textures.get('stone_oven_False'), layer=1))
+        g.em.add_component(eid, Collider(32, 32, True))
+        g.em.add_component(eid, Health(apply_rarity(STONE_OVEN_HP, rarity)))
+        g.em.add_component(eid, Storage(STONE_OVEN_SLOTS))
+        g.em.add_component(eid, Building('stone_oven'))
 
 
 # ======================================================================

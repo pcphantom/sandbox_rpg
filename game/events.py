@@ -100,7 +100,7 @@ def handle_events(g) -> None:
                     g.spell_item = None
                 elif (g.show_inventory or g.show_crafting
                         or g.show_character or g.show_chest
-                        or g.show_enchant_table):
+                        or g.show_enchant_table or g.show_stone_oven):
                     g._return_held_item()
                     g.show_inventory = False
                     g.show_crafting = False
@@ -110,6 +110,8 @@ def handle_events(g) -> None:
                     g.chest_ui.split_dialog.close()
                     g.show_enchant_table = False
                     g.active_enchant_table = None
+                    g.show_stone_oven = False
+                    g.active_stone_oven = None
                 else:
                     g.paused = True
                 continue
@@ -123,6 +125,8 @@ def handle_events(g) -> None:
                 g.active_chest = None
                 g.show_enchant_table = False
                 g.active_enchant_table = None
+                g.show_stone_oven = False
+                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_c:
                 g._return_held_item()
@@ -133,6 +137,8 @@ def handle_events(g) -> None:
                 g.active_chest = None
                 g.show_enchant_table = False
                 g.active_enchant_table = None
+                g.show_stone_oven = False
+                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_p:
                 g._return_held_item()
@@ -143,6 +149,8 @@ def handle_events(g) -> None:
                 g.active_chest = None
                 g.show_enchant_table = False
                 g.active_enchant_table = None
+                g.show_stone_oven = False
+                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_f:
                 g._use_equipped_item()
@@ -165,7 +173,7 @@ def handle_events(g) -> None:
             if (not g.placement_mode and not g.spell_targeting
                     and not g.show_inventory and not g.show_crafting
                     and not g.show_character and not g.show_chest
-                    and not g.show_enchant_table):
+                    and not g.show_enchant_table and not g.show_stone_oven):
                 inv = g.em.get_component(g.player_id, Inventory)
                 inv.equipped_slot = (inv.equipped_slot - event.y) % 6
 
@@ -228,6 +236,9 @@ def handle_events(g) -> None:
                 g.enchant_table_ui.handle_event(
                     event, stor,
                     g.em.get_component(g.player_id, Inventory))
+        if g.show_stone_oven:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                g.stone_oven_ui.handle_click(g, *event.pos, event.button)
         if g.show_inventory:
             g.inventory_ui.handle_event(event)
         if g.show_crafting:

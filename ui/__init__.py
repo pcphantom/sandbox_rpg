@@ -14,3 +14,4 @@ from ui.character_menu import CharacterMenu                           # noqa: F4
 from ui.chest import ChestUI                                          # noqa: F401
 from ui.enchantment_table import EnchantmentTableUI                   # noqa: F401
 from ui.minimap import Minimap                                        # noqa: F401
+from ui.stone_oven import StoneOvenUI                                 # noqa: F401
