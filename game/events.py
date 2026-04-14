@@ -230,12 +230,19 @@ def handle_events(g) -> None:
                     event, stor,
                     g.em.get_component(g.player_id, Inventory),
                     is_cave_chest=is_cave)
+                if g.chest_ui.dw.close_requested:
+                    g.show_chest = False
+                    g.active_chest = None
+                    g.chest_ui.split_dialog.close()
         if g.show_enchant_table and g.active_enchant_table is not None:
             stor = g.em.get_component(g.active_enchant_table, Storage)
             if stor:
                 g.enchant_table_ui.handle_event(
                     event, stor,
                     g.em.get_component(g.player_id, Inventory))
+                if g.enchant_table_ui.dw.close_requested:
+                    g.show_enchant_table = False
+                    g.active_enchant_table = None
         if g.show_stone_oven:
             if g.stone_oven_ui.handle_event(event, g):
                 continue
@@ -261,3 +268,6 @@ def handle_events(g) -> None:
                 g.em.get_component(g.player_id, Equipment),
                 g.em.get_component(g.player_id, Inventory),
             )
+            if g.character_menu.dw.close_requested:
+                g._return_held_item()
+                g.show_character = False
