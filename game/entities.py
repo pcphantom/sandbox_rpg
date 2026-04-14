@@ -49,6 +49,7 @@ from game_controller import (
     MOB_COLOR_ZOMBIE, MOB_COLOR_WRAITH, MOB_COLOR_TROLL,
     MOB_COLOR_SKELETON_ARCHER, MOB_COLOR_GOBLIN_SHAMAN,
     MOB_COLOR_BOSS_GOLEM, MOB_COLOR_BOSS_LICH, BOSS_GLOW_DEFAULT,
+    ELITE_HP_MULT, ELITE_DMG_MULT, ELITE_XP_MULT,
 )
 
 
@@ -79,7 +80,8 @@ def create_player(g: 'Game') -> int:
 # MOBS
 # ======================================================================
 
-def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
+def create_mob(g: 'Game', x: float, y: float, mob_type: str,
+               elite: bool = False) -> int:
     data = MOB_DATA[mob_type]
     tex_key = mob_type
     eid = g.em.create_entity()
@@ -99,16 +101,26 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
     dmg_day_scale = 1.0 + days_elapsed * prof['enemy_dmg_per_day']
     scaled_hp = int(data['hp'] * hp_mult * hp_day_scale)
     scaled_dmg = int(data['damage'] * dmg_mult * dmg_day_scale)
+    # Elite scaling — tougher version with glow border
+    if elite:
+        scaled_hp = int(scaled_hp * ELITE_HP_MULT)
+        scaled_dmg = int(scaled_dmg * ELITE_DMG_MULT)
     g.em.add_component(eid, Health(scaled_hp))
     mob_ai = AI('wander', mob_type)
     mob_ai.speed = data['speed']
     mob_ai.detection_range = data['detection']
     mob_ai.contact_damage = scaled_dmg
-    mob_ai.xp_value = data['xp']
+    xp = data['xp']
+    if elite:
+        xp = int(xp * ELITE_XP_MULT)
+    mob_ai.xp_value = xp
+    mob_ai.is_elite = elite
     if data.get('ranged', False):
         mob_ai.is_ranged = True
         mob_ai.ranged_damage = int(
             data.get('ranged_damage', 10) * dmg_mult * dmg_day_scale)
+        if elite:
+            mob_ai.ranged_damage = int(mob_ai.ranged_damage * ELITE_DMG_MULT)
         mob_ai.ranged_range = data.get('ranged_range', 200.0)
         mob_ai.ranged_cooldown = data.get('ranged_cooldown', 2.0)
         mob_ai.ranged_speed = data.get('ranged_speed', 350.0)
@@ -185,7 +197,10 @@ def populate_world(g: 'Game') -> None:
 
 
 def spawn_mob(g: 'Game') -> None:
+    from data.mobs import (UNDEAD_MOB_TYPES, DAY_SPAWN_TABLE,
+                           NIGHT_SPAWN_TABLE)
     pt: Transform = g.em.get_component(g.player_id, Transform)
+    is_night = g.daynight.is_night()
     for _ in range(MOB_SPAWN_ATTEMPTS):
         x = random.randint(5, WORLD_WIDTH - 5)
         y = random.randint(5, WORLD_HEIGHT - 5)
@@ -195,22 +210,24 @@ def spawn_mob(g: 'Game') -> None:
         if g.world.is_solid(x, y):
             continue
         tile = g.world.get_tile(x, y)
-        is_night = g.daynight.is_night()
-        if is_night and random.random() < GHOST_SPAWN_CHANCE:
-            mob = 'ghost'
-        elif is_night and random.random() < NIGHT_MOB_SPAWN_CHANCE:
-            mob = ('dark_knight' if random.random() < DARK_KNIGHT_SPAWN_CHANCE
-                   else 'skeleton')
-        elif tile == TILE_FOREST and random.random() < FOREST_MOB_SPAWN_CHANCE:
-            mob = random.choice(['wolf', 'spider'])
-        elif (tile in (TILE_DIRT, TILE_STONE_FLOOR)
-              and random.random() < DIRT_MOB_SPAWN_CHANCE):
-            mob = 'orc' if random.random() < ORC_SPAWN_CHANCE else 'goblin'
-        elif tile == TILE_GRASS and random.random() < GRASS_MOB_SPAWN_CHANCE:
-            mob = 'wolf'
+        # Map tile types to biome keys
+        if tile == TILE_FOREST:
+            biome = 'forest'
+        elif tile in (TILE_DIRT, TILE_STONE_FLOOR):
+            biome = 'dirt'
         else:
-            mob = 'slime'
-        create_mob(g, wx, wy, mob)
+            biome = 'grass'
+        # Choose from appropriate spawn table
+        if is_night:
+            pool = NIGHT_SPAWN_TABLE.get(biome, NIGHT_SPAWN_TABLE['grass'])
+        else:
+            pool = DAY_SPAWN_TABLE.get(biome, DAY_SPAWN_TABLE['grass'])
+        mob = random.choice(pool) if pool else 'slime'
+        # Elite chance for overworld spawns (very rare, increases with days)
+        days = max(0, g.daynight.day_number - 7)
+        elite = (days > 0 and random.random() < min(0.1, days * 0.01)
+                 and mob not in UNDEAD_MOB_TYPES)
+        create_mob(g, wx, wy, mob, elite=elite)
         return
 
 
@@ -244,7 +261,10 @@ def spawn_wave_mobs(g: 'Game', count: int, tier: int,
             mob_type = random.choice(WAVE_RANGED_MOBS)
         else:
             mob_type = random.choice(available)
-        create_mob(g, wx, wy, mob_type)
+        # Elite chance: scales with tier and day number
+        elite = (tier >= 2 and random.random() < 0.15 * (tier - 1)
+                 and mob_type not in WAVE_BOSS_MOBS)
+        create_mob(g, wx, wy, mob_type, elite=elite)
 
 
 # ======================================================================
@@ -279,6 +299,35 @@ def on_mob_killed(g: 'Game', eid: int) -> None:
         'goblin_shaman': MOB_COLOR_GOBLIN_SHAMAN,
         'boss_golem': MOB_COLOR_BOSS_GOLEM, 'boss_lich': MOB_COLOR_BOSS_LICH,
     }
+    # Extend with all new mob colors from game_controller
+    from game_controller import (
+        MOB_COLOR_ORC_ARCHER, MOB_COLOR_HOBGOBLIN, MOB_COLOR_KOBOLD,
+        MOB_COLOR_MEPHIT_FIRE, MOB_COLOR_MEPHIT_ICE, MOB_COLOR_MEPHIT_LIGHTNING,
+        MOB_COLOR_OGRE, MOB_COLOR_OGRE_MAGE, MOB_COLOR_CENTAUR,
+        MOB_COLOR_SNAKE, MOB_COLOR_BEAR, MOB_COLOR_GOLEM,
+        MOB_COLOR_DRAGON_RED, MOB_COLOR_DRAGON_GREEN,
+        MOB_COLOR_DRAGON_BLACK, MOB_COLOR_DRAGON_WHITE,
+        MOB_COLOR_SHADOW_DRAGON,
+    )
+    mob_colors.update({
+        'orc_archer': MOB_COLOR_ORC_ARCHER,
+        'hobgoblin': MOB_COLOR_HOBGOBLIN,
+        'kobold': MOB_COLOR_KOBOLD,
+        'mephit_fire': MOB_COLOR_MEPHIT_FIRE,
+        'mephit_ice': MOB_COLOR_MEPHIT_ICE,
+        'mephit_lightning': MOB_COLOR_MEPHIT_LIGHTNING,
+        'ogre': MOB_COLOR_OGRE,
+        'ogre_mage': MOB_COLOR_OGRE_MAGE,
+        'centaur': MOB_COLOR_CENTAUR,
+        'snake': MOB_COLOR_SNAKE,
+        'bear': MOB_COLOR_BEAR,
+        'golem': MOB_COLOR_GOLEM,
+        'dragon_red': MOB_COLOR_DRAGON_RED,
+        'dragon_green': MOB_COLOR_DRAGON_GREEN,
+        'dragon_black': MOB_COLOR_DRAGON_BLACK,
+        'dragon_white': MOB_COLOR_DRAGON_WHITE,
+        'shadow_dragon': MOB_COLOR_SHADOW_DRAGON,
+    })
     color = mob_colors.get(mob_ai.mob_type, GRAY)
     g.particles.emit(td.x + 12, td.y + 10, 15, color, 80, 0.5)
 

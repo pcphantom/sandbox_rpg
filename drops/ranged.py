@@ -44,4 +44,19 @@ RANGED_LOOT: Dict[str, Dict[str, Any]] = {
             ('enchant_tome_1',      2, 1, 1),
         ],
     },
+    'orc_archer': {
+        'drop_chance': 1.0,
+        'min_items': 1,
+        'max_items': 3,
+        'enhanced_chance': 0.15,
+        'pool': [
+            ('arrow',        30, 2, 6),
+            ('iron',         20, 1, 2),
+            ('bone',         15, 1, 2),
+            ('bow',           8, 1, 1),
+            ('fire_arrow',    8, 1, 2),
+            ('leather',      10, 1, 2),
+            ('health_potion',  6, 1, 1),
+        ],
+    },
 }
