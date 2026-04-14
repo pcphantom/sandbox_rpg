@@ -83,6 +83,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
+| `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager, ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
 
 > ⚠️ **UI LAYOUT PROTECTION**: Panel dimensions and element positions in `pause_menu.py`, `character_menu.py`, and `chest.py` must NEVER be changed without explicit user instruction. Modifying sizes, positions, or rearranging layout sections is strictly prohibited.
 | **enchantments/** | Enchantment system | |

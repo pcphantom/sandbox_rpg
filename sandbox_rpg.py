@@ -194,6 +194,9 @@ class Game:
         self.enchant_table_ui = EnchantmentTableUI(self.textures)
         self.stone_oven_ui = StoneOvenUI(self.textures)
 
+        from ui.action_bar import ActionBarManager
+        self.action_bar_mgr = ActionBarManager()
+
         self.health_bar = ProgressBar(
             pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)
         self.xp_bar = ProgressBar(

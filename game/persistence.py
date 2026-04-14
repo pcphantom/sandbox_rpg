@@ -120,6 +120,7 @@ def build_save_data(g: 'Game') -> Dict[str, Any]:
         'cheats_enabled': g.cheats_enabled,
         'harvested_resources': list(g.harvested_resources),
         'cave_snapshots': g.cave_snapshots,
+        'action_bars': g.action_bar_mgr.get_save_data(),
     }
 
 
@@ -257,6 +258,10 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
 
     for struct in data.get('structures', []):
         restore_structure(g, struct)
+
+    ab_data = data.get('action_bars')
+    if ab_data:
+        g.action_bar_mgr.load_save_data(ab_data)
 
 
 # ======================================================================

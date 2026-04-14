@@ -162,6 +162,13 @@ def handle_events(g) -> None:
                 g._quick_load()
                 continue
 
+            # Action bar manager events (close button, drag, context menu,
+            # extra bar slot clicks, secondary bar hotkeys)
+            if g.action_bar_mgr.handle_close_click(event):
+                continue
+            if g.action_bar_mgr.handle_event(event, g):
+                continue
+
             # Number keys 1-6 → hotbar
             inv = g.em.get_component(g.player_id, Inventory)
             for n in range(1, 7):
@@ -176,6 +183,15 @@ def handle_events(g) -> None:
                     and not g.show_enchant_table and not g.show_stone_oven):
                 inv = g.em.get_component(g.player_id, Inventory)
                 inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+
+        # Action bar manager mouse events (drag, right-click context menu,
+        # close button, extra bar slot clicks)
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
+                          pygame.MOUSEMOTION):
+            if g.action_bar_mgr.handle_close_click(event):
+                continue
+            if g.action_bar_mgr.handle_event(event, g):
+                continue
 
         # Placement mode rotation
         if g.placement_mode and event.type == pygame.KEYDOWN:
@@ -249,6 +265,10 @@ def handle_events(g) -> None:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 g.stone_oven_ui.handle_click(g, *event.pos, event.button)
         if g.show_inventory:
+            # Allow dropping held items onto extra action bar slots
+            inv = g.em.get_component(g.player_id, Inventory)
+            if g.action_bar_mgr.handle_extra_bar_drop(event, inv):
+                pass  # consumed; still let inventory UI see other events
             g.inventory_ui.handle_event(event)
             if g.inventory_ui.dw.close_requested:
                 g._return_held_item()
