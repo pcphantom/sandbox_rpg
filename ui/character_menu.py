@@ -57,7 +57,7 @@ class CharacterMenu:
              stats: PlayerStats, equipment: Equipment,
              health: Health, inventory: Inventory,
              tooltip: Tooltip) -> None:
-        pw, ph = 520, 480
+        pw, ph = 540, 460
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
@@ -70,7 +70,7 @@ class CharacterMenu:
         surface.blit(title,
                      (px + pw // 2 - title.get_width() // 2, py + 10))
 
-        # Top-left: Level/HP header
+        # ---- Left column: Stats ----
         sx = px + 20
         sy = py + 50
         surface.blit(self.font.render(
@@ -82,7 +82,6 @@ class CharacterMenu:
             True, WHITE), (sx, sy))
         sy += 30
 
-        # Left column: Stats
         surface.blit(self.font.render("Stats", True, YELLOW), (sx, sy))
         sy += 22
         mx, my = pygame.mouse.get_pos()
@@ -104,7 +103,7 @@ class CharacterMenu:
         surface.blit(self.font_sm.render(
             f"Stat points: {stats.stat_points}", True, GRAY), (sx, sy))
 
-        # Right column: Derived stats / bonuses (to the right of stat block)
+        # ---- Right column: Bonuses ----
         from systems.damage_calc import calc_damage_reduction, calc_melee_damage, calc_ranged_damage
         from systems.rarity import apply_rarity
         from core.item_stack import normalize_rarity
@@ -112,7 +111,9 @@ class CharacterMenu:
         from data import ITEM_DATA as _ID, RANGED_DATA as _RD, AMMO_BONUS_DAMAGE
 
         bx = px + 270
-        by = py + 104
+        by = py + 50
+        surface.blit(self.font.render("Bonuses", True, YELLOW), (bx, by))
+        by += 26
 
         # Attack damage (apply rarity to match actual combat damage)
         weapon = equipment.weapon if equipment and equipment.weapon else inventory.get_equipped()
@@ -163,9 +164,9 @@ class CharacterMenu:
         surface.blit(self.font_sm.render(
             f"Harvest luck: +{luck_bonus}%", True, GRAY), (bx, by))
 
-        # Bottom: Equipment (below stats)
+        # ---- Bottom: Equipment (full width) ----
         ex = px + 20
-        ey = py + 280
+        ey = py + 260
         surface.blit(self.font.render("Equipment", True, YELLOW), (ex, ey))
         ey += 26
         for attr, label in _EQUIP_SLOTS:
@@ -186,17 +187,17 @@ class CharacterMenu:
             # Icon
             if item_id:
                 icon = self.textures.cache.get(f'item_{item_id}')
-                icon_rect = pygame.Rect(ex + 350, ey - 1, 22, 22)
+                icon_rect = pygame.Rect(ex + 439, ey - 1, 22, 22)
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (20, 20)),
-                                 (ex + 351, ey))
+                                 (ex + 440, ey))
                 # Rarity border around icon (the ONLY item border)
                 eq_rar = equipment.rarities.get(attr, 'common')
                 if eq_rar != 'common':
                     from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, icon_rect, eq_rar)
             # Equip / Unequip button
-            btn = pygame.Rect(ex + 376, ey, 20, 20)
+            btn = pygame.Rect(ex + 465, ey, 20, 20)
             hov = btn.collidepoint(mx, my)
             if item_id:
                 # Unequip
@@ -214,8 +215,8 @@ class CharacterMenu:
                              btn.centery - t.get_height() // 2))
             ey += 28
 
-        # Equip hint
-        ey += 4
+        # Help text
+        ey += 6
         surface.blit(self.font_sm.render(
             "Click E to equip, x to unequip", True, GRAY), (ex, ey))
 
@@ -370,7 +371,7 @@ class CharacterMenu:
                 self._dropdown_open = False
                 return True
 
-        pw, ph = 520, 480
+        pw, ph = 540, 460
         px = SCREEN_WIDTH // 2 - pw // 2
         py = SCREEN_HEIGHT // 2 - ph // 2
 
@@ -387,9 +388,9 @@ class CharacterMenu:
 
         # Equipment buttons (below stats)
         ex = px + 20
-        ey = py + 280 + 26
+        ey = py + 260 + 26
         for attr, _label in _EQUIP_SLOTS:
-            btn = pygame.Rect(ex + 376, ey, 20, 20)
+            btn = pygame.Rect(ex + 465, ey, 20, 20)
             if btn.collidepoint(mx, my):
                 item_id = getattr(equipment, attr)
                 if item_id:

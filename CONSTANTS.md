@@ -74,14 +74,16 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/split_dialog.py` | SplitDialog | Stack splitting |
 | `ui/drop_confirm.py` | DropConfirmDialog | Drop item confirmation prompt |
 | `ui/inventory.py` | InventoryGrid | Inventory panel |
-| `ui/crafting.py` | CraftingPanel | Crafting panel |
-| `ui/pause_menu.py` | PauseMenu | Pause/save/load |
-| `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown |
-| `ui/chest.py` | ChestUI | Chest storage with stacking rules (see note below) |
+| `ui/crafting.py` | CraftingPanel | Crafting panel (420×dynamic) |
+| `ui/pause_menu.py` | PauseMenu | Pause/save/load (460×440) — **DO NOT MODIFY dimensions or layout** |
+| `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown (540×460) — **DO NOT MODIFY dimensions or layout** |
+| `ui/chest.py` | ChestUI | Chest storage with stacking rules (620×320) — **DO NOT MODIFY dimensions** |
 | `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
+
+> ⚠️ **UI LAYOUT PROTECTION**: Panel dimensions and element positions in `pause_menu.py`, `character_menu.py`, and `chest.py` must NEVER be changed without explicit user instruction. Modifying sizes, positions, or rearranging layout sections is strictly prohibited.
 | **enchantments/** | Enchantment system | |
 | `enchantments/effects.py` | Enchant types, prefixes, colours — imports from `game_controller.py` | ENCHANT_PREFIX, ENCHANT_COLORS, SPELL_TO_ENCHANT, get_enchant_display_prefix |
 | `enchantments/recipes.py` | Enchant combine logic | try_combine |
