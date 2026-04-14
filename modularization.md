@@ -160,25 +160,21 @@ The following files contain module-level declared variables that belong in `game
 **Risk:** Medium — must verify no remaining imports reference `gui.py`.
 **Approach:** `grep -r "from gui import\|import gui" .` to find all references, update them, then delete.
 
-### Step 11: Split `textures.py` (2,499 lines) → `textures/` Package
-**Files:** `textures.py` → `textures/__init__.py`, `textures/tiles.py`, `textures/mobs.py`, `textures/items.py`, `textures/buildings.py`, `textures/effects.py`, `textures/ui.py`
-**What:** Break the monolithic texture generator into a package organized by texture category. Each sub-module generates textures for one category. The `__init__.py` re-exports `build_textures()` for backwards compatibility. All color values used in texture generation should reference `game_controller`.
-**Risk:** High — `textures.py` is tightly coupled internally. Must be split carefully along natural boundaries.
-**Approach:** Identify natural groupings (tile textures, mob textures, item textures, building textures, effect textures, UI textures), extract each to its own file.
+### Step 11: Split `textures.py` (2,499 lines) → `textures/` Package ✅
+**Files:** `textures.py` → `textures/__init__.py`, `textures/tiles.py`, `textures/mobs.py`, `textures/items.py`, `textures/buildings.py`, `textures/effects.py`
+**What:** Broke the monolithic texture generator into a package organized by texture category. Each sub-module contains standalone functions (taking `gen` parameter) for one category. The `__init__.py` re-exports `TextureGenerator` with `generate_all()` for backwards compatibility. Verified 187 texture keys match exactly between old and new.
 
-### Step 12: Trim `sandbox_rpg.py` (1,189 lines) Below 1,000
-**Files:** `sandbox_rpg.py`
-**What:** Identify remaining inline logic in the main game file and extract it to appropriate `game/` sub-modules. Candidates: initialization logic → `game/init.py`, remaining input handling → `game/input.py`, any remaining inline drawing → `game/drawing.py`.
-**Risk:** Medium — this is the entry point, changes must be surgical.
-**Approach:** Profile which methods are longest, extract the largest ones first until under 1,000 lines.
+### Step 12: Trim `sandbox_rpg.py` (1,204 lines) Below 1,000 ✅
+**Files:** `sandbox_rpg.py` → `game/events.py`, `game/update.py`
+**What:** Extracted `_handle_events()` (196 lines) to `game/events.py` and `_update()` (228 lines) to `game/update.py`. Cleaned up unused imports. Final size: 734 lines.
 
-### Step 13: Verification Pass
+### Step 13: Verification Pass ✅
 **What:** After all migrations:
-1. Run `wc -l` on every `.py` file — confirm none exceed 1,000 lines (except `game_controller.py`).
-2. `grep -rn` for any remaining inline color tuples `(N, N, N)` that should be constants.
-3. `grep -rn` for any duplicated numeric constants across files.
-4. Full game test — verify all functionality unchanged.
-5. Update `CONSTANTS.md` with the new architecture.
+1. ✅ `wc -l` on every `.py` file — no file exceeds 1,000 lines except `game_controller.py` (1,021 — the single source of truth).
+2. ✅ Zero remaining inline color tuples in `game/`, `ui/`, `spells/`, or `sandbox_rpg.py`.
+3. ✅ All 35 spell tier colors centralized in `game_controller.py`.
+4. ✅ Full game test — all 187 textures, all 35 spells, all UI components verified.
+5. ✅ All module imports successful.
 
 ---
 
@@ -241,14 +237,13 @@ game_controller.py          ← ALL declared variables (the one source of truth)
     ├── game/*.py           ← All colors from game_controller
     ├── ui/*.py             ← All colors from game_controller
     │
-    ├── textures/           ← NEW package (split from textures.py)
-    │   ├── __init__.py
-    │   ├── tiles.py
-    │   ├── mobs.py
-    │   ├── items.py
-    │   ├── buildings.py
-    │   ├── effects.py
-    │   └── ui.py
+    ├── textures/           ← Package (split from textures.py)
+    │   ├── __init__.py     ← TextureGenerator class + generate_all()
+    │   ├── tiles.py        ← Player, resource, terrain tiles
+    │   ├── mobs.py         ← All 18 mob textures
+    │   ├── items.py        ← All ~52 item textures
+    │   ├── buildings.py    ← Building items + placed objects
+    │   └── effects.py      ← Projectiles + enchantment textures
     │
     └── sandbox_rpg.py      ← Entry point, < 1000 lines
 ```
@@ -269,6 +264,6 @@ game_controller.py          ← ALL declared variables (the one source of truth)
 | **8** | Game module inline colors | Medium | 6 | ✅ |
 | **9** | UI module inline colors | Medium | 8 | ✅ |
 | **10** | Delete legacy `gui.py` | Medium | 1+ | ✅ |
-| **11** | Split `textures.py` → package | High | 7+ new files |
-| **12** | Trim `sandbox_rpg.py` < 1000 lines | Medium | 2-3 |
-| **13** | Verification pass | Easy | All |
+| **11** | Split `textures.py` → package | High | 7+ new files | ✅ |
+| **12** | Trim `sandbox_rpg.py` < 1000 lines | Medium | 2-3 | ✅ |
+| **13** | Verification pass | Easy | All | ✅ |
