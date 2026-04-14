@@ -179,6 +179,7 @@ class AI(Component):
         self.is_boss = False
         self.glow_color: Optional[Tuple[int, int, int]] = None
         self.aggro = False  # set True when hit by player
+        self.is_elite = False  # elite variant with glow border
 
 
 class PlayerStats(Component):

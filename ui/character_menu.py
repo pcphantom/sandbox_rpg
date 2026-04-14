@@ -16,6 +16,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, CYAN, GREEN,
 from core.components import Inventory, Health, PlayerStats, Equipment
 from data import ITEM_DATA, ITEM_CATEGORIES
 from ui.elements import Tooltip
+from ui.draggable import DraggableWindow
 
 _EQUIP_SLOTS = [
     ('weapon',  'Weapon'),
@@ -52,23 +53,18 @@ class CharacterMenu:
         self._dropdown_scroll: int = 0
         self._dropdown_max_visible: int = 6
         self._dropdown_row_h: int = 24
+        self.dw = DraggableWindow(540, 460, title="Character")
 
     def draw(self, surface: pygame.Surface,
              stats: PlayerStats, equipment: Equipment,
              health: Health, inventory: Inventory,
              tooltip: Tooltip) -> None:
         pw, ph = 540, 460
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 20, 35, 240))
         surface.blit(bg, (px, py))
-        pygame.draw.rect(surface, UI_BORDER_PANEL,
-                         (px, py, pw, ph), 2, border_radius=10)
-
-        title = self.title_font.render("Character  [P]", True, WHITE)
-        surface.blit(title,
-                     (px + pw // 2 - title.get_width() // 2, py + 10))
 
         # ---- Left column: Stats ----
         sx = px + 20
@@ -227,6 +223,8 @@ class CharacterMenu:
         if self._dropdown_open and self._dropdown_items:
             self._draw_dropdown(surface, mx, my)
 
+        self.dw.draw_chrome(surface)
+
     def _draw_dropdown(self, surface: pygame.Surface,
                        mx: int, my: int) -> None:
         """Draw the equip-selection dropdown list."""
@@ -345,6 +343,8 @@ class CharacterMenu:
     def handle_event(self, event: pygame.event.Event,
                      stats: PlayerStats, equipment: Equipment,
                      inventory: Inventory) -> bool:
+        if self.dw.handle_event(event):
+            return True
         # Handle dropdown scroll
         if self._dropdown_open and event.type == pygame.MOUSEWHEEL:
             max_scroll = max(0, len(self._dropdown_items)
@@ -375,8 +375,8 @@ class CharacterMenu:
                 return True
 
         pw, ph = 540, 460
-        px = SCREEN_WIDTH // 2 - pw // 2
-        py = SCREEN_HEIGHT // 2 - ph // 2
+        cr = self.dw.content_rect
+        px, py = cr.x, cr.y
 
         # Stat + buttons
         sx = px + 20

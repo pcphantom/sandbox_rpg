@@ -18,6 +18,8 @@ from game_controller import (                                         # noqa: F4
     WAVE_INTERVAL_REDUCTION,
     WAVE_SPAWN_BATCH,
     WAVE_RANGED_MOB_CHANCE,
+    NIGHT_WAVE_COUNT,
+    NIGHT_WAVE_SPACING_HOURS,
     MOB_RESPAWN_INTERVAL,
     MOB_RESPAWN_MIN_DIST,
     MOB_MAX_COUNT,

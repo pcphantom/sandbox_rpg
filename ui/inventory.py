@@ -7,6 +7,7 @@ import pygame
 
 from core.constants import (WHITE, GRAY, CYAN, INVENTORY_SLOTS_PER_PAGE,
                             HOTBAR_CAPACITY, INVENTORY_PAGES, INVENTORY_COLS,
+                            SCREEN_WIDTH, SCREEN_HEIGHT,
                             UI_BORDER_LIGHT, UI_SLOT_BG_SELECTED,
                             UI_SLOT_BG_NORMAL, UI_TEXT_HIGHLIGHT,
                             UI_SLOT_BORDER_NORMAL, HOTBAR_SLOT_NUMBER_COLOR,
@@ -17,6 +18,7 @@ from data import ITEM_DATA, get_item_color
 from ui.elements import UIElement, Tooltip
 from ui.split_dialog import SplitDialog
 from ui.rarity_display import pick_up_rarity, place_rarity, swap_rarity
+from ui.draggable import DraggableWindow
 
 
 class InventoryGrid(UIElement):
@@ -32,6 +34,16 @@ class InventoryGrid(UIElement):
         self.font = pygame.font.SysFont('consolas', 14)
         self.title_font = pygame.font.SysFont('consolas', 20, bold=True)
         self.split_dialog = SplitDialog()
+        # Draggable window — positioned on right side for stone oven pairing
+        self.dw = DraggableWindow(
+            rect.width, rect.height, title="Inventory",
+            start_x=SCREEN_WIDTH // 2 - rect.width // 2,
+            start_y=SCREEN_HEIGHT // 2 - rect.height // 2 - 11)
+
+    def _sync_rect(self) -> None:
+        """Keep UIElement rect in sync with the draggable window position."""
+        cr = self.dw.content_rect
+        self.rect = cr
 
     def _page_offset(self) -> int:
         return self.page * INVENTORY_SLOTS_PER_PAGE
@@ -52,17 +64,11 @@ class InventoryGrid(UIElement):
     def draw(self, surface: pygame.Surface, tooltip: Tooltip) -> None:
         if not self.visible:
             return
+        self._sync_rect()
         bg = pygame.Surface((self.rect.width, self.rect.height),
                             pygame.SRCALPHA)
         bg.fill((20, 20, 32, 235))
         surface.blit(bg, self.rect.topleft)
-        pygame.draw.rect(surface, UI_BORDER_LIGHT, self.rect, 2,
-                         border_radius=8)
-
-        # Title
-        title = self.title_font.render("Inventory", True, WHITE)
-        surface.blit(title, (self.rect.centerx - title.get_width() // 2,
-                             self.rect.y + 8))
 
         mx, my = pygame.mouse.get_pos()
 
@@ -140,6 +146,9 @@ class InventoryGrid(UIElement):
         # -- Split dialog overlay --
         self.split_dialog.draw(surface)
 
+        # -- Draggable window chrome (title bar, close button, resize) --
+        self.dw.draw_chrome(surface)
+
     def _draw_item(self, surface: pygame.Surface, sr: pygame.Rect,
                    item_id: str, count: int,
                    mx: int, my: int, tooltip: Tooltip,
@@ -186,6 +195,11 @@ class InventoryGrid(UIElement):
     def handle_event(self, event: pygame.event.Event) -> bool:
         if not self.visible:
             return False
+        self._sync_rect()
+        # Draggable window chrome (drag, close, resize)
+        if self.dw.handle_event(event):
+            # close_requested is checked by the caller (events.py)
+            return True
         # Split dialog takes priority
         if self.split_dialog.active:
             return self.split_dialog.handle_event(event, self.inventory)

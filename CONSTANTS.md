@@ -1864,3 +1864,166 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 - `ENHANCEMENT_COLOR_1` through `ENHANCEMENT_COLOR_5` — **COMMENTED OUT** in `game_controller.py`
 - Tier glow borders on item icon textures — **REMOVED** from `textures/items.py` (`_generate_stat_weapon`, `generate_tiered_spell_books`)
 - Enchant color fallback borders (drawn when no rarity but has enchant) — **REMOVED** from all UI modules
+
+---
+
+## New Enemy Types (added to data/mobs.py MOB_DATA)
+
+### Tier 0 — Easy
+| Mob Type | HP | Speed | Detection | Damage | XP | Notes |
+|----------|-----|-------|-----------|--------|----|-------|
+| `snake` | 20 | 60 | 120 | 6 | 18 | Fast, low HP |
+| `kobold` | 28 | 50 | 160 | 6 | 22 | Small humanoid |
+
+### Tier 2 — Hard
+| Mob Type | HP | Speed | Detection | Damage | XP | Notes |
+|----------|-----|-------|-----------|--------|----|-------|
+| `hobgoblin` | 80 | 42 | 200 | 14 | 55 | Larger goblin |
+| `bear` | 100 | 35 | 140 | 18 | 65 | Strong melee |
+| `mephit_fire` | 45 | 55 | 220 | 12 | 50 | Ranged (fire) |
+| `mephit_ice` | 45 | 55 | 220 | 10 | 50 | Ranged (ice) |
+| `mephit_lightning` | 45 | 58 | 230 | 11 | 55 | Ranged (lightning) |
+
+### Tier 3 — Elite
+| Mob Type | HP | Speed | Detection | Damage | XP | Notes |
+|----------|-----|-------|-----------|--------|----|-------|
+| `ogre` | 180 | 24 | 160 | 28 | 90 | Large enemy |
+| `ogre_mage` | 140 | 30 | 240 | 18 | 100 | Large, ranged |
+| `golem` | 220 | 18 | 140 | 30 | 100 | Large, very slow |
+
+### Tier 4 — Late Game
+| Mob Type | HP | Speed | Detection | Damage | XP | Notes |
+|----------|-----|-------|-----------|--------|----|-------|
+| `centaur` | 110 | 55 | 280 | 15 | 85 | Fast ranged |
+
+### Dragon Bosses (all Large)
+| Mob Type | HP | Speed | Detection | Damage | XP | Boss | Glow |
+|----------|-----|-------|-----------|--------|----|------|------|
+| `dragon_red` | 500 | 32 | 350 | 40 | 300 | Yes | BOSS_GLOW_DRAGON_RED |
+| `dragon_green` | 450 | 34 | 340 | 35 | 280 | Yes | BOSS_GLOW_DRAGON_GREEN |
+| `dragon_black` | 550 | 30 | 360 | 42 | 320 | Yes | BOSS_GLOW_DRAGON_BLACK |
+| `dragon_white` | 480 | 36 | 350 | 38 | 300 | Yes | BOSS_GLOW_DRAGON_WHITE |
+| `shadow_dragon` | 800 | 28 | 400 | 55 | 500 | Yes | BOSS_GLOW_SHADOW_DRAGON |
+
+### New Ranged Enemies
+| Mob Type | Ranged Dmg | Range | Cooldown | Speed |
+|----------|-----------|-------|----------|-------|
+| `orc_archer` | 16 | 260 | 1.8s | 360 |
+| `mephit_fire` | 14 | 200 | 2.0s | 320 |
+| `mephit_ice` | 12 | 200 | 2.2s | 300 |
+| `mephit_lightning` | 16 | 210 | 1.8s | 380 |
+| `centaur` | 18 | 280 | 1.5s | 400 |
+
+---
+
+## New Game Controller Constants
+
+### New Mob Colors (game_controller.py)
+| Constant | RGB Value |
+|----------|-----------|
+| `MOB_COLOR_ORC_ARCHER` | (90, 110, 55) |
+| `MOB_COLOR_HOBGOBLIN` | (120, 80, 50) |
+| `MOB_COLOR_KOBOLD` | (140, 100, 60) |
+| `MOB_COLOR_MEPHIT_FIRE` | (220, 80, 30) |
+| `MOB_COLOR_MEPHIT_ICE` | (100, 180, 230) |
+| `MOB_COLOR_MEPHIT_LIGHTNING` | (200, 200, 60) |
+| `MOB_COLOR_OGRE` | (130, 110, 70) |
+| `MOB_COLOR_OGRE_MAGE` | (110, 80, 140) |
+| `MOB_COLOR_CENTAUR` | (140, 120, 80) |
+| `MOB_COLOR_SNAKE` | (80, 140, 50) |
+| `MOB_COLOR_BEAR` | (100, 70, 40) |
+| `MOB_COLOR_GOLEM` | (150, 140, 130) |
+| `MOB_COLOR_DRAGON_RED` | (200, 40, 30) |
+| `MOB_COLOR_DRAGON_GREEN` | (40, 160, 50) |
+| `MOB_COLOR_DRAGON_BLACK` | (30, 30, 40) |
+| `MOB_COLOR_DRAGON_WHITE` | (220, 220, 240) |
+| `MOB_COLOR_SHADOW_DRAGON` | (50, 20, 70) |
+
+### New Boss Glow Colors
+| Constant | RGB Value |
+|----------|-----------|
+| `BOSS_GLOW_DRAGON_RED` | (255, 80, 40) |
+| `BOSS_GLOW_DRAGON_GREEN` | (60, 255, 60) |
+| `BOSS_GLOW_DRAGON_BLACK` | (120, 60, 180) |
+| `BOSS_GLOW_DRAGON_WHITE` | (200, 220, 255) |
+| `BOSS_GLOW_SHADOW_DRAGON` | (160, 40, 220) |
+
+### Elite Enemy System
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `ELITE_GLOW_COLOR` | (200, 180, 60) | Gold-tinted glow border for elite enemies |
+| `ELITE_HP_MULT` | 1.8 | HP multiplier for elite variants |
+| `ELITE_DMG_MULT` | 1.5 | Damage multiplier for elite variants |
+| `ELITE_XP_MULT` | 2.0 | XP multiplier for elite variants |
+
+### Multi-Wave Night System
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `NIGHT_WAVE_COUNT` | {0:1, 1:3, 2:5, 3:10} | Waves per night by difficulty |
+| `NIGHT_WAVE_SPACING_HOURS` | {0:0, 1:2, 2:1, 3:0.5} | Game hours between waves |
+
+---
+
+## Spawn Tables (data/mobs.py)
+
+### Day Spawn Table (DAY_SPAWN_TABLE)
+| Biome | Spawns |
+|-------|--------|
+| grass | slime, snake, kobold |
+| forest | wolf, spider, bear, snake |
+| dirt | goblin, kobold, hobgoblin, orc |
+
+### Night Spawn Table (NIGHT_SPAWN_TABLE)
+| Biome | Spawns |
+|-------|--------|
+| grass | skeleton, zombie, ghost, wraith |
+| forest | wolf, spider, skeleton, ghost, wraith |
+| dirt | dark_knight, orc, hobgoblin, skeleton, zombie |
+
+### Undead Types (night-only on overworld)
+`skeleton`, `zombie`, `ghost`, `wraith`, `skeleton_archer`
+
+### Wave Mob Tiers (WAVE_MOB_TIERS) — 5 tiers now
+| Tier | Enemies |
+|------|---------|
+| 0 | slime, spider, snake, kobold |
+| 1 | skeleton, wolf, goblin, zombie, ghost |
+| 2 | orc, wraith, hobgoblin, bear, mephit_fire/ice/lightning |
+| 3 | dark_knight, troll, ogre, ogre_mage, golem |
+| 4 | centaur, dragon_red/green/black/white |
+
+---
+
+## DraggableWindow System (ui/draggable.py)
+
+All UI windows use `DraggableWindow` for drag, close (X), and resize support.
+
+| UI Panel | DraggableWindow Title | Base Size |
+|----------|----------------------|-----------|
+| Inventory | "Inventory" | Dynamic |
+| Crafting | "Crafting" | 420×501 |
+| Character Menu | "Character" | 540×460 |
+| Chest | "Chest" | 620×320 |
+| Enchantment Table | "Enchantment Table" | 570×300 |
+| Stone Oven | "Stone Oven" | 380×340 |
+| Pause Menu | "Pause Menu" | 460×440 |
+
+### DraggableWindow Features
+- Title bar height: 22px
+- Close button (X): upper right corner
+- Resize handle: lower right corner (8×8)
+- Minimum size: 120×80
+- All UIs retain ESC-closes-all behavior
+- Stone Oven opens left-aligned with inventory beside it
+
+### AI Component (core/components.py) — New Attribute
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `is_elite` | bool | False | Whether mob is an elite variant |
+
+### Large Enemy Flag
+Enemies with `'large': True` in MOB_DATA:
+- `ogre`, `ogre_mage`, `golem`
+- `dragon_red`, `dragon_green`, `dragon_black`, `dragon_white`, `shadow_dragon`
+
+These use larger texture surfaces (36×48 for ogres/golems, 48×48 for dragons).

@@ -802,19 +802,36 @@ def draw_spell_targeting(g: 'Game') -> None:
 def draw_boss_glow(g: 'Game') -> None:
     for eid in g.em.get_entities_with(Transform, AI):
         ai_c = g.em.get_component(eid, AI)
-        if not ai_c.is_boss or not ai_c.glow_color:
-            continue
         t = g.em.get_component(eid, Transform)
         sx = int(t.x - g.camera.x + 14)
         sy = int(t.y - g.camera.y + 14)
-        pulse = 0.7 + 0.3 * math.sin(pygame.time.get_ticks() * 0.005)
-        radius = int(40 * pulse)
-        glow_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-        r, gv, b = ai_c.glow_color
-        pygame.draw.circle(glow_surf, (r, gv, b, int(60 * pulse)),
-                           (radius, radius), radius)
-        g.screen.blit(glow_surf, (sx - radius, sy - radius),
-                       special_flags=pygame.BLEND_RGBA_ADD)
+        # Boss glow (large pulsing aura)
+        if ai_c.is_boss and ai_c.glow_color:
+            pulse = 0.7 + 0.3 * math.sin(pygame.time.get_ticks() * 0.005)
+            radius = int(40 * pulse)
+            glow_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            r, gv, b = ai_c.glow_color
+            pygame.draw.circle(glow_surf, (r, gv, b, int(60 * pulse)),
+                               (radius, radius), radius)
+            g.screen.blit(glow_surf, (sx - radius, sy - radius),
+                           special_flags=pygame.BLEND_RGBA_ADD)
+        # Elite glow (subtle lit border, NOT boss-style full aura)
+        elif ai_c.is_elite:
+            from game_controller import ELITE_GLOW_COLOR
+            pulse = 0.6 + 0.4 * math.sin(pygame.time.get_ticks() * 0.004)
+            rend = g.em.get_component(eid, Renderable)
+            if rend and rend.surface:
+                w, h = rend.surface.get_width(), rend.surface.get_height()
+                border_rect = pygame.Rect(sx - w // 2 - 2, sy - h // 2 - 2,
+                                          w + 4, h + 4)
+                er, eg, eb = ELITE_GLOW_COLOR
+                alpha = int(120 * pulse)
+                glow = pygame.Surface((border_rect.width, border_rect.height),
+                                      pygame.SRCALPHA)
+                pygame.draw.rect(glow, (er, eg, eb, alpha),
+                                 (0, 0, border_rect.width, border_rect.height), 2,
+                                 border_radius=3)
+                g.screen.blit(glow, border_rect.topleft)
 
 
 # ======================================================================
