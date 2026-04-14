@@ -17,6 +17,12 @@ from core.constants import (
     HOTBAR_SELECTED_BORDER, HOTBAR_NORMAL_BORDER,
     HOTBAR_SLOT_NUMBER_COLOR, RED,
 )
+from data import ITEM_DATA, SPELL_DATA, SPELL_RECHARGE
+from data.quality import get_stat_description, get_rarity_color
+from enchantments.effects import (
+    get_enchant_display_prefix, ENCHANT_COLORS,
+)
+from ui.rarity_display import draw_rarity_border, insert_rarity_tooltip
 
 if TYPE_CHECKING:
     from sandbox_rpg import Game
@@ -353,8 +359,6 @@ class ActionBarManager:
                                       bar.y + ss - cs.get_height() - 2))
                 # Spell cooldown overlay
                 if item_id in g.spell_cooldowns:
-                    from data import SPELL_DATA
-                    from data import SPELL_RECHARGE
                     remaining = g.spell_cooldowns[item_id]
                     sdata = SPELL_DATA.get(item_id)
                     total = sdata['cooldown'] if sdata else SPELL_RECHARGE
@@ -367,40 +371,33 @@ class ActionBarManager:
                 # Rarity border
                 rar = bar.slot_rarities.get(i, 'common')
                 if rar and rar != 'common':
-                    from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, rect, rar)
 
                 # Tooltip on hover
                 if rect.collidepoint(mx, my):
-                    from data import ITEM_DATA
                     if item_id in ITEM_DATA:
                         d = ITEM_DATA[item_id]
                         name = d[0]
                         hb_rar = bar.slot_rarities.get(i, 'common')
                         if hb_rar and hb_rar != 'common':
                             name = f"{hb_rar.title()} {name}"
-                        from data.quality import get_stat_description
                         lines = [name, get_stat_description(item_id, hb_rar)]
                         colors = [WHITE, WHITE]
                         if hb_rar and hb_rar != 'common':
-                            from data.quality import get_rarity_color
                             colors[0] = get_rarity_color(hb_rar)
                         hb_ench = bar.slot_enchantments.get(i)
                         if hb_ench:
-                            from enchantments.effects import (
-                                get_enchant_display_prefix,
-                                ENCHANT_COLORS as EC2,
-                            )
                             prefix = get_enchant_display_prefix(hb_ench)
                             if prefix:
                                 lines[0] = f"{prefix} {name}"
-                                colors[0] = EC2.get(hb_ench['type'], colors[0])
+                                colors[0] = ENCHANT_COLORS.get(
+                                    hb_ench['type'], colors[0])
                             ench_line = (f"Enchant: {hb_ench['type'].title()}"
                                          f" Lv.{hb_ench['level']}")
                             lines.insert(1, ench_line)
-                            colors.insert(1, EC2.get(hb_ench['type'], CYAN))
+                            colors.insert(1, ENCHANT_COLORS.get(
+                                hb_ench['type'], CYAN))
                         if hb_rar and hb_rar != 'common':
-                            from ui.rarity_display import insert_rarity_tooltip
                             insert_rarity_tooltip(lines, colors, hb_rar)
                         g.tooltip.show(lines, (mx, my), colors)
 
