@@ -3,6 +3,7 @@ from core.constants import DIFFICULTY_EASY, DIFFICULTY_MULTIPLIERS, RANGED_ENEMY
 from data.day_events import (WAVE_SPAWN_INITIAL_INTERVAL, WAVE_SPAWN_MIN_INTERVAL,
                              WAVE_INTERVAL_REDUCTION, WAVE_SPAWN_BATCH,
                              NIGHT_WAVE_COUNT, NIGHT_WAVE_SPACING_HOURS)
+from game_controller import GAME_HOUR_IN_SECONDS
 
 
 class WaveSystem:
@@ -48,8 +49,8 @@ class WaveSystem:
                 self._waves_remaining = total_waves
                 # Game-hours between waves → real seconds
                 spacing_hours = NIGHT_WAVE_SPACING_HOURS.get(self.difficulty, 0.0)
-                # Convert game-hours to real seconds (each game hour = ~50 real seconds)
-                self._wave_gap_target = spacing_hours * 50.0
+                # Convert game-hours to real seconds
+                self._wave_gap_target = spacing_hours * GAME_HOUR_IN_SECONDS
                 self._wave_gap_timer = 0.0
                 self._start_wave(WAVE_BASE_COUNT, WAVE_SCALE_PER_NIGHT,
                                  WAVE_DAY_BONUS_PER_DAY, day_number)

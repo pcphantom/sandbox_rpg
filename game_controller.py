@@ -191,6 +191,11 @@ ELITE_GLOW_COLOR: Tuple[int, int, int] = (200, 180, 60)
 ELITE_HP_MULT: float = 1.8
 ELITE_DMG_MULT: float = 1.5
 ELITE_XP_MULT: float = 2.0
+ELITE_START_DAY: int = 7             # No elite overworld spawns before this day
+ELITE_MAX_CHANCE: float = 0.1        # Max probability of elite overworld spawn
+ELITE_CHANCE_PER_DAY: float = 0.01   # Chance increase per day past ELITE_START_DAY
+ELITE_MIN_WAVE_TIER: int = 2         # Minimum wave tier for elite spawns
+ELITE_WAVE_BASE_CHANCE: float = 0.15 # Base chance for elite in waves (multiplied by tier-1)
 
 # --- Light source colors ---
 LIGHT_COLOR_DEFAULT: Tuple[int, int, int] = (255, 200, 120)
@@ -582,6 +587,8 @@ NIGHT_WAVE_SPACING_HOURS: Dict[int, float] = {
     2: 1.0,   # Hard     — 1 game hour apart
     3: 0.5,   # Hardcore  — 30 game minutes apart
 }
+# Conversion factor: real seconds per game hour
+GAME_HOUR_IN_SECONDS: float = 50.0
 
 # --- Mob respawn / population ---
 MOB_RESPAWN_INTERVAL: float = 4.0        # seconds between natural respawn ticks

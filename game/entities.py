@@ -50,6 +50,8 @@ from game_controller import (
     MOB_COLOR_SKELETON_ARCHER, MOB_COLOR_GOBLIN_SHAMAN,
     MOB_COLOR_BOSS_GOLEM, MOB_COLOR_BOSS_LICH, BOSS_GLOW_DEFAULT,
     ELITE_HP_MULT, ELITE_DMG_MULT, ELITE_XP_MULT,
+    ELITE_START_DAY, ELITE_MAX_CHANCE, ELITE_CHANCE_PER_DAY,
+    ELITE_MIN_WAVE_TIER, ELITE_WAVE_BASE_CHANCE,
 )
 
 
@@ -224,8 +226,9 @@ def spawn_mob(g: 'Game') -> None:
             pool = DAY_SPAWN_TABLE.get(biome, DAY_SPAWN_TABLE['grass'])
         mob = random.choice(pool) if pool else 'slime'
         # Elite chance for overworld spawns (very rare, increases with days)
-        days = max(0, g.daynight.day_number - 7)
-        elite = (days > 0 and random.random() < min(0.1, days * 0.01)
+        days = max(0, g.daynight.day_number - ELITE_START_DAY)
+        elite = (days > 0 and random.random() < min(ELITE_MAX_CHANCE,
+                 days * ELITE_CHANCE_PER_DAY)
                  and mob not in UNDEAD_MOB_TYPES)
         create_mob(g, wx, wy, mob, elite=elite)
         return
@@ -262,7 +265,8 @@ def spawn_wave_mobs(g: 'Game', count: int, tier: int,
         else:
             mob_type = random.choice(available)
         # Elite chance: scales with tier and day number
-        elite = (tier >= 2 and random.random() < 0.15 * (tier - 1)
+        elite = (tier >= ELITE_MIN_WAVE_TIER
+                 and random.random() < ELITE_WAVE_BASE_CHANCE * (tier - 1)
                  and mob_type not in WAVE_BOSS_MOBS)
         create_mob(g, wx, wy, mob_type, elite=elite)
 
