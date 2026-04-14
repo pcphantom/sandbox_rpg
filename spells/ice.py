@@ -5,13 +5,16 @@ Control variables are declared at the top for easy tuning.
 """
 from typing import Dict, Any
 
+from game_controller import (
+    ICE_1_COLOR, ICE_2_COLOR, ICE_3_COLOR, ICE_4_COLOR, ICE_5_COLOR,
+)
+
 # -- Ice Shard I ---------------------------------------------------------------
 ICE_1_COOLDOWN: float = 3.0            # seconds between casts
 ICE_1_DAMAGE: int = 45                 # base damage on hit
 ICE_1_RANGE: float = 300.0             # max projectile travel distance (px)
 ICE_1_SPEED: float = 280.0             # projectile speed (px/s)
 ICE_1_RADIUS: float = 60.0             # AoE splash radius (px)
-ICE_1_COLOR = (100, 200, 255)          # particle / projectile tint
 ICE_1_SLOW_DURATION: float = 3.0       # seconds the slow lasts
 ICE_1_SLOW_FACTOR: float = 0.4         # speed multiplier while slowed
 
@@ -21,7 +24,6 @@ ICE_2_DAMAGE: int = 70
 ICE_2_RANGE: float = 350.0
 ICE_2_SPEED: float = 310.0
 ICE_2_RADIUS: float = 70.0
-ICE_2_COLOR = (120, 215, 255)
 ICE_2_SLOW_DURATION: float = 4.0
 ICE_2_SLOW_FACTOR: float = 0.3
 
@@ -31,7 +33,6 @@ ICE_3_DAMAGE: int = 100
 ICE_3_RANGE: float = 400.0
 ICE_3_SPEED: float = 340.0
 ICE_3_RADIUS: float = 80.0
-ICE_3_COLOR = (140, 225, 255)
 ICE_3_SLOW_DURATION: float = 5.0
 ICE_3_SLOW_FACTOR: float = 0.2
 
@@ -41,7 +42,6 @@ ICE_4_DAMAGE: int = 140
 ICE_4_RANGE: float = 450.0
 ICE_4_SPEED: float = 370.0
 ICE_4_RADIUS: float = 90.0
-ICE_4_COLOR = (160, 235, 255)
 ICE_4_SLOW_DURATION: float = 6.0
 ICE_4_SLOW_FACTOR: float = 0.15
 
@@ -51,7 +51,6 @@ ICE_5_DAMAGE: int = 190
 ICE_5_RANGE: float = 500.0
 ICE_5_SPEED: float = 400.0
 ICE_5_RADIUS: float = 100.0
-ICE_5_COLOR = (180, 245, 255)
 ICE_5_SLOW_DURATION: float = 7.0
 ICE_5_SLOW_FACTOR: float = 0.1
 

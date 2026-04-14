@@ -80,6 +80,50 @@ ENCHANT_COLOR_PROTECTION: Tuple[int, int, int] = (80, 255, 120)
 ENCHANT_COLOR_REGEN: Tuple[int, int, int] = (50, 255, 50)
 ENCHANT_COLOR_STRENGTH: Tuple[int, int, int] = (255, 80, 80)
 
+# --- Spell tier colors (particle / projectile tints per spell level) ---
+# Fireball I–V
+FIREBALL_1_COLOR: Tuple[int, int, int] = (255, 120, 30)
+FIREBALL_2_COLOR: Tuple[int, int, int] = (255, 140, 40)
+FIREBALL_3_COLOR: Tuple[int, int, int] = (255, 160, 50)
+FIREBALL_4_COLOR: Tuple[int, int, int] = (255, 180, 60)
+FIREBALL_5_COLOR: Tuple[int, int, int] = (255, 200, 80)
+# Heal I–V
+HEAL_1_COLOR: Tuple[int, int, int] = (80, 255, 80)
+HEAL_2_COLOR: Tuple[int, int, int] = (100, 255, 100)
+HEAL_3_COLOR: Tuple[int, int, int] = (120, 255, 120)
+HEAL_4_COLOR: Tuple[int, int, int] = (140, 255, 140)
+HEAL_5_COLOR: Tuple[int, int, int] = (160, 255, 160)
+# Lightning I–V
+LIGHTNING_1_COLOR: Tuple[int, int, int] = (180, 200, 255)
+LIGHTNING_2_COLOR: Tuple[int, int, int] = (200, 215, 255)
+LIGHTNING_3_COLOR: Tuple[int, int, int] = (220, 230, 255)
+LIGHTNING_4_COLOR: Tuple[int, int, int] = (235, 240, 255)
+LIGHTNING_5_COLOR: Tuple[int, int, int] = (245, 248, 255)
+# Ice Shard I–V
+ICE_1_COLOR: Tuple[int, int, int] = (100, 200, 255)
+ICE_2_COLOR: Tuple[int, int, int] = (120, 215, 255)
+ICE_3_COLOR: Tuple[int, int, int] = (140, 225, 255)
+ICE_4_COLOR: Tuple[int, int, int] = (160, 235, 255)
+ICE_5_COLOR: Tuple[int, int, int] = (180, 245, 255)
+# Strength I–V
+STRENGTH_1_COLOR: Tuple[int, int, int] = (255, 100, 80)
+STRENGTH_2_COLOR: Tuple[int, int, int] = (255, 120, 100)
+STRENGTH_3_COLOR: Tuple[int, int, int] = (255, 140, 120)
+STRENGTH_4_COLOR: Tuple[int, int, int] = (255, 160, 140)
+STRENGTH_5_COLOR: Tuple[int, int, int] = (255, 180, 160)
+# Regen I–V
+REGEN_1_COLOR: Tuple[int, int, int] = (80, 255, 140)
+REGEN_2_COLOR: Tuple[int, int, int] = (100, 255, 160)
+REGEN_3_COLOR: Tuple[int, int, int] = (120, 255, 180)
+REGEN_4_COLOR: Tuple[int, int, int] = (140, 255, 200)
+REGEN_5_COLOR: Tuple[int, int, int] = (160, 255, 220)
+# Protection I–V
+PROTECTION_1_COLOR: Tuple[int, int, int] = (100, 180, 255)
+PROTECTION_2_COLOR: Tuple[int, int, int] = (120, 200, 255)
+PROTECTION_3_COLOR: Tuple[int, int, int] = (140, 220, 255)
+PROTECTION_4_COLOR: Tuple[int, int, int] = (160, 235, 255)
+PROTECTION_5_COLOR: Tuple[int, int, int] = (180, 245, 255)
+
 # --- Mob body colors ---
 MOB_COLOR_SLIME: Tuple[int, int, int] = (50, 200, 70)
 MOB_COLOR_SKELETON: Tuple[int, int, int] = (200, 200, 210)
@@ -296,6 +340,10 @@ HUD_REPAIR_DAMAGED_BG: Tuple[int, int, int, int] = (10, 30, 10, 160)
 HUD_REPAIR_DAMAGED_TEXT: Tuple[int, int, int] = (180, 255, 180)
 HUD_REPAIR_NORMAL_BG: Tuple[int, int, int, int] = (20, 20, 20, 160)
 HUD_REPAIR_NORMAL_TEXT: Tuple[int, int, int] = (200, 200, 200)
+HUD_HP_BAR_FG: Tuple[int, int, int] = (210, 50, 50)
+HUD_HP_BAR_BG: Tuple[int, int, int] = (40, 15, 15)
+HUD_XP_BAR_FG: Tuple[int, int, int] = (70, 160, 255)
+HUD_XP_BAR_BG: Tuple[int, int, int] = (20, 30, 50)
 
 # --- Attack arc / Stone wall visual ---
 ATTACK_ARC_COLOR: Tuple[int, int, int] = (255, 255, 200)

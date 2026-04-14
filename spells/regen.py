@@ -6,35 +6,35 @@ Control variables are declared at the top for easy tuning.
 """
 from typing import Dict, Any
 
+from game_controller import (
+    REGEN_1_COLOR, REGEN_2_COLOR, REGEN_3_COLOR,
+    REGEN_4_COLOR, REGEN_5_COLOR,
+)
+
 # -- Regen I -------------------------------------------------------------------
 REGEN_1_COOLDOWN: float = 5.0          # seconds between casts
 REGEN_1_DURATION: float = 30.0         # buff duration in seconds
 REGEN_1_VALUE: int = 2                 # HP healed per second
-REGEN_1_COLOR = (80, 255, 140)         # particle tint
 
 # -- Regen II ------------------------------------------------------------------
 REGEN_2_COOLDOWN: float = 5.0
 REGEN_2_DURATION: float = 30.0
 REGEN_2_VALUE: int = 4
-REGEN_2_COLOR = (100, 255, 160)
 
 # -- Regen III -----------------------------------------------------------------
 REGEN_3_COOLDOWN: float = 5.0
 REGEN_3_DURATION: float = 30.0
 REGEN_3_VALUE: int = 6
-REGEN_3_COLOR = (120, 255, 180)
 
 # -- Regen IV ------------------------------------------------------------------
 REGEN_4_COOLDOWN: float = 5.0
 REGEN_4_DURATION: float = 30.0
 REGEN_4_VALUE: int = 9
-REGEN_4_COLOR = (140, 255, 200)
 
 # -- Regen V -------------------------------------------------------------------
 REGEN_5_COOLDOWN: float = 5.0
 REGEN_5_DURATION: float = 30.0
 REGEN_5_VALUE: int = 12
-REGEN_5_COLOR = (160, 255, 220)
 
 # Assembled spell data keyed by item_id
 REGEN_SPELLS: Dict[str, Dict[str, Any]] = {

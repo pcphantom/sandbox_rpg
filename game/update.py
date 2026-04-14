@@ -2,7 +2,7 @@
 import pygame
 
 from core.constants import (
-    GREEN, GRAY,
+    GREEN, GRAY, ENCHANT_COLOR_REGEN,
     PLAYER_BASE_SPEED, AGI_SPEED_BONUS, AGI_SPEED_BONUS_CAP,
     MOVEMENT_ACCEL_MULT, SPRITE_FLIP_THRESHOLD,
     MIN_ATTACK_COOLDOWN, BASE_ATTACK_COOLDOWN, AGILITY_COOLDOWN_REDUCTION,
@@ -155,7 +155,7 @@ def update(g, dt: float) -> None:
                 ph_ar.heal(armor_regen_rate)
                 g.health_bar.set_value(ph_ar.current)
                 g.dmg_numbers.append(
-                    (pt.x, pt.y - 24, f'+{armor_regen_rate}', (50, 255, 50), 0.5))
+                    (pt.x, pt.y - 24, f'+{armor_regen_rate}', ENCHANT_COLOR_REGEN, 0.5))
     else:
         g.armor_regen_accum = 0.0
 

@@ -5,13 +5,17 @@ Control variables are declared at the top for easy tuning.
 """
 from typing import Dict, Any
 
+from game_controller import (
+    LIGHTNING_1_COLOR, LIGHTNING_2_COLOR, LIGHTNING_3_COLOR,
+    LIGHTNING_4_COLOR, LIGHTNING_5_COLOR,
+)
+
 # -- Lightning I ---------------------------------------------------------------
 LIGHTNING_1_COOLDOWN: float = 3.0      # seconds between casts
 LIGHTNING_1_DAMAGE: int = 80           # base damage on hit
 LIGHTNING_1_RANGE: float = 350.0       # max projectile travel distance (px)
 LIGHTNING_1_SPEED: float = 600.0       # projectile speed (px/s)
 LIGHTNING_1_RADIUS: float = 40.0       # AoE splash radius (px)
-LIGHTNING_1_COLOR = (180, 200, 255)    # particle / projectile tint
 
 # -- Lightning II --------------------------------------------------------------
 LIGHTNING_2_COOLDOWN: float = 2.5
@@ -19,7 +23,6 @@ LIGHTNING_2_DAMAGE: int = 120
 LIGHTNING_2_RANGE: float = 400.0
 LIGHTNING_2_SPEED: float = 650.0
 LIGHTNING_2_RADIUS: float = 50.0
-LIGHTNING_2_COLOR = (200, 215, 255)
 
 # -- Lightning III -------------------------------------------------------------
 LIGHTNING_3_COOLDOWN: float = 2.0
@@ -27,7 +30,6 @@ LIGHTNING_3_DAMAGE: int = 170
 LIGHTNING_3_RANGE: float = 450.0
 LIGHTNING_3_SPEED: float = 700.0
 LIGHTNING_3_RADIUS: float = 60.0
-LIGHTNING_3_COLOR = (220, 230, 255)
 
 # -- Lightning IV --------------------------------------------------------------
 LIGHTNING_4_COOLDOWN: float = 1.6
@@ -35,7 +37,6 @@ LIGHTNING_4_DAMAGE: int = 230
 LIGHTNING_4_RANGE: float = 500.0
 LIGHTNING_4_SPEED: float = 750.0
 LIGHTNING_4_RADIUS: float = 70.0
-LIGHTNING_4_COLOR = (235, 240, 255)
 
 # -- Lightning V ---------------------------------------------------------------
 LIGHTNING_5_COOLDOWN: float = 1.2
@@ -43,7 +44,6 @@ LIGHTNING_5_DAMAGE: int = 300
 LIGHTNING_5_RANGE: float = 550.0
 LIGHTNING_5_SPEED: float = 800.0
 LIGHTNING_5_RADIUS: float = 80.0
-LIGHTNING_5_COLOR = (245, 248, 255)
 
 # Assembled spell data keyed by item_id
 LIGHTNING_SPELLS: Dict[str, Dict[str, Any]] = {

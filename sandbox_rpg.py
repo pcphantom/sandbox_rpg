@@ -15,6 +15,7 @@ from core.constants import (
     FPS, DIFFICULTY_EASY,
     FONT_SIZE_MAIN, FONT_SIZE_SM, FONT_SIZE_LG, FONT_SIZE_XL,
     NOTIFICATION_DURATION, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    HUD_HP_BAR_FG, HUD_HP_BAR_BG, HUD_XP_BAR_FG, HUD_XP_BAR_BG,
 )
 from core.utils import clamp
 from core.ecs import EntityManager
@@ -180,9 +181,9 @@ class Game:
         self.enchant_table_ui = EnchantmentTableUI(self.textures)
 
         self.health_bar = ProgressBar(
-            pygame.Rect(20, 16, 200, 18), 100, (210, 50, 50), (40, 15, 15))
+            pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)
         self.xp_bar = ProgressBar(
-            pygame.Rect(20, 38, 200, 12), 50, (70, 160, 255), (20, 30, 50))
+            pygame.Rect(20, 38, 200, 12), 50, HUD_XP_BAR_FG, HUD_XP_BAR_BG)
         self.minimap = Minimap()
 
         # Timers / cooldowns
