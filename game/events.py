@@ -26,6 +26,29 @@ def handle_events(g) -> None:
         if hasattr(event, 'pos'):
             event.pos = g._scale_mouse_pos(event.pos)
 
+        # F12 toggles command bar (works in all non-dead, non-menu states)
+        if (event.type == pygame.KEYDOWN
+                and event.key == pygame.K_F12
+                and not g.dead and not g.paused):
+            g.command_bar.toggle()
+            continue
+
+        # Command bar consumes events when visible
+        if g.command_bar.visible:
+            from game.cheats import execute_command
+            g.command_bar.handle_event(
+                event, lambda cmd: execute_command(g, cmd))
+            continue
+
+        # Cheat help overlay close
+        if g.show_cheat_help:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                g.show_cheat_help = False
+                continue
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                g.show_cheat_help = False
+                continue
+
         # --- Dead state ---
         if g.dead:
             if event.type == pygame.KEYDOWN:
@@ -173,6 +196,19 @@ def handle_events(g) -> None:
             elif event.button == 3:
                 g.spell_targeting = False
                 g.spell_item = None
+                continue
+
+        # Cheats button click (below minimap)
+        if (g.cheats_enabled and event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1 and not g.show_cheat_help):
+            from game_controller import (
+                SCREEN_WIDTH as SW, MINIMAP_SIZE_PX,
+            )
+            btn_w, btn_h = 110, 22
+            btn_x = SW - MINIMAP_SIZE_PX - 15
+            btn_y = 50 + MINIMAP_SIZE_PX + 6
+            if pygame.Rect(btn_x, btn_y, btn_w, btn_h).collidepoint(event.pos):
+                g.show_cheat_help = True
                 continue
 
         # Overlay event handling

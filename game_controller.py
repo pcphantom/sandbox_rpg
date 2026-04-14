@@ -328,6 +328,27 @@ OPTIONS_BACK_HOVER: Tuple[int, int, int] = (60, 70, 100)
 OPTIONS_BACK_NORMAL: Tuple[int, int, int] = (40, 45, 65)
 OPTIONS_BACK_BORDER: Tuple[int, int, int] = (130, 130, 160)
 OPTIONS_INFO_TEXT: Tuple[int, int, int] = (160, 160, 190)
+
+# --- Command bar (F12) UI ---
+CMD_BAR_BG: Tuple[int, int, int, int] = (15, 15, 25, 230)
+CMD_BAR_BORDER: Tuple[int, int, int] = (120, 120, 160)
+CMD_BAR_INPUT_BG: Tuple[int, int, int] = (30, 30, 45)
+CMD_BAR_INPUT_BORDER: Tuple[int, int, int] = (100, 100, 140)
+CMD_BAR_TEXT: Tuple[int, int, int] = (220, 220, 240)
+CMD_BAR_PLACEHOLDER: Tuple[int, int, int] = (100, 100, 120)
+CMD_BAR_CLOSE_HOVER: Tuple[int, int, int] = (160, 60, 60)
+CMD_BAR_CLOSE_NORMAL: Tuple[int, int, int] = (100, 40, 40)
+CMD_BAR_RESULT_OK: Tuple[int, int, int] = (100, 255, 100)
+CMD_BAR_RESULT_ERR: Tuple[int, int, int] = (255, 100, 100)
+
+# --- Cheats button (below minimap) ---
+CHEAT_BTN_BG: Tuple[int, int, int, int] = (40, 20, 60, 200)
+CHEAT_BTN_BORDER: Tuple[int, int, int] = (140, 80, 200)
+CHEAT_BTN_HOVER: Tuple[int, int, int, int] = (60, 30, 80, 220)
+CHEAT_BTN_TEXT: Tuple[int, int, int] = (200, 150, 255)
+CHEAT_HELP_BG: Tuple[int, int, int, int] = (15, 10, 25, 235)
+CHEAT_HELP_BORDER: Tuple[int, int, int] = (140, 80, 200)
+CHEAT_HELP_TEXT: Tuple[int, int, int] = (200, 200, 220)
 VOLUME_SLIDER_BG: Tuple[int, int, int] = (30, 30, 50)
 VOLUME_SLIDER_FILL: Tuple[int, int, int] = (70, 160, 255)
 

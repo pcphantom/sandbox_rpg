@@ -113,6 +113,7 @@ def build_save_data(g: 'Game') -> Dict[str, Any]:
         'cave_chest_looted': g.caves.chest_looted,
         'last_resource_respawn_day': g._last_resource_respawn_day,
         'last_cave_reset_day': g._last_cave_reset_day,
+        'cheats_enabled': g.cheats_enabled,
     }
 
 
@@ -227,6 +228,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     g.daynight.reset_speed()
     g._last_resource_respawn_day = data.get('last_resource_respawn_day', 1)
     g._last_cave_reset_day = data.get('last_cave_reset_day', 1)
+    g.cheats_enabled = data.get('cheats_enabled', False)
 
     # Reset camera bounds & position for the loaded world
     if g.in_cave >= 0:
