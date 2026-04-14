@@ -199,7 +199,7 @@ def use_equipped_item(g: 'Game') -> None:
             remaining = g.spell_cooldowns[eq_id]
             g._notify(f"{sdata['name']} on cooldown ({remaining:.1f}s)")
             return
-        # Self-buff spells (protection, regen, strength) — apply immediately
+        # Self-buff spells (protection, regen, strength, levitate) — apply immediately
         if sdata.get('type') == 'self_buff':
             effect = sdata['effect']
             if effect in g.active_buffs:
@@ -213,6 +213,27 @@ def use_equipped_item(g: 'Game') -> None:
             color = sdata.get('color', CYAN)
             g._notify(f"Applied {sdata['name']} ({sdata['duration']:.0f}s)")
             g.particles.emit(pt.x + 10, pt.y + 14, 10, color, 60, 0.5)
+            return
+        # Teleport-to-bed spells (Return)
+        if sdata.get('type') == 'teleport_bed':
+            bed_pos = None
+            for eid_check in g.em.get_entities_with(Transform, Placeable):
+                pl_check = g.em.get_component(eid_check, Placeable)
+                if pl_check.item_type == 'bed':
+                    bed_t = g.em.get_component(eid_check, Transform)
+                    bed_pos = (bed_t.x, bed_t.y)
+                    break
+            if bed_pos is None:
+                g._notify("No bed found!")
+                return
+            pt.x = bed_pos[0]
+            pt.y = bed_pos[1] - TILE_SIZE
+            g.camera.follow(pt.x, pt.y)
+            g.camera.snap()
+            g.spell_cooldowns[eq_id] = sdata.get('cooldown', 600.0)
+            color = sdata.get('color', CYAN)
+            g._notify(f"Returned to bed!")
+            g.particles.emit(pt.x + 10, pt.y + 14, 15, color, 80, 0.6)
             return
         # Self-heal spells — cast immediately
         if sdata.get('type') == 'self':

@@ -92,7 +92,7 @@ This document tracks all global constants, key variables, and data structures us
 | **systems/** | Centralized game systems | |
 | `systems/rarity.py` | Rarity stat application & drop rolling | apply_rarity, roll_rarity |
 | `systems/damage_calc.py` | Damage/DR formulas | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
-| **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE |
+| **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE, FIREBALL_SPELLS, HEAL_SPELLS, LIGHTNING_SPELLS, ICE_SPELLS, PROTECTION_SPELLS, REGEN_SPELLS, STRENGTH_SPELLS, LEVITATE_SPELLS, RETURN_SPELLS |
 | **rendering/** | Rendering utilities | |
 | `rendering/particles.py` | Particle effects | ParticleSystem |
 | `textures.py` | Texture generation (root) | TextureGenerator |
@@ -1158,6 +1158,27 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | spell_strength_3 | strength | 3 | 60.0s | +10 DMG | 5.0 |
 | spell_strength_4 | strength | 4 | 60.0s | +15 DMG | 5.0 |
 | spell_strength_5 | strength | 5 | 60.0s | +20 DMG | 5.0 |
+| spell_levitate_1 | levitate | 1 | 30.0s | on/off | 5.0 |
+| spell_levitate_2 | levitate | 2 | 45.0s | on/off | 5.0 |
+| spell_levitate_3 | levitate | 3 | 60.0s | on/off | 5.0 |
+| spell_levitate_4 | levitate | 4 | 75.0s | on/off | 5.0 |
+| spell_levitate_5 | levitate | 5 | 90.0s | on/off | 5.0 |
+
+### Teleport Spells
+| ID | Type | Cooldown | Effect |
+|----|------|----------|--------|
+| spell_return_1 | teleport_bed | 600.0 | Teleport to bed |
+| spell_return_2 | teleport_bed | 480.0 | Teleport to bed |
+| spell_return_3 | teleport_bed | 360.0 | Teleport to bed |
+| spell_return_4 | teleport_bed | 240.0 | Teleport to bed |
+| spell_return_5 | teleport_bed | 120.0 | Teleport to bed |
+
+### Terrain Speed Modifiers
+| Constant | Value | Tile |
+|----------|-------|------|
+| TERRAIN_SPEED_SAND | 0.7 | TILE_SAND |
+| TERRAIN_SPEED_WATER | 0.5 | TILE_WATER |
+| TERRAIN_SPEED_DIRT | 0.9 | TILE_DIRT |
 
 ## Bomb Data (`items_data.py: BOMB_DATA`)
 

@@ -946,6 +946,12 @@ def generate_buff_spell_books(gen) -> None:
         'spell_strength_1': (180, 60, 60), 'spell_strength_2': (200, 40, 40),
         'spell_strength_3': (220, 20, 20), 'spell_strength_4': (235, 10, 10),
         'spell_strength_5': (250, 0, 0),
+        'spell_levitate_1': (60, 180, 60), 'spell_levitate_2': (40, 200, 40),
+        'spell_levitate_3': (20, 220, 20), 'spell_levitate_4': (10, 235, 10),
+        'spell_levitate_5': (0, 250, 0),
+        'spell_return_1': (120, 80, 180), 'spell_return_2': (100, 60, 200),
+        'spell_return_3': (80, 40, 220), 'spell_return_4': (60, 20, 235),
+        'spell_return_5': (40, 0, 250),
     }
     for name, color in colors.items():
         _generate_buff_spell_book(gen, name, color)

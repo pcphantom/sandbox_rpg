@@ -124,6 +124,18 @@ PROTECTION_2_COLOR: Tuple[int, int, int] = (120, 200, 255)
 PROTECTION_3_COLOR: Tuple[int, int, int] = (140, 220, 255)
 PROTECTION_4_COLOR: Tuple[int, int, int] = (160, 235, 255)
 PROTECTION_5_COLOR: Tuple[int, int, int] = (180, 245, 255)
+# Levitate I–V
+LEVITATE_1_COLOR: Tuple[int, int, int] = (200, 255, 200)
+LEVITATE_2_COLOR: Tuple[int, int, int] = (180, 255, 180)
+LEVITATE_3_COLOR: Tuple[int, int, int] = (160, 255, 160)
+LEVITATE_4_COLOR: Tuple[int, int, int] = (140, 255, 140)
+LEVITATE_5_COLOR: Tuple[int, int, int] = (120, 255, 120)
+# Return I–V
+RETURN_1_COLOR: Tuple[int, int, int] = (200, 180, 255)
+RETURN_2_COLOR: Tuple[int, int, int] = (180, 160, 255)
+RETURN_3_COLOR: Tuple[int, int, int] = (160, 140, 255)
+RETURN_4_COLOR: Tuple[int, int, int] = (140, 120, 255)
+RETURN_5_COLOR: Tuple[int, int, int] = (120, 100, 255)
 
 # --- Mob body colors ---
 MOB_COLOR_SLIME: Tuple[int, int, int] = (50, 200, 70)
@@ -1125,6 +1137,13 @@ BOMB_DATA: Dict[str, Dict[str, Any]] = {
     },
 }
 
+
+# ######################################################################
+#                        TERRAIN SPEED MODIFIERS
+# ######################################################################
+TERRAIN_SPEED_SAND: float = 0.7
+TERRAIN_SPEED_WATER: float = 0.5
+TERRAIN_SPEED_DIRT: float = 0.9
 
 # ######################################################################
 #                        SPELL CONTROLS
