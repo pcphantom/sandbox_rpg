@@ -656,12 +656,10 @@ def generate_snake(gen) -> pygame.Surface:
         ey = hy - 1
         if 0 <= ey < 16:
             s.set_at((18, ey), (255, 200, 0, 255))
-            if 19 < 20:
-                s.set_at((19, ey), (255, 200, 0, 255))
+            s.set_at((19, ey), (255, 200, 0, 255))
         # Forked tongue
-        tx = min(19, 19)
         if 0 <= hy < 16:
-            s.set_at((tx, hy), (200, 50, 50, 255))
+            s.set_at((19, hy), (200, 50, 50, 255))
         return s
     return gen._get("snake", make)
 

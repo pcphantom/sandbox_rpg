@@ -141,6 +141,24 @@ MOB_COLOR_SKELETON_ARCHER: Tuple[int, int, int] = (200, 200, 210)
 MOB_COLOR_GOBLIN_SHAMAN: Tuple[int, int, int] = (100, 60, 160)
 MOB_COLOR_BOSS_GOLEM: Tuple[int, int, int] = (180, 80, 60)
 MOB_COLOR_BOSS_LICH: Tuple[int, int, int] = (120, 60, 180)
+# New enemy colors
+MOB_COLOR_ORC_ARCHER: Tuple[int, int, int] = (90, 110, 55)
+MOB_COLOR_HOBGOBLIN: Tuple[int, int, int] = (120, 80, 50)
+MOB_COLOR_KOBOLD: Tuple[int, int, int] = (140, 100, 60)
+MOB_COLOR_MEPHIT_FIRE: Tuple[int, int, int] = (220, 80, 30)
+MOB_COLOR_MEPHIT_ICE: Tuple[int, int, int] = (100, 180, 230)
+MOB_COLOR_MEPHIT_LIGHTNING: Tuple[int, int, int] = (200, 200, 60)
+MOB_COLOR_OGRE: Tuple[int, int, int] = (130, 110, 70)
+MOB_COLOR_OGRE_MAGE: Tuple[int, int, int] = (110, 80, 140)
+MOB_COLOR_CENTAUR: Tuple[int, int, int] = (140, 120, 80)
+MOB_COLOR_SNAKE: Tuple[int, int, int] = (80, 140, 50)
+MOB_COLOR_BEAR: Tuple[int, int, int] = (100, 70, 40)
+MOB_COLOR_GOLEM: Tuple[int, int, int] = (150, 140, 130)
+MOB_COLOR_DRAGON_RED: Tuple[int, int, int] = (200, 40, 30)
+MOB_COLOR_DRAGON_GREEN: Tuple[int, int, int] = (40, 160, 50)
+MOB_COLOR_DRAGON_BLACK: Tuple[int, int, int] = (30, 30, 40)
+MOB_COLOR_DRAGON_WHITE: Tuple[int, int, int] = (220, 220, 240)
+MOB_COLOR_SHADOW_DRAGON: Tuple[int, int, int] = (50, 20, 70)
 
 # --- Boss glow colors ---
 BOSS_GLOW_GOLEM: Tuple[int, int, int] = (255, 60, 60)
@@ -149,6 +167,11 @@ BOSS_GLOW_DRAGON: Tuple[int, int, int] = (255, 140, 30)
 BOSS_GLOW_NECROMANCER: Tuple[int, int, int] = (80, 255, 80)
 BOSS_GLOW_TROLL_KING: Tuple[int, int, int] = (100, 180, 60)
 BOSS_GLOW_DEFAULT: Tuple[int, int, int] = (255, 60, 60)
+BOSS_GLOW_DRAGON_RED: Tuple[int, int, int] = (255, 80, 40)
+BOSS_GLOW_DRAGON_GREEN: Tuple[int, int, int] = (60, 255, 60)
+BOSS_GLOW_DRAGON_BLACK: Tuple[int, int, int] = (120, 60, 180)
+BOSS_GLOW_DRAGON_WHITE: Tuple[int, int, int] = (200, 220, 255)
+BOSS_GLOW_SHADOW_DRAGON: Tuple[int, int, int] = (160, 40, 220)
 # Built from the individual boss glow constants above.
 BOSS_GLOW_COLORS: Dict[str, Tuple[int, int, int]] = {
     'boss_golem':       BOSS_GLOW_GOLEM,
@@ -156,7 +179,18 @@ BOSS_GLOW_COLORS: Dict[str, Tuple[int, int, int]] = {
     'boss_dragon':      BOSS_GLOW_DRAGON,
     'boss_necromancer': BOSS_GLOW_NECROMANCER,
     'boss_troll_king':  BOSS_GLOW_TROLL_KING,
+    'dragon_red':       BOSS_GLOW_DRAGON_RED,
+    'dragon_green':     BOSS_GLOW_DRAGON_GREEN,
+    'dragon_black':     BOSS_GLOW_DRAGON_BLACK,
+    'dragon_white':     BOSS_GLOW_DRAGON_WHITE,
+    'shadow_dragon':    BOSS_GLOW_SHADOW_DRAGON,
 }
+
+# --- Elite enemy glow border color ---
+ELITE_GLOW_COLOR: Tuple[int, int, int] = (200, 180, 60)
+ELITE_HP_MULT: float = 1.8
+ELITE_DMG_MULT: float = 1.5
+ELITE_XP_MULT: float = 2.0
 
 # --- Light source colors ---
 LIGHT_COLOR_DEFAULT: Tuple[int, int, int] = (255, 200, 120)
@@ -412,10 +446,14 @@ CAVE_WIDTH: int = 60
 CAVE_HEIGHT: int = 45
 CAVE_WALL_DENSITY: float = 0.48
 CAVE_SMOOTH_PASSES: int = 5
-CAVE_MOB_TYPES: Tuple[str, ...] = ('skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith')
+CAVE_MOB_TYPES: Tuple[str, ...] = (
+    'skeleton', 'orc', 'dark_knight', 'troll', 'ghost', 'wraith',
+    'hobgoblin', 'kobold', 'ogre', 'golem', 'spider',
+)
 CAVE_MOB_COUNT: int = 15
 CAVE_BOSS_TYPES: Tuple[str, ...] = (
     'boss_golem', 'boss_lich', 'boss_dragon', 'boss_necromancer', 'boss_troll_king',
+    'dragon_red', 'dragon_green', 'dragon_black', 'dragon_white',
 )
 CAVE_ORE_COUNT: int = 8
 CAVE_DIAMOND_COUNT: int = 3
@@ -528,6 +566,22 @@ WAVE_SPAWN_MIN_INTERVAL: float = 0.8     # fastest possible batch interval
 WAVE_INTERVAL_REDUCTION: float = 0.1     # seconds shaved off interval per qualifying night
 WAVE_SPAWN_BATCH: int = 3                # mobs spawned per batch tick
 WAVE_RANGED_MOB_CHANCE: float = 0.25     # chance a wave mob is ranged (after RANGED_ENEMY_START_DAY)
+
+# --- Multi-wave night system (per difficulty) ---
+# Number of separate waves per night.  Easy keeps 1, higher difficulties get more.
+NIGHT_WAVE_COUNT: Dict[int, int] = {
+    0: 1,     # Easy     — 1 wave per night
+    1: 3,     # Normal   — 3 waves per night
+    2: 5,     # Hard     — 5 waves per night
+    3: 10,    # Hardcore  — 10 waves per night
+}
+# Game-hours between each wave within a single night.
+NIGHT_WAVE_SPACING_HOURS: Dict[int, float] = {
+    0: 0.0,   # Easy     — single wave, spacing irrelevant
+    1: 2.0,   # Normal   — 2 game hours apart
+    2: 1.0,   # Hard     — 1 game hour apart
+    3: 0.5,   # Hardcore  — 30 game minutes apart
+}
 
 # --- Mob respawn / population ---
 MOB_RESPAWN_INTERVAL: float = 4.0        # seconds between natural respawn ticks
