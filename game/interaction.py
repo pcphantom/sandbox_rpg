@@ -43,6 +43,7 @@ from data import (
     ITEM_DATA, ITEM_CATEGORIES, RECIPES,
     RANGED_DATA, AMMO_BONUS_DAMAGE,
     SPELL_DATA, SPELL_RECHARGE, BOMB_DATA,
+    HARVEST_TYPE,
 )
 
 
@@ -103,15 +104,40 @@ def interact(g: 'Game') -> None:
     if nearest is not None:
         r = g.em.get_component(nearest, Renderable)
         eq: Equipment = g.em.get_component(g.player_id, Equipment)
-        eq_item = eq.weapon if eq and eq.weapon else inv.get_equipped()
-        bonus = (ITEM_DATA[eq_item][3]
-                 if eq_item and eq_item in ITEM_DATA else 0)
         ps: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
         luck_bonus = (1 if random.random() < ps.luck * LUCK_HARVEST_CHANCE
                       else 0)
         pl_check = (g.em.get_component(nearest, Placeable)
                     if g.em.has_component(nearest, Placeable) else None)
-        if pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item:
+        is_cave_res = (pl_check and hasattr(pl_check, 'drop_item')
+                       and pl_check.drop_item)
+
+        # Determine resource type being gathered
+        if not is_cave_res and r.surface == g.textures.get('tree'):
+            resource_type = 'wood'
+        else:
+            resource_type = 'stone'
+
+        # Get bonus from equipped weapon
+        eq_bonus = 0
+        if eq and eq.weapon and eq.weapon in ITEM_DATA:
+            eq_ht = HARVEST_TYPE.get(eq.weapon, 'all')
+            if eq_ht == resource_type or eq_ht == 'all':
+                eq_bonus = ITEM_DATA[eq.weapon][3]
+
+        # Get bonus from active hotbar item
+        hb_bonus = 0
+        hotbar_item = inv.get_equipped()
+        eq_weapon = eq.weapon if eq else None
+        if (hotbar_item and hotbar_item in ITEM_DATA
+                and hotbar_item != eq_weapon):
+            hb_ht = HARVEST_TYPE.get(hotbar_item, 'all')
+            if hb_ht == resource_type or hb_ht == 'all':
+                hb_bonus = ITEM_DATA[hotbar_item][3]
+
+        bonus = max(eq_bonus, hb_bonus)
+
+        if is_cave_res:
             drop_id = pl_check.drop_item
             drop_count = random.randint(1, 3) + bonus + luck_bonus
             inv.add_item(drop_id, drop_count)
@@ -132,7 +158,7 @@ def interact(g: 'Game') -> None:
             th = g.em.get_component(nearest, Transform)
             g.particles.emit(th.x + 14, th.y + 10, 8, GRAY, 40, 0.3)
         # Track harvested overworld resource positions (skip cave resources)
-        if g.in_cave < 0 and not (pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item):
+        if g.in_cave < 0 and not is_cave_res:
             th_h = g.em.get_component(nearest, Transform)
             gx = int(th_h.x // TILE_SIZE)
             gy = int(th_h.y // TILE_SIZE)

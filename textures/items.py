@@ -998,6 +998,9 @@ def generate_stat_weapons(gen) -> None:
         _generate_stat_weapon(gen, 'mace', tier, color)
         _generate_stat_weapon(gen, 'titanium_axe', tier, color)
         _generate_stat_weapon(gen, 'diamond_axe', tier, color)
+        _generate_stat_weapon(gen, 'iron_pickaxe', tier, color)
+        _generate_stat_weapon(gen, 'titanium_pickaxe', tier, color)
+        _generate_stat_weapon(gen, 'diamond_pickaxe', tier, color)
 
 
 def generate_stat_ranged(gen) -> None:
@@ -1019,3 +1022,61 @@ def generate_stat_turrets(gen) -> None:
     for tier in range(1, 6):
         color = (80, 140, 255) if tier <= 2 else (180, 60, 255)
         _generate_stat_weapon(gen, 'turret', tier, color)
+
+
+# ==================================================================
+# PICKAXE ICONS (16×16)
+# ==================================================================
+def _draw_pickaxe_handle(s: pygame.Surface) -> None:
+    """Draw the shared diagonal pickaxe handle onto a 16×16 surface."""
+    for i in range(10):
+        s.set_at((3 + i, 13 - i), (120, 80, 40, 255))
+        s.set_at((4 + i, 13 - i), (100, 65, 30, 255))
+
+
+def generate_item_pickaxe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        _draw_pickaxe_handle(s)
+        for dx in range(6):
+            s.set_at((8 + dx, 4 - min(dx, 3)), (160, 160, 170, 255))
+            s.set_at((8 + dx, 5 - min(dx, 3)), (140, 140, 150, 255))
+        return s
+    return gen._get("item_pickaxe", make)
+
+
+def generate_item_iron_pickaxe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        _draw_pickaxe_handle(s)
+        for dx in range(6):
+            c = 170 + int(20 * hash_noise(8 + dx, 4, gen.seed + 300))
+            s.set_at((8 + dx, 4 - min(dx, 3)), (c, c, c + 15, 255))
+            s.set_at((8 + dx, 5 - min(dx, 3)), (c - 20, c - 20, c - 5, 255))
+        return s
+    return gen._get("item_iron_pickaxe", make)
+
+
+def generate_item_titanium_pickaxe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        _draw_pickaxe_handle(s)
+        for dx in range(6):
+            c = 160 + int(20 * hash_noise(8 + dx, 4, gen.seed + 310))
+            s.set_at((8 + dx, 4 - min(dx, 3)), (c, c + 10, c + 30, 255))
+            s.set_at((8 + dx, 5 - min(dx, 3)), (c - 20, c - 10, c + 10, 255))
+        return s
+    return gen._get("item_titanium_pickaxe", make)
+
+
+def generate_item_diamond_pickaxe(gen) -> pygame.Surface:
+    def make() -> pygame.Surface:
+        s = pygame.Surface((16, 16), pygame.SRCALPHA)
+        _draw_pickaxe_handle(s)
+        for dx in range(6):
+            c = 180 + int(20 * hash_noise(8 + dx, 4, gen.seed + 320))
+            s.set_at((8 + dx, 4 - min(dx, 3)), (c - 40, c, min(255, c + 30), 255))
+            s.set_at((8 + dx, 5 - min(dx, 3)), (c - 60, c - 20, c + 10, 255))
+        s.set_at((12, 2), (255, 255, 230, 255))
+        return s
+    return gen._get("item_diamond_pickaxe", make)

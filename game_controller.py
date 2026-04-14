@@ -980,6 +980,14 @@ WEAPON_BASES: Dict[str, Tuple[int, int]] = {
     'diamond_axe':  WEAPON_BASE_DIAMOND_AXE,
 }
 
+# --- Pickaxe base damages (for enhancement scaling) ---
+WEAPON_BASE_IRON_PICKAXE: Tuple[int, int] = (15, 4)
+WEAPON_BASE_TITANIUM_PICKAXE: Tuple[int, int] = (23, 6)
+WEAPON_BASE_DIAMOND_PICKAXE: Tuple[int, int] = (30, 8)
+WEAPON_BASES['iron_pickaxe'] = WEAPON_BASE_IRON_PICKAXE
+WEAPON_BASES['titanium_pickaxe'] = WEAPON_BASE_TITANIUM_PICKAXE
+WEAPON_BASES['diamond_pickaxe'] = WEAPON_BASE_DIAMOND_PICKAXE
+
 # --- Ranged base damages ---
 RANGED_BASE_BOW: int = 18
 RANGED_BASE_CROSSBOW: int = 28

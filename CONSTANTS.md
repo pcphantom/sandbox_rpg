@@ -42,7 +42,7 @@ This document tracks all global constants, key variables, and data structures us
 | **core/** | Core ECS, components, constants, enhancement | |
 | `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS. ENHANCEMENT_COLORS import REMOVED (commented out in game_controller.py). |
 | **data/** | Centralised game data/tuning | |
-| `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
+| `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, HARVEST_TYPE, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
 | `data/combat.py` | Combat data — re-exports from `game_controller.py` | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
 | `data/mobs.py` | Mob definitions — boss glow colors from `game_controller.py` | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
@@ -52,7 +52,7 @@ This document tracks all global constants, key variables, and data structures us
 | `data/difficulty.py` | Difficulty profiles — re-exports from `game_controller.py` + helpers | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
 | `data/quality.py` | Item quality/rarity — re-exports from `game_controller.py` + helpers | RARITY_TIERS, RARITY_COLORS, RARITY_MULTIPLIERS, RARITY_ELIGIBLE_CATEGORIES, QUALITY_COLORS, get_item_quality, get_item_color |
 | **items/** | Modular item definitions with control flags | |
-| `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
+| `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, HARVEST_TYPE, NON_STACKABLE_CATEGORIES from category modules | |
 | `items/materials.py` | Material items (wood, stone, iron, etc.) | ITEMS list |
 | `items/consumables.py` | Consumable items (berry, pie, bandage, etc.) | ITEMS list |
 | `items/weapons.py` | Melee weapons (axe, sword, iron_sword, etc.) | ITEMS list |
@@ -61,7 +61,7 @@ This document tracks all global constants, key variables, and data structures us
 | `items/armor.py` | Armor and shields | ITEMS list |
 | `items/placeables.py` | Placeables (turret, wall, chest, etc.) | ITEMS list |
 | `items/spells.py` | Spell books (all tiers) | ITEMS list |
-| `items/tools.py` | Tools (hammer) | ITEMS list |
+| `items/tools.py` | Tools (hammer, pickaxes) | ITEMS list |
 | `items/tomes.py` | Enchantment and transfer tomes | ITEMS list |
 | `items/throwables.py` | Throwables (bomb) | ITEMS list |
 | **world/** | World generation | |
@@ -126,7 +126,7 @@ Three per-item boolean flags centralize eligibility checks. All consumer modules
 | enchant_tome / transfer_tome | False | False | False |
 | throwable | False | False | False |
 
-*`can_enhance=True` for: iron_sword, iron_axe, mace, titanium_axe, diamond_axe, iron_armor, iron_shield, turret
+*`can_enhance=True` for: iron_sword, iron_axe, mace, titanium_axe, diamond_axe, iron_pickaxe, titanium_pickaxe, diamond_pickaxe, iron_armor, iron_shield, turret
 
 ### Enhanced Item Flag Inheritance
 
@@ -993,17 +993,26 @@ Format: `(name, description, damage, harvest_bonus, heal, placeable)`
 | spell_ice_5 | Ice V Tome |
 
 ### Melee Weapons
-| ID | Name | Damage | Harvest Bonus |
-|----|------|--------|---------------|
-| axe | Stone Axe | 12 | +2 |
-| sword | Wood Sword | 20 | 0 |
-| iron_sword | Iron Sword | 30 | 0 |
-| spear | Spear | 18 | 0 |
-| iron_axe | Iron Axe | 22 | +4 |
-| mace | Iron Mace | 26 | 0 |
-| bone_club | Bone Club | 14 | 0 |
-| titanium_axe | Titanium Axe | 33 | +6 |
-| diamond_axe | Diamond Axe | 44 | +8 |
+| ID | Name | Damage | Harvest Bonus | Harvest Type |
+|----|------|--------|---------------|--------------|
+| axe | Stone Axe | 12 | +2 | wood |
+| sword | Wood Sword | 20 | 0 | all |
+| iron_sword | Iron Sword | 30 | 0 | all |
+| spear | Spear | 18 | 0 | all |
+| iron_axe | Iron Axe | 22 | +4 | wood |
+| mace | Iron Mace | 26 | 0 | all |
+| bone_club | Bone Club | 14 | 0 | all |
+| titanium_axe | Titanium Axe | 33 | +6 | wood |
+| diamond_axe | Diamond Axe | 44 | +8 | wood |
+
+### Tools
+| ID | Name | Damage | Harvest Bonus | Harvest Type |
+|----|------|--------|---------------|--------------|
+| hammer | Hammer | 5 | 0 | all |
+| pickaxe | Stone Pickaxe | 8 | +2 | stone |
+| iron_pickaxe | Iron Pickaxe | 15 | +4 | stone |
+| titanium_pickaxe | Titanium Pickaxe | 23 | +6 | stone |
+| diamond_pickaxe | Diamond Pickaxe | 30 | +8 | stone |
 
 ### Enhanced Weapons (+1 to +5, generated from `core/enhancement.py`)
 
@@ -1016,8 +1025,11 @@ Control variable: `OFFENSE_BONUS_PER_LEVEL = 2` (+2 damage per enhancement level
 | mace (26) | 28 | 30 | 32 | 34 | 36 |
 | titanium_axe (33) | 35 | 37 | 39 | 41 | 43 |
 | diamond_axe (44) | 46 | 48 | 50 | 52 | 54 |
+| iron_pickaxe (15) | 17 | 19 | 21 | 23 | 25 |
+| titanium_pickaxe (23) | 25 | 27 | 29 | 31 | 33 |
+| diamond_pickaxe (30) | 32 | 34 | 36 | 38 | 40 |
 
-IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`, `titanium_axe_1`..`titanium_axe_5`, `diamond_axe_1`..`diamond_axe_5`
+IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`, `titanium_axe_1`..`titanium_axe_5`, `diamond_axe_1`..`diamond_axe_5`, `iron_pickaxe_1`..`iron_pickaxe_5`, `titanium_pickaxe_1`..`titanium_pickaxe_5`, `diamond_pickaxe_1`..`diamond_pickaxe_5`
 
 ### Ranged Weapons
 | ID | Name | Damage | Range | Ammo | Speed | Cooldown |
@@ -1308,6 +1320,9 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 | Iron Mace | iron×5, wood×1 |
 | Spear | stick×4, stone×2 |
 | Bone Club | bone×3, stick×1 |
+| Stone Pickaxe | wood×3, stone×3 |
+| Iron Pickaxe | iron×3, wood×2 |
+| Titanium Pickaxe | titanium_ingot×5, wood×2 |
 
 ### Ranged Weapons
 | Result | Cost |
@@ -1695,7 +1710,7 @@ Control variable: `PROTECTION_DR_PER_LEVEL = 2` (+2 DR per enchant level, stacks
 
 > **Note**: The old `_ENHANCEABLE_BASES` set in recipes.py has been replaced by the `CAN_ENHANCE` flag dict from the `items/` package.
 
-`iron_sword`, `iron_axe`, `mace`, `titanium_axe`, `diamond_axe`, `iron_armor`, `iron_shield`, `turret`
+`iron_sword`, `iron_axe`, `mace`, `titanium_axe`, `diamond_axe`, `iron_pickaxe`, `titanium_pickaxe`, `diamond_pickaxe`, `iron_armor`, `iron_shield`, `turret`
 
 ### Combine Recipes (`enchantments/recipes.py: try_combine()`)
 

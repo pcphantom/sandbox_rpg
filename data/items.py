@@ -12,4 +12,5 @@ from items import (
     CAN_ENCHANT,
     CAN_ENHANCE,
     HAS_RARITY,
+    HARVEST_TYPE,
 )

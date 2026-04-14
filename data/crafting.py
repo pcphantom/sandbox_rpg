@@ -20,6 +20,9 @@ RECIPES: List[Dict[str, Any]] = [
     {'name': 'Iron Mace',       'cost': {'iron': 5, 'wood': 1},                'gives': 'mace'},
     {'name': 'Spear',           'cost': {'stick': 4, 'stone': 2},              'gives': 'spear'},
     {'name': 'Bone Club',       'cost': {'bone': 3, 'stick': 1},               'gives': 'bone_club'},
+    {'name': 'Stone Pickaxe',   'cost': {'wood': 3, 'stone': 3},               'gives': 'pickaxe'},
+    {'name': 'Iron Pickaxe',    'cost': {'iron': 3, 'wood': 2},                'gives': 'iron_pickaxe'},
+    {'name': 'Titanium Pickaxe','cost': {'titanium_ingot': 5, 'wood': 2},      'gives': 'titanium_pickaxe'},
 
     # =====================================================================
     # RANGED WEAPONS
