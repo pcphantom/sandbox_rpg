@@ -117,6 +117,8 @@ def render(g: 'Game') -> None:
                 g.screen, stor,
                 g.em.get_component(g.player_id, Inventory),
                 g.tooltip)
+    if g.show_stone_oven:
+        g.stone_oven_ui.draw(g.screen, g)
     if g.show_inventory:
         g.inventory_ui.draw(g.screen, g.tooltip)
     if g.show_crafting:

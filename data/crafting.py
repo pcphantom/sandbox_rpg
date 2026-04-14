@@ -69,13 +69,14 @@ RECIPES: List[Dict[str, Any]] = [
     {'name': 'Turret',          'cost': {'wood': 8, 'stone': 5, 'iron': 3},    'gives': 'turret'},
     {'name': 'Chest',           'cost': {'wood': 8, 'iron': 2},                'gives': 'chest'},
     {'name': 'Door',            'cost': {'wood': 4, 'iron': 1},                'gives': 'door'},
+    {'name': 'Beacon',          'cost': {'wood': 25, 'stone': 10},             'gives': 'beacon'},
+    {'name': 'Stone Oven',      'cost': {'stone': 8, 'wood': 2},               'gives': 'stone_oven'},
 
     # =====================================================================
     # MATERIAL PROCESSING
     # =====================================================================
     {'name': 'Sticks x5',      'cost': {'wood': 1},                            'gives': 'stick',        'count': 5},
     {'name': 'Iron Ingot',      'cost': {'stone': 4, 'wood': 2},               'gives': 'iron'},
-    {'name': 'Iron from Ore',   'cost': {'iron_ore': 1, 'wood': 1},            'gives': 'iron'},
     {'name': 'Cloth',           'cost': {'stick': 3, 'berry': 1},              'gives': 'cloth'},
     {'name': 'Leather',         'cost': {'bone': 2, 'berry': 1},               'gives': 'leather'},
 
@@ -93,6 +94,5 @@ RECIPES: List[Dict[str, Any]] = [
     # =====================================================================
     # TITANIUM GEAR (Brilliant Diamond, Diamond Axe, Greater Enchant Table are enchant-table-only)
     # =====================================================================
-    {'name': 'Titanium Ingot',    'cost': {'titanium_ore': 2, 'wood': 2}, 'gives': 'titanium_ingot'},
     {'name': 'Titanium Axe',  'cost': {'titanium_ingot': 5, 'wood': 2}, 'gives': 'titanium_axe'},
 ]

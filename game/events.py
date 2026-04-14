@@ -100,7 +100,7 @@ def handle_events(g) -> None:
                     g.spell_item = None
                 elif (g.show_inventory or g.show_crafting
                         or g.show_character or g.show_chest
-                        or g.show_enchant_table):
+                        or g.show_enchant_table or g.show_stone_oven):
                     g._return_held_item()
                     g.show_inventory = False
                     g.show_crafting = False
@@ -110,6 +110,8 @@ def handle_events(g) -> None:
                     g.chest_ui.split_dialog.close()
                     g.show_enchant_table = False
                     g.active_enchant_table = None
+                    g.show_stone_oven = False
+                    g.active_stone_oven = None
                 else:
                     g.paused = True
                 continue

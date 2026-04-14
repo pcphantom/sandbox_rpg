@@ -119,6 +119,12 @@ class TextureGenerator:
         buildings.generate_chest_placed(self)
         buildings.generate_cave_chest_placed(self)
         buildings.generate_door_placed(self)
+        # Beacon and Stone Oven
+        buildings.generate_item_beacon(self)
+        buildings.generate_beacon_placed(self)
+        buildings.generate_item_stone_oven(self)
+        buildings.generate_stone_oven_placed(self, False)
+        buildings.generate_stone_oven_placed(self, True)
         # Projectiles
         effects.generate_projectile_arrow(self)
         effects.generate_projectile_rock(self)

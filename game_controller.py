@@ -570,13 +570,13 @@ RESOURCE_RESPAWN_DAYS: Dict[int, int] = {
 
 # --- Cave reset interval ---
 # Days between automatic cave regeneration, per difficulty.
-# 1 = caves rebuild every day (all difficulties — resets mobs and resources).
+# 1 = caves rebuild every day (current default).
 # 0 = caves never regenerate (one-time clear).
 CAVE_RESET_DAYS: Dict[int, int] = {
     0: 1,     # Easy     — every day
     1: 1,     # Normal   — every day
-    2: 1,     # Hard     — every day
-    3: 1,     # Hardcore  — every day
+    2: 2,     # Hard     — every 2 days
+    3: 3,     # Hardcore  — every 3 days
 }
 
 
@@ -791,7 +791,26 @@ CAMPFIRE_HEAL_INTERVAL: float = 1.0
 # --- Light radii ---
 CAMPFIRE_LIGHT_RADIUS: int = 180
 TORCH_LIGHT_RADIUS: int = 120
+BEACON_LIGHT_RADIUS: int = 720          # 4× campfire
+STONE_OVEN_LIGHT_RADIUS: int = 120      # same as torch, only when burning
 REPAIR_RANGE: float = 60.0
+
+# --- Beacon controls ---
+BEACON_HP: int = 120
+BEACON_ATTRACT_RADIUS: float = 1440.0   # 2× light radius — enemies start moving toward beacon
+BEACON_ATTRACT_SPEED_OUTSIDE: float = 0.3  # speed mult for enemies outside beacon light
+BEACON_ATTRACT_SPEED_INSIDE: float = 0.5   # speed mult for enemies inside beacon light (1/2 player chase speed)
+
+# --- Stone Oven controls ---
+STONE_OVEN_HP: int = 80
+STONE_OVEN_SLOTS: int = 4               # 2×2 grid
+
+# --- Stone Oven smelting recipes ---
+# Each entry: ore_id, ingot_id, ore_per_ingot, wood_per_ingot, smelt_time_sec
+SMELTING_RECIPES: list = [
+    {'ore': 'iron_ore',     'result': 'iron',            'ore_cost': 1, 'wood_cost': 2, 'time': 10.0},
+    {'ore': 'titanium_ore', 'result': 'titanium_ingot',  'ore_cost': 1, 'wood_cost': 2, 'time': 30.0},
+]
 
 
 # ######################################################################

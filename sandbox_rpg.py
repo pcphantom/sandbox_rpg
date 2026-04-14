@@ -35,7 +35,7 @@ from systems import (
 )
 from ui import (
     ProgressBar, Tooltip, InventoryGrid, CraftingPanel, PauseMenu,
-    CharacterMenu, ChestUI, EnchantmentTableUI,
+    CharacterMenu, ChestUI, EnchantmentTableUI, StoneOvenUI,
 )
 from core.settings import (
     load_settings, save_settings,
@@ -148,6 +148,8 @@ class Game:
         self.active_chest: Optional[int] = None
         self.show_enchant_table = False
         self.active_enchant_table: Optional[int] = None
+        self.show_stone_oven = False
+        self.active_stone_oven: Optional[int] = None
         self.tooltip = Tooltip()
 
         # Placement preview mode
@@ -180,6 +182,7 @@ class Game:
         self.character_menu = CharacterMenu(self.textures)
         self.chest_ui = ChestUI(self.textures)
         self.enchant_table_ui = EnchantmentTableUI(self.textures)
+        self.stone_oven_ui = StoneOvenUI(self.textures)
 
         self.health_bar = ProgressBar(
             pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)

@@ -61,6 +61,7 @@ def update(g, dt: float) -> None:
     g.projectile_system.update(dt, g.em, on_hit=g._on_proj_hit)
     g.trap_system.update(dt, g.em, on_hit=g._on_trap_hit)
     g.turret_system.update(dt, g.em, on_fire=g._on_turret_fire)
+    g.stone_oven_ui.update(g, dt)
     g.daynight.update(dt)
 
     # Day change — cave regeneration and resource respawn (per difficulty)
