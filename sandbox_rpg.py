@@ -204,6 +204,11 @@ class Game:
         # Day-based respawn tracking
         self._last_resource_respawn_day: int = 1
         self._last_cave_reset_day: int = 1
+        # Harvested overworld resource grid positions (cleared on respawn day)
+        self.harvested_resources: set = set()
+        # Cave entity snapshots: cave_index -> list of entity dicts
+        # Persists cave state between entries/exits so caves don't reset
+        self.cave_snapshots: Dict[int, list] = {}
 
         self.dmg_numbers: List[Tuple[float, float, str,
                                      Tuple[int, int, int], float]] = []
@@ -360,14 +365,20 @@ class Game:
         pt.y = eyp - TILE_SIZE  # slightly above exit
         self.camera.follow(pt.x, pt.y)
         self.camera.snap()
-        # Populate cave
-        self._populate_cave(cave_index)
+        # Populate cave — restore snapshot if exists, otherwise fresh populate
+        if cave_index in self.cave_snapshots:
+            game_entities.restore_cave_snapshot(self, cave_index,
+                                                self.cave_snapshots[cave_index])
+        else:
+            self._populate_cave(cave_index)
         self.cave_teleport_cd = 1.5
         self._notify(f"Entered cave {cave_index + 1}...")
 
     def _exit_cave(self) -> None:
         """Teleport player back to overworld."""
         cave_index = self.in_cave
+        # Snapshot cave entities before destroying them
+        self.cave_snapshots[cave_index] = game_entities.snapshot_cave_entities(self)
         # Destroy cave entities
         self._destroy_non_player_entities()
         self.cave_entities.clear()
@@ -546,6 +557,8 @@ class Game:
         self.in_cave = -1
         self.overworld = None
         self.cave_entities.clear()
+        self.harvested_resources.clear()
+        self.cave_snapshots.clear()
         # Restore physics for overworld
         self.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
         self.player_id = self._create_player()
@@ -628,6 +641,8 @@ class Game:
         # If player dies in a cave, exit to overworld first
         if self.in_cave >= 0:
             cave_index = self.in_cave
+            # Snapshot cave state before leaving
+            self.cave_snapshots[cave_index] = game_entities.snapshot_cave_entities(self)
             self._destroy_non_player_entities()
             self.cave_entities.clear()
             assert self.overworld is not None

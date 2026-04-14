@@ -570,13 +570,13 @@ RESOURCE_RESPAWN_DAYS: Dict[int, int] = {
 
 # --- Cave reset interval ---
 # Days between automatic cave regeneration, per difficulty.
-# 1 = caves rebuild every day (current default).
+# 1 = caves rebuild every day (all difficulties — resets mobs and resources).
 # 0 = caves never regenerate (one-time clear).
 CAVE_RESET_DAYS: Dict[int, int] = {
     0: 1,     # Easy     — every day
     1: 1,     # Normal   — every day
-    2: 2,     # Hard     — every 2 days
-    3: 3,     # Hardcore  — every 3 days
+    2: 1,     # Hard     — every day
+    3: 1,     # Hardcore  — every day
 }
 
 

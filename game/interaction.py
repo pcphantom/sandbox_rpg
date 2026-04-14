@@ -123,6 +123,12 @@ def interact(g: 'Game') -> None:
                          random.randint(2, 3) + bonus + luck_bonus)
             th = g.em.get_component(nearest, Transform)
             g.particles.emit(th.x + 14, th.y + 10, 8, GRAY, 40, 0.3)
+        # Track harvested overworld resource positions (skip cave resources)
+        if g.in_cave < 0 and not (pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item):
+            th_h = g.em.get_component(nearest, Transform)
+            gx = int(th_h.x // TILE_SIZE)
+            gy = int(th_h.y // TILE_SIZE)
+            g.harvested_resources.add((gx, gy))
         g.em.destroy_entity(nearest)
 
 

@@ -66,6 +66,7 @@ def update(g, dt: float) -> None:
             if g.in_cave >= 0:
                 g._exit_cave()
             g.caves.regenerate(day)
+            g.cave_snapshots.clear()
             g._last_cave_reset_day = day
         # Resource respawn (controlled by RESOURCE_RESPAWN_DAYS per difficulty)
         res_interval = RESOURCE_RESPAWN_DAYS.get(g.difficulty, 0)

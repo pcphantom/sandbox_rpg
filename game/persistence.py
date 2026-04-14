@@ -114,6 +114,8 @@ def build_save_data(g: 'Game') -> Dict[str, Any]:
         'last_resource_respawn_day': g._last_resource_respawn_day,
         'last_cave_reset_day': g._last_cave_reset_day,
         'cheats_enabled': g.cheats_enabled,
+        'harvested_resources': list(g.harvested_resources),
+        'cave_snapshots': g.cave_snapshots,
     }
 
 
@@ -140,6 +142,11 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     g.in_cave = data.get('in_cave', -1)
     g.overworld = None
     g.cave_entities.clear()
+    # Restore harvested resources and cave snapshots BEFORE populating
+    g.harvested_resources = set(
+        tuple(pos) for pos in data.get('harvested_resources', []))
+    raw_snaps = data.get('cave_snapshots', {})
+    g.cave_snapshots = {int(k): v for k, v in raw_snaps.items()}
 
     for eid in list(g.em._entities):
         if eid != g.player_id:
@@ -151,7 +158,13 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
         g.overworld = g.world
         g.world = g.caves.interiors[g.in_cave]
         g.physics = PhysicsSystem(g.world.width, g.world.height)
-        g._populate_cave(g.in_cave)
+        # Restore cave from snapshot if available, otherwise fresh populate
+        from game import entities as _ge
+        if g.in_cave in g.cave_snapshots:
+            _ge.restore_cave_snapshot(g, g.in_cave,
+                                      g.cave_snapshots[g.in_cave])
+        else:
+            g._populate_cave(g.in_cave)
     else:
         g._populate_world()
 

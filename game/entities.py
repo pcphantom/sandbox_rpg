@@ -136,9 +136,12 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str) -> int:
 
 def populate_world(g: 'Game') -> None:
     rng = random.Random(g.seed + 12345)
+    harvested = g.harvested_resources
     for _ in range(TREE_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in harvested:
+            continue
         tile = g.world.get_tile(x, y)
         if tile in (TILE_GRASS, TILE_FOREST):
             eid = g.em.create_entity()
@@ -150,6 +153,8 @@ def populate_world(g: 'Game') -> None:
     for _ in range(FOREST_TREE_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in harvested:
+            continue
         if g.world.get_tile(x, y) == TILE_FOREST:
             eid = g.em.create_entity()
             g.em.add_component(eid, Transform(
@@ -160,6 +165,8 @@ def populate_world(g: 'Game') -> None:
     for _ in range(ROCK_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
+        if (x, y) in harvested:
+            continue
         if g.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
                                        TILE_STONE_FLOOR, TILE_FOREST):
             eid = g.em.create_entity()
@@ -488,6 +495,106 @@ def restore_structures(g: 'Game', structs: list) -> None:
         restore_structure(g, sd)
 
 
+def snapshot_cave_entities(g: 'Game') -> list:
+    """Capture all cave entity state for later restoration."""
+    data = []
+    for eid in g.cave_entities:
+        if not g.em.has_component(eid, Transform):
+            continue
+        t = g.em.get_component(eid, Transform)
+        entry: dict = {'x': t.x, 'y': t.y}
+        if g.em.has_component(eid, AI):
+            ai = g.em.get_component(eid, AI)
+            h = g.em.get_component(eid, Health) if g.em.has_component(eid, Health) else None
+            if h and not h.is_alive():
+                continue  # Skip dead mobs
+            entry['etype'] = 'mob'
+            entry['mob_type'] = ai.mob_type
+            entry['hp'] = h.current if h else 0
+            entry['max_hp'] = h.maximum if h else 0
+            entry['is_boss'] = ai.is_boss
+        elif g.em.has_component(eid, Placeable):
+            pl = g.em.get_component(eid, Placeable)
+            h = g.em.get_component(eid, Health) if g.em.has_component(eid, Health) else None
+            if g.em.has_component(eid, Storage):
+                stor = g.em.get_component(eid, Storage)
+                entry['etype'] = 'chest'
+                entry['hp'] = h.current if h else 0
+                entry['max_hp'] = h.maximum if h else 200
+                entry['storage'] = {
+                    str(s): [iid, c]
+                    for s, (iid, c) in stor.slots.items()
+                }
+                entry['storage_rarities'] = {
+                    str(s): r
+                    for s, r in stor.slot_rarities.items()
+                }
+                if stor.slot_enchantments:
+                    entry['storage_enchants'] = {
+                        str(s): e
+                        for s, e in stor.slot_enchantments.items()
+                    }
+            elif hasattr(pl, 'drop_item') and pl.drop_item:
+                entry['etype'] = 'resource'
+                entry['texture_key'] = pl.item_type
+                entry['drop_item'] = pl.drop_item
+                entry['hp'] = h.current if h else 0
+            else:
+                continue
+        else:
+            continue
+        data.append(entry)
+    return data
+
+
+def restore_cave_snapshot(g: 'Game', cave_index: int,
+                          snapshot: list) -> None:
+    """Restore cave entities from a snapshot instead of repopulating."""
+    g.cave_entities.clear()
+    for entry in snapshot:
+        etype = entry.get('etype', '')
+        if etype == 'mob':
+            hp = entry.get('hp', 0)
+            if hp <= 0:
+                continue  # Dead mob, skip
+            eid = create_cave_mob(g, entry['x'], entry['y'],
+                                  entry['mob_type'])
+            h = g.em.get_component(eid, Health) if g.em.has_component(eid, Health) else None
+            if h:
+                h.maximum = entry.get('max_hp', h.maximum)
+                h.current = min(hp, h.maximum)
+            g.cave_entities.append(eid)
+        elif etype == 'resource':
+            eid = create_cave_resource(
+                g, entry['x'], entry['y'],
+                entry['texture_key'], entry['drop_item'])
+            h = g.em.get_component(eid, Health) if g.em.has_component(eid, Health) else None
+            if h:
+                h.current = entry.get('hp', h.current)
+            g.cave_entities.append(eid)
+        elif etype == 'chest':
+            eid = g.em.create_entity()
+            g.em.add_component(eid, Transform(entry['x'], entry['y']))
+            g.em.add_component(eid, Renderable(
+                g.textures.get('cave_chest_placed'), layer=1))
+            g.em.add_component(eid, Collider(28, 24, True))
+            max_hp = entry.get('max_hp', 200)
+            g.em.add_component(eid, Health(max_hp))
+            h = g.em.get_component(eid, Health)
+            h.current = entry.get('hp', max_hp)
+            stor = Storage(CHEST_CAPACITY)
+            from core.item_stack import normalize_rarity
+            for s_str, (iid, c) in entry.get('storage', {}).items():
+                stor.slots[int(s_str)] = (iid, c)
+            for s_str, r in entry.get('storage_rarities', {}).items():
+                stor.slot_rarities[int(s_str)] = normalize_rarity(r)
+            for s_str, e in entry.get('storage_enchants', {}).items():
+                stor.slot_enchantments[int(s_str)] = e
+            g.em.add_component(eid, stor)
+            g.em.add_component(eid, Placeable('chest'))
+            g.cave_entities.append(eid)
+
+
 def destroy_non_player_entities(g: 'Game') -> None:
     for eid in list(g.em._entities):
         if eid != g.player_id:
@@ -497,10 +604,11 @@ def destroy_non_player_entities(g: 'Game') -> None:
 def respawn_resources(g: 'Game') -> None:
     """Replenish overworld trees and rocks that have been harvested.
 
-    Uses the same seed-based placement as populate_world so resources reappear
-    in consistent positions.  Skips tiles that already have an entity (tree,
-    rock, or player structure) to avoid overlaps.
+    Clears the harvested_resources tracking set so all positions become
+    available again, then uses a seed-based placement to add resources at
+    positions that are not already occupied by other entities.
     """
+    g.harvested_resources.clear()
     rng = random.Random(g.seed + 12345 + g.daynight.day_number)
     occupied = set()
     for eid in g.em.get_entities_with(Transform, Collider):
