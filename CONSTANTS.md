@@ -79,7 +79,8 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown (540×460) — **DO NOT MODIFY dimensions or layout** |
 | `ui/chest.py` | ChestUI | Chest storage with stacking rules (620×320) — **DO NOT MODIFY dimensions** |
 | `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
-| `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting interface |
+| `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting/cooking interface |
+| `ui/inventory_sort.py` | sort_inventory_slots | Inventory sorting (respects non-stackable rules) |
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
@@ -1378,7 +1379,6 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 ### Consumables
 | Result | Cost |
 |--------|------|
-| Berry Pie | berry×5, wood×1 |
 | Bandage | cloth×2, berry×1 |
 | Health Potion | berry×8, stone×2, cloth×1 |
 | Antidote | berry×3, bone×1 |
@@ -1408,11 +1408,26 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 |--------|------|
 | Brilliant Diamond | diamond×9 |
 
+### Stone Oven Fuel
+| Fuel Item | Fuel Units per Item | Notes |
+|-----------|--------------------:|-------|
+| wood | 5 | Standard fuel |
+| stick | 1 | Burns 5× faster than wood |
+
 ### Stone Oven Smelting Recipes
-| Result | Ore Cost | Wood Cost | Smelt Time |
+| Result | Ore Cost | Fuel Cost | Smelt Time |
 |--------|----------|-----------|------------|
-| Iron Ingot | iron_ore×1 | wood×2 | 10s |
-| Titanium Ingot | titanium_ore×1 | wood×2 | 30s |
+| Iron Ingot | iron_ore×1 | 10 fuel units | 10s |
+| Titanium Ingot | titanium_ore×1 | 10 fuel units | 30s |
+
+### Stone Oven Cooking Recipes
+| Result | Ingredients | Fuel Cost | Cook Time |
+|--------|-------------|-----------|-----------|
+| Berry Pie | berry×5 | 5 fuel units | 8s |
+
+### Stone Oven Valid Input Categories
+Items whose category is `material`, `consumable`, or `ammo` may be placed in the oven.
+Gear items (weapon, ranged, armor, shield, spell, tool, etc.) are rejected with "You don't want to burn that."
 
 ### Titanium & Diamond Gear
 | Result | Cost |
@@ -1479,7 +1494,7 @@ torch, campfire, trap, bed, wall, stone_wall_b, turret, chest, door, enchantment
 Items in these categories always occupy their own slot (count = 1 each):
 `weapon`, `ranged`, `armor`, `shield`, `spell`, `tool`, `enchantment`
 
-### Stack Splitting (`gui.py: SplitDialog`)
+### Stack Splitting (`ui/split_dialog.py: SplitDialog`)
 
 Right-click a stack (count > 1) in the inventory to open a split dialog.
 - Scroll wheel or +/- buttons adjust the split amount.
@@ -1487,7 +1502,7 @@ Right-click a stack (count > 1) in the inventory to open a split dialog.
 - Press Enter or click Confirm to split; Esc or Cancel to close.
 - Default split amount is half the stack.
 
-### Drop Item Confirm (`gui.py: DropConfirmDialog`)
+### Drop Item Confirm (`ui/drop_confirm.py: DropConfirmDialog`)
 
 Left-click outside the inventory panel while holding an item opens a confirmation dialog.
 - Shows item name (with rarity, enchant prefix, and count).
@@ -1495,6 +1510,13 @@ Left-click outside the inventory panel while holding an item opens a confirmatio
 - "Yes, Drop" destroys the held item (clears `held_item`, `held_enchant`, `held_rarity`).
 - "Cancel" or Esc closes the dialog; the item remains held.
 - Enter confirms the drop.
+
+### Inventory Sort (`ui/inventory_sort.py: sort_inventory_slots`)
+
+Click the "Sort" button below the inventory page navigation to sort and compact inventory slots.
+- Stackable items with matching identity (id + enchant + rarity) are merged.
+- Non-stackable items (weapons, armor, etc.) keep one unit per slot and are never merged.
+- Slots are compacted so there are no gaps, sorted alphabetically by item_id.
 
 ## Key Game State Fields (`sandbox_rpg.py: Game`)
 
@@ -2137,4 +2159,5 @@ Each weapon_id is matched (first match wins) to a (weapon_type, handle_color, he
 ### UI Window System
 - Opening one window (I/C/P) does NOT close other windows
 - Only ESC closes all windows simultaneously
-- Stone oven, chest, and enchantment table all auto-open inventory alongside themselves
+- Stone oven and enchantment table auto-open inventory alongside themselves
+- Chest does NOT auto-open inventory (chest UI has its own built-in inventory panel)
