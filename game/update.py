@@ -24,6 +24,9 @@ from enchantments.effects import get_enchant_regen_rate
 
 def update(g, dt: float) -> None:
     """Run one simulation tick.  ``g`` is the :class:`sandbox_rpg.Game` instance."""
+    # Invalidate per-frame ECS query cache at the very start of each tick.
+    g.em.clear_query_cache()
+
     # Command bar timer update (runs even when no keys are pressed)
     g.command_bar.update(dt)
 
@@ -218,6 +221,7 @@ def update(g, dt: float) -> None:
             g._on_mob_killed(eid)
 
     # Kill dead placeables
+    from core.spatial import spatial_hash as _sh
     for eid in list(g.em.get_entities_with(Health, Placeable)):
         if g.em.has_component(eid, AI):
             continue
@@ -232,6 +236,7 @@ def update(g, dt: float) -> None:
             if g.active_enchant_table == eid:
                 g.show_enchant_table = False
                 g.active_enchant_table = None
+            _sh.remove(eid)
             g.em.destroy_entity(eid)
 
     # Mob contact damage

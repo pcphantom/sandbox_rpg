@@ -712,6 +712,8 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
                     (pt.x, pt.y - 30, 'YOU DIED', RED, 2.5))
             break
     for pid in to_remove:
+        from core.spatial import spatial_hash
+        spatial_hash.remove(pid)
         g.em.destroy_entity(pid)
 
 

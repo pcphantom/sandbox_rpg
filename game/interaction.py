@@ -173,6 +173,8 @@ def interact(g: 'Game') -> None:
                 gx = int(th_h.x // TILE_SIZE)
                 gy = int(th_h.y // TILE_SIZE)
                 g.harvested_resources.add((gx, gy))
+        from core.spatial import spatial_hash
+        spatial_hash.remove(nearest)
         g.em.destroy_entity(nearest)
 
 
@@ -469,6 +471,8 @@ def placement_confirm(g: 'Game') -> None:
             old_name = ITEM_DATA[existing_placeable.item_type][0]
             td = g.em.get_component(existing_bid, Transform)
             g.particles.emit(td.x + 10, td.y + 10, 6, GRAY, 40, 0.3)
+            from core.spatial import spatial_hash
+            spatial_hash.remove(existing_bid)
             g.em.destroy_entity(existing_bid)
             inv_check.remove_item(g.placement_item, 1)
             min_tx = min(t[0] for t in tiles)
@@ -668,6 +672,13 @@ def place_item(g: 'Game', item_id: str,
         g.em.add_component(eid, Health(apply_rarity(STONE_OVEN_HP, rarity)))
         g.em.add_component(eid, Storage(STONE_OVEN_SLOTS))
         g.em.add_component(eid, Building('stone_oven'))
+
+    # Register in spatial hash
+    from core.spatial import spatial_hash
+    col = g.em.get_component(eid, Collider) if g.em.has_component(eid, Collider) else None
+    cw = col.width if col else TILE_SIZE
+    ch = col.height if col else TILE_SIZE
+    spatial_hash.insert(eid, px, py, cw, ch)
 
 
 # ======================================================================

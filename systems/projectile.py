@@ -48,4 +48,6 @@ class ProjectileSystem:
                     to_remove.append(pid)
                     break
         for pid in set(to_remove):
+            from core.spatial import spatial_hash
+            spatial_hash.remove(pid)
             em.destroy_entity(pid)
