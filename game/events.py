@@ -119,38 +119,12 @@ def handle_events(g) -> None:
                 if g.show_inventory:
                     g._return_held_item()
                 g.show_inventory = not g.show_inventory
-                g.show_crafting = False
-                g.show_character = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_c:
-                g._return_held_item()
                 g.show_crafting = not g.show_crafting
-                g.show_inventory = False
-                g.show_character = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_p:
-                g._return_held_item()
                 g.show_character = not g.show_character
-                g.show_inventory = False
-                g.show_crafting = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_f:
                 g._use_equipped_item()
@@ -288,6 +262,9 @@ def handle_events(g) -> None:
                 g.em.get_component(g.player_id, Equipment),
                 g.em.get_component(g.player_id, Inventory),
             )
+            if g.character_menu.equipment_changed:
+                g.character_menu.equipment_changed = False
+                g._rebuild_player_sprite()
             if g.character_menu.dw.close_requested:
                 g._return_held_item()
                 g.show_character = False

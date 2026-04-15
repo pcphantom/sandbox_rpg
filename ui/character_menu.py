@@ -54,6 +54,8 @@ class CharacterMenu:
         self._dropdown_max_visible: int = 6
         self._dropdown_row_h: int = 24
         self.dw = DraggableWindow(540, 460, title="Character")
+        # Set True whenever equipment changes so Game can rebuild sprite
+        self.equipment_changed: bool = False
 
     def draw(self, surface: pygame.Surface,
              stats: PlayerStats, equipment: Equipment,
@@ -339,6 +341,7 @@ class CharacterMenu:
             equipment.enchantments[attr] = ench
         equipment.rarities[attr] = rar
         self._dropdown_open = False
+        self.equipment_changed = True
 
     def handle_event(self, event: pygame.event.Event,
                      stats: PlayerStats, equipment: Equipment,
@@ -402,6 +405,7 @@ class CharacterMenu:
                     rar = equipment.rarities.pop(attr, 'common')
                     inventory.add_item_enchanted(item_id, ench, 1, rar)
                     setattr(equipment, attr, None)
+                    self.equipment_changed = True
                 else:
                     # Equip — open dropdown to let player choose
                     self._open_dropdown(attr, inventory,

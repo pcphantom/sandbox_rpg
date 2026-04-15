@@ -196,72 +196,194 @@ def draw_pants(style: str, color: Color) -> pygame.Surface:
     return s
 
 
+# ---------------------------------------------------------------------------
+# Weapon overlay colour profiles — keyed by weapon_id substring match order.
+# Each entry: (handle_color, head_color)
+# Matched top-to-bottom; first match wins.
+# ---------------------------------------------------------------------------
+_WEAPON_PROFILES: list[tuple[str, Color, Color]] = [
+    # --- swords (blade + guard + handle) ---
+    ('iron_sword',   (80, 60, 30),  (200, 210, 230)),
+    ('sword',        (100, 70, 35), (180, 180, 200)),
+    # --- pickaxes (before axe so 'pickaxe' matches first) ---
+    ('diamond_pickaxe',  (120, 80, 40), (140, 200, 255)),
+    ('titanium_pickaxe', (120, 80, 40), (160, 170, 200)),
+    ('iron_pickaxe',     (120, 80, 40), (170, 170, 190)),
+    ('pickaxe',          (120, 80, 40), (160, 160, 170)),
+    # --- axes ---
+    ('diamond_axe',   (120, 80, 40), (140, 200, 255)),
+    ('titanium_axe',  (120, 80, 40), (160, 170, 200)),
+    ('iron_axe',      (120, 80, 40), (170, 170, 190)),
+    ('axe',           (120, 80, 40), (180, 180, 200)),
+    # --- mace ---
+    ('mace',  (120, 80, 40), (160, 160, 175)),
+    # --- spear ---
+    ('spear', (120, 80, 40), (180, 190, 210)),
+    # --- bone club ---
+    ('bone_club', (200, 195, 180), (230, 225, 210)),
+]
+
+
+def _match_weapon(weapon_id: str) -> tuple[str, Color, Color]:
+    """Return (weapon_type, handle_color, head_color) for a weapon_id."""
+    for key, handle, head in _WEAPON_PROFILES:
+        if key in weapon_id:
+            # Determine broad type for drawing shape
+            if 'sword' in key:
+                return 'sword', handle, head
+            if 'pickaxe' in key:
+                return 'pickaxe', handle, head
+            if 'axe' in key:
+                return 'axe', handle, head
+            if 'mace' in key:
+                return 'mace', handle, head
+            if 'spear' in key:
+                return 'spear', handle, head
+            if 'club' in key:
+                return 'club', handle, head
+    return 'generic', (120, 80, 40), (180, 180, 200)
+
+
 def draw_weapon_overlay(weapon_id: str) -> pygame.Surface:
-    """Draw a small weapon icon at the right-hand position."""
+    """Draw a small weapon icon at the right-hand position.
+
+    Each weapon type has a distinct silhouette and uses colour profiles
+    derived from the matching item texture so the overlay is an accurate
+    miniature representation of the equipped weapon.
+    """
     s = pygame.Surface((24, 32), pygame.SRCALPHA)
     if not weapon_id:
         return s
-    blade = (180, 180, 200, 255)
-    handle = (120, 80, 40, 255)
-    if 'sword' in weapon_id:
+
+    wtype, handle_c, head_c = _match_weapon(weapon_id)
+    h4 = (*handle_c, 255)
+    m4 = (*head_c, 255)
+    # Slightly brighter version for edge highlights
+    hi4 = (min(255, head_c[0] + 20),
+           min(255, head_c[1] + 20),
+           min(255, head_c[2] + 20), 255)
+
+    if wtype == 'sword':
+        # Blade — 2-pixel-wide, pointing up from hand
         for y in range(12, 22):
-            s.set_at((21, y), blade)
-        s.set_at((20, 22), handle)
-        s.set_at((22, 22), handle)
-    elif 'axe' in weapon_id or 'pickaxe' in weapon_id:
-        for y in range(14, 23):
-            s.set_at((21, y), handle)
+            s.set_at((21, y), m4)
+            s.set_at((22, y), hi4)
+        s.set_at((21, 11), hi4)  # tip
+        # Guard
+        guard = (min(255, handle_c[0] + 60),
+                 min(255, handle_c[1] + 40), 30, 255)
+        for x in range(20, 24):
+            if x < 24:
+                s.set_at((x, 22), guard)
+        # Pommel
+        s.set_at((21, 23), h4)
+        s.set_at((22, 23), h4)
+    elif wtype == 'axe':
+        # Handle
+        for y in range(15, 24):
+            s.set_at((21, y), h4)
+        # Axe head — triangular on one side
+        for y in range(12, 17):
+            s.set_at((22, y), m4)
+            s.set_at((23, y), m4 if y < 16 else hi4)
+        s.set_at((22, 11), hi4)  # top edge
+    elif wtype == 'pickaxe':
+        # Handle
+        for y in range(16, 24):
+            s.set_at((21, y), h4)
+        # Pick head — horizontal pointed shape
+        for x in range(19, 24):
+            if x < 24:
+                s.set_at((x, 14), m4)
+                s.set_at((x, 15), m4)
+        s.set_at((19, 13), hi4)  # pointed tip left
+        s.set_at((23, 13), hi4)  # pointed tip right
+    elif wtype == 'mace':
+        # Handle
+        for y in range(17, 24):
+            s.set_at((21, y), h4)
+        # Spiked head — rough circle
+        for y in range(13, 17):
+            for x in range(20, 24):
+                if x < 24 and (x - 21) ** 2 + (y - 15) ** 2 < 5:
+                    s.set_at((x, y), m4)
+        # Spikes
+        s.set_at((21, 12), hi4)
+        s.set_at((19, 15), hi4)
+        s.set_at((23, 15), hi4) if 23 < 24 else None
+    elif wtype == 'spear':
+        # Long shaft
+        for y in range(10, 24):
+            s.set_at((21, y), h4)
+        # Spear tip
+        s.set_at((21, 8), hi4)
+        s.set_at((20, 9), m4)
+        s.set_at((21, 9), m4)
+        s.set_at((22, 9), m4)
+    elif wtype == 'club':
+        # Shaft
+        for y in range(17, 24):
+            s.set_at((21, y), h4)
+        # Thick head
         for y in range(13, 18):
-            s.set_at((22, y), blade)
-            if 23 < 24:
-                s.set_at((23, y), blade)
-    elif 'mace' in weapon_id:
-        for y in range(16, 23):
-            s.set_at((21, y), handle)
-        for y in range(13, 17):
-            for x in range(20, min(24, 24)):
-                s.set_at((x, y), (160, 160, 180, 255))
-    elif 'spear' in weapon_id:
-        for y in range(8, 23):
-            s.set_at((21, y), handle)
-        s.set_at((21, 7), blade)
-        s.set_at((20, 8), blade)
-        s.set_at((22, 8), blade)
-    elif 'club' in weapon_id:
-        for y in range(16, 23):
-            s.set_at((21, y), (160, 140, 100, 255))
-        for y in range(13, 17):
             for x in range(20, 23):
-                s.set_at((x, y), (180, 160, 120, 255))
+                s.set_at((x, y), m4)
     else:
-        for y in range(14, 23):
-            s.set_at((21, y), blade)
+        # Generic fallback
+        for y in range(14, 24):
+            s.set_at((21, y), m4)
     return s
 
 
+# ---------------------------------------------------------------------------
+# Shield overlay colour profiles
+# ---------------------------------------------------------------------------
+_SHIELD_PROFILES: list[tuple[str, Color, Color, Color]] = [
+    # (key, fill_color, border_color, emblem_color)
+    ('iron_shield', (160, 160, 180), (120, 120, 135), (200, 205, 220)),
+    ('wood_shield', (130, 91, 30),   (80, 60, 40),    (180, 180, 200)),
+]
+
+
 def draw_shield_overlay(shield_id: str) -> pygame.Surface:
-    """Draw a small shield icon at the left-hand position."""
+    """Draw a small shield icon at the left-hand position.
+
+    Uses colour profiles matched to the item texture so the overlay
+    accurately represents the equipped shield.
+    """
     s = pygame.Surface((24, 32), pygame.SRCALPHA)
     if not shield_id:
         return s
-    fill = (100, 80, 60, 255)
-    if 'iron' in shield_id:
-        fill = (160, 160, 180, 255)
-    border = (80, 60, 40, 255)
+
+    # Match profile
+    fill = (100, 80, 60)
+    border_c = (80, 60, 40)
+    emblem_c = (200, 180, 60)
+    for key, fc, bc, ec in _SHIELD_PROFILES:
+        if key in shield_id:
+            fill, border_c, emblem_c = fc, bc, ec
+            break
+
+    f4 = (*fill, 255)
+    b4 = (*border_c, 255)
+    e4 = (*emblem_c, 255)
+
+    # Shield body (4x8 rectangle at left hand)
     for y in range(15, 23):
         for x in range(0, 4):
-            s.set_at((x, y), fill)
+            s.set_at((x, y), f4)
+    # Border edges
     for y in range(15, 23):
-        s.set_at((0, y), border)
-        s.set_at((3, y), border)
+        s.set_at((0, y), b4)
+        s.set_at((3, y), b4)
     for x in range(0, 4):
-        s.set_at((x, 15), border)
-        s.set_at((x, 22), border)
-    # Center emblem
-    s.set_at((1, 18), (200, 180, 60, 255))
-    s.set_at((2, 18), (200, 180, 60, 255))
-    s.set_at((1, 19), (200, 180, 60, 255))
-    s.set_at((2, 19), (200, 180, 60, 255))
+        s.set_at((x, 15), b4)
+        s.set_at((x, 22), b4)
+    # Center emblem (boss)
+    s.set_at((1, 18), e4)
+    s.set_at((2, 18), e4)
+    s.set_at((1, 19), e4)
+    s.set_at((2, 19), e4)
     return s
 
 

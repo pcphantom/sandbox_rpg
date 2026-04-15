@@ -102,6 +102,12 @@ class Game:
         self.in_about_menu = False
         self.about_section: str = ''  # 'game', 'index', 'noobfragged', 'credits'
         self.about_scroll: int = 0  # scroll position for long text
+        self.in_char_gen = False
+
+        # Character customization data + UI
+        from character.generator import CharacterData, CharacterGenerator
+        self.char_data = CharacterData()
+        self.char_gen_ui = CharacterGenerator()
 
         # Fonts
         self.font = pygame.font.SysFont('consolas', FONT_SIZE_MAIN)
@@ -249,6 +255,18 @@ class Game:
     def _notify(self, msg: str, duration: float = NOTIFICATION_DURATION) -> None:
         self.notification = msg
         self.notification_timer = duration
+
+    def _rebuild_player_sprite(self) -> None:
+        """Rebuild the player sprite from char_data + current equipment."""
+        from core.components import Renderable, Equipment as Equip
+        eq: Equip = self.em.get_component(self.player_id, Equip)
+        weapon = eq.weapon or '' if eq else ''
+        shield = eq.shield or '' if eq else ''
+        sprite = self.char_data.build_sprite(weapon, shield)
+        self.textures.cache['player'] = sprite
+        pr: Renderable = self.em.get_component(self.player_id, Renderable)
+        if pr:
+            pr.surface = sprite
 
     def _create_display(self) -> pygame.Surface:
         """Create or recreate the pygame display for current settings."""
@@ -437,7 +455,10 @@ class Game:
             dt = min(self.clock.tick(FPS) / 1000.0, 0.05)  # Cap at 50ms to prevent velocity spikes
             # Handle global display events
             self._process_display_events()
-            if self.in_about_menu:
+            if self.in_char_gen:
+                self.char_gen_ui.handle_events(self)
+                self.char_gen_ui.draw(self)
+            elif self.in_about_menu:
                 from ui.about_menu import handle_about_events, draw_about_menu, draw_about_section
                 handle_about_events(self)
                 if self.about_section:

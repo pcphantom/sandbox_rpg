@@ -47,7 +47,7 @@ def handle_main_menu_events(g: 'Game') -> None:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 g.in_main_menu = False
-                g.music_manager.start(g.daynight.is_night())
+                g.in_char_gen = True
             elif event.key == pygame.K_q:
                 g.running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -57,15 +57,26 @@ def handle_main_menu_events(g: 'Game') -> None:
             start_y = 300
             if pygame.Rect(bx, start_y, btn_w, btn_h).collidepoint(mx, my):
                 g.in_main_menu = False
-                g.music_manager.start(g.daynight.is_night())
+                g.in_char_gen = True
             load_y = start_y + 60
             if pygame.Rect(bx, load_y, btn_w, btn_h).collidepoint(mx, my):
                 data = save_load.load_game(QUICK_SAVE_SLOT)
                 if data:
                     g._apply_save_data(data)
-                g.in_main_menu = False
-                g.paused = True
-                g.music_manager.start(g.daynight.is_night())
+                    # Check if save is missing character data (legacy save)
+                    from character.legacy_save_migration import check_needs_migration
+                    if check_needs_migration(data):
+                        g.in_main_menu = False
+                        g.in_char_gen = True
+                        g.char_gen_ui._is_legacy_migration = True
+                    else:
+                        g.in_main_menu = False
+                        g.paused = True
+                        g.music_manager.start(g.daynight.is_night())
+                else:
+                    g.in_main_menu = False
+                    g.paused = True
+                    g.music_manager.start(g.daynight.is_night())
             opts_y = load_y + 60
             if pygame.Rect(bx, opts_y, btn_w, btn_h).collidepoint(mx, my):
                 g.in_options_menu = True

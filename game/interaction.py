@@ -69,15 +69,14 @@ def interact(g: 'Game') -> None:
             elif bld and bld.building_type == 'enchantment_table':
                 g.show_enchant_table = True
                 g.active_enchant_table = eid
+                g.show_inventory = True  # Open inventory alongside enchantment table
             else:
                 g.show_chest = True
                 g.active_chest = eid
                 g.chest_ui.chest_scroll = 0
+                g.show_inventory = True  # Open inventory alongside chest
                 if g.in_cave >= 0:
                     g.caves.chest_looted[g.in_cave] = True
-            g.show_inventory = False
-            g.show_crafting = False
-            g.show_character = False
             return
 
     # Harvest

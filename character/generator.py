@@ -109,6 +109,8 @@ class CharacterGenerator:
         self._font_sm = pygame.font.SysFont('consolas', 13)
         self._font_lg = pygame.font.SysFont('consolas', 22, bold=True)
         self._preview_weapon: bool = True  # toggle in preview
+        # Set to True when opened for a legacy save migration
+        self._is_legacy_migration: bool = False
 
     # ------------------------------------------------------------------
     # Drawing
@@ -190,6 +192,8 @@ class CharacterGenerator:
             opt_y += _ROW_H + 8
 
         # "Save and Start Game" button
+        btn_label = ("Save and Continue" if self._is_legacy_migration
+                     else "Save and Start Game")
         btn_w, btn_h = 240, 46
         btn_x = SCREEN_WIDTH // 2 - btn_w // 2
         btn_y = py + ph + 20
@@ -199,7 +203,7 @@ class CharacterGenerator:
         pygame.draw.rect(screen, bc, btn_r, border_radius=6)
         bd = GREEN if hov else UI_BORDER_NORMAL
         pygame.draw.rect(screen, bd, btn_r, 2, border_radius=6)
-        bt = self._font.render("Save and Start Game", True,
+        bt = self._font.render(btn_label, True,
                                WHITE if hov else GRAY)
         screen.blit(bt, (btn_r.centerx - bt.get_width() // 2,
                          btn_r.centery - bt.get_height() // 2))
@@ -341,10 +345,17 @@ class CharacterGenerator:
     def _start_game(self, g: 'Game') -> None:
         """Finalize character and enter the game."""
         from core.components import Renderable, Equipment
-        # Build final sprite (no weapon/shield yet — player starts unarmed)
-        sprite = g.char_data.build_sprite()
+        # Build sprite with current equipment if loading a save
+        eq: Equipment = g.em.get_component(g.player_id, Equipment)
+        weapon = eq.weapon or '' if eq else ''
+        shield = eq.shield or '' if eq else ''
+        sprite = g.char_data.build_sprite(weapon, shield)
         g.textures.cache['player'] = sprite
         pr: Renderable = g.em.get_component(g.player_id, Renderable)
         pr.surface = sprite
         g.in_char_gen = False
+        if self._is_legacy_migration:
+            # Returning to a loaded game — go to paused state
+            g.paused = True
+            self._is_legacy_migration = False
         g.music_manager.start(g.daynight.is_night())
