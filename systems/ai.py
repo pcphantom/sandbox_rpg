@@ -6,6 +6,7 @@ from typing import Any
 from core.ecs import EntityManager
 from core.components import (Transform, Velocity, Collider, Health,
                              AI, Placeable, Turret, Building)
+from core.spatial import spatial_hash
 from enchantments.effects import get_enchant_dr_bonus
 from core.enhancement import enhanced_turret_dr
 from game_controller import (
@@ -38,8 +39,13 @@ class AISystem:
         step = max(cw, ch) * AI_PROBE_STEP_MULT
         probe_x = t.x + (dx / dist) * step
         probe_y = t.y + (dy / dist) * step
-        for bid in em.get_entities_with(Transform, Collider):
+        # Use spatial hash broadphase instead of scanning all entities
+        candidates = spatial_hash.query_rect(
+            probe_x, probe_y, cw, ch)
+        for bid in candidates:
             if bid == eid:
+                continue
+            if not em.has_component(bid, Collider):
                 continue
             bc = em.get_component(bid, Collider)
             if not bc.solid:
@@ -87,8 +93,17 @@ class AISystem:
             if mob_ai.state != "chase" and mob_ai.behavior == "wander":
                 best_placeable = None
                 best_distance = mob_ai.detection_range
-                for pid in em.get_entities_with(Transform, Building, Health):
+                # Use spatial hash to find nearby buildings instead of full scan
+                candidates = spatial_hash.query_radius(
+                    t.x, t.y, mob_ai.detection_range)
+                for pid in candidates:
+                    if not em.has_component(pid, Building):
+                        continue
+                    if not em.has_component(pid, Health):
+                        continue
                     pt2 = em.get_component(pid, Transform)
+                    if not pt2:
+                        continue
                     d2 = math.hypot(pt2.x - t.x, pt2.y - t.y)
                     if d2 < best_distance:
                         best_distance = d2
@@ -123,7 +138,12 @@ class AISystem:
                                 near_light = False
                                 from core.components import LightSource
                                 from game_controller import LIGHT_SAFETY_RADIUS
-                                for lid in em.get_entities_with(Transform, LightSource):
+                                # Use spatial hash for light source proximity
+                                light_candidates = spatial_hash.query_radius(
+                                    tt.x, tt.y, LIGHT_SAFETY_RADIUS)
+                                for lid in light_candidates:
+                                    if not em.has_component(lid, LightSource):
+                                        continue
                                     lt = em.get_component(lid, Transform)
                                     if math.hypot(lt.x - tt.x, lt.y - tt.y) < LIGHT_SAFETY_RADIUS:
                                         near_light = True

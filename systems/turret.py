@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional
 
 from core.ecs import EntityManager
 from core.components import Transform, Health, AI, Turret
+from core.spatial import spatial_hash
 from enchantments.effects import (
     get_enchant_bonus_damage,
     get_enchant_arc_radius,
@@ -50,10 +51,18 @@ class TurretSystem:
                 continue
             tt = em.get_component(tid, Transform)
 
-            # Find nearest mob
+            # Find nearest mob using spatial hash
             best_eid, best_dist = None, turr.fire_range
-            for mid in em.get_entities_with(Transform, Health, AI):
+            candidates = spatial_hash.query_radius(
+                tt.x, tt.y, turr.fire_range)
+            for mid in candidates:
+                if not em.has_component(mid, AI):
+                    continue
+                if not em.has_component(mid, Health):
+                    continue
                 mt = em.get_component(mid, Transform)
+                if not mt:
+                    continue
                 d = math.hypot(mt.x - tt.x, mt.y - tt.y)
                 if d < best_dist:
                     best_dist = d
@@ -86,10 +95,19 @@ class TurretSystem:
                 arc_radius = get_enchant_arc_radius(turr.enchant)
                 arc_frac = get_enchant_arc_damage_frac(turr.enchant)
                 arc_dmg = max(1, int(total_dmg * arc_frac))
-                for mid2 in em.get_entities_with(Transform, Health, AI):
+                # Use spatial hash for arc range check
+                arc_candidates = spatial_hash.query_radius(
+                    mt.x, mt.y, arc_radius)
+                for mid2 in arc_candidates:
                     if mid2 == best_eid:
                         continue
+                    if not em.has_component(mid2, AI):
+                        continue
+                    if not em.has_component(mid2, Health):
+                        continue
                     mt2 = em.get_component(mid2, Transform)
+                    if not mt2:
+                        continue
                     if math.hypot(mt2.x - mt.x, mt2.y - mt.y) <= arc_radius:
                         mh2 = em.get_component(mid2, Health)
                         mh2.damage(arc_dmg)

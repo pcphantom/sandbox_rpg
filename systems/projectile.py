@@ -4,6 +4,7 @@ from typing import Any
 
 from core.ecs import EntityManager
 from core.components import Transform, Velocity, Health, AI, Projectile
+from core.spatial import spatial_hash
 from game_controller import PROJ_MOB_HIT_RADIUS
 
 
@@ -32,8 +33,17 @@ class ProjectileSystem:
             is_player_proj = not em.has_component(proj.owner, AI)
             if not is_player_proj:
                 continue
-            for mid in em.get_entities_with(Transform, Health, AI):
+            # Use spatial hash for mob collision
+            candidates = spatial_hash.query_radius(
+                pt.x, pt.y, PROJ_MOB_HIT_RADIUS)
+            for mid in candidates:
+                if not em.has_component(mid, AI):
+                    continue
+                if not em.has_component(mid, Health):
+                    continue
                 mt = em.get_component(mid, Transform)
+                if not mt:
+                    continue
                 if math.hypot(mt.x - pt.x, mt.y - pt.y) < PROJ_MOB_HIT_RADIUS:
                     mh = em.get_component(mid, Health)
                     if not proj.is_bomb:
@@ -48,6 +58,5 @@ class ProjectileSystem:
                     to_remove.append(pid)
                     break
         for pid in set(to_remove):
-            from core.spatial import spatial_hash
             spatial_hash.remove(pid)
             em.destroy_entity(pid)
