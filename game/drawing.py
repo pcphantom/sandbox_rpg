@@ -804,6 +804,10 @@ def draw_spell_targeting(g: 'Game') -> None:
 # ======================================================================
 
 def draw_boss_glow(g: 'Game') -> None:
+    from game_controller import (
+        ELITE_TIER_COLORS, ELITE_GLOW_EXPAND,
+        ELITE_GLOW_PULSE_SPEED, ELITE_GLOW_ALPHA_MIN, ELITE_GLOW_ALPHA_MAX,
+    )
     for eid in g.em.get_entities_with(Transform, AI):
         ai_c = g.em.get_component(eid, AI)
         t = g.em.get_component(eid, Transform)
@@ -819,23 +823,38 @@ def draw_boss_glow(g: 'Game') -> None:
                                (radius, radius), radius)
             g.screen.blit(glow_surf, (sx - radius, sy - radius),
                            special_flags=pygame.BLEND_RGBA_ADD)
-        # Elite glow (subtle lit border, NOT boss-style full aura)
-        elif ai_c.is_elite:
-            from game_controller import ELITE_GLOW_COLOR
-            pulse = 0.6 + 0.4 * math.sin(pygame.time.get_ticks() * 0.004)
+        # Elite glow — silhouette-based neon outline matching the enemy shape
+        elif ai_c.is_elite and ai_c.elite_tier > 0:
             rend = g.em.get_component(eid, Renderable)
-            if rend and rend.surface:
-                w, h = rend.surface.get_width(), rend.surface.get_height()
-                border_rect = pygame.Rect(sx - w // 2 - 2, sy - h // 2 - 2,
-                                          w + 4, h + 4)
-                er, eg, eb = ELITE_GLOW_COLOR
-                alpha = int(120 * pulse)
-                glow = pygame.Surface((border_rect.width, border_rect.height),
-                                      pygame.SRCALPHA)
-                pygame.draw.rect(glow, (er, eg, eb, alpha),
-                                 (0, 0, border_rect.width, border_rect.height), 2,
-                                 border_radius=3)
-                g.screen.blit(glow, border_rect.topleft)
+            if not (rend and rend.surface):
+                continue
+            tier_color = ELITE_TIER_COLORS.get(ai_c.elite_tier, (60, 140, 255))
+            pulse = (math.sin(pygame.time.get_ticks() * ELITE_GLOW_PULSE_SPEED) + 1.0) * 0.5
+            alpha = int(ELITE_GLOW_ALPHA_MIN + pulse * (ELITE_GLOW_ALPHA_MAX - ELITE_GLOW_ALPHA_MIN))
+            sprite = rend.surface
+            sw, sh = sprite.get_width(), sprite.get_height()
+            expand = ELITE_GLOW_EXPAND
+            # Build an expanded silhouette by blitting the sprite's alpha mask
+            # shifted in 8 directions (N, S, E, W, NE, NW, SE, SW).
+            outline_w = sw + expand * 2
+            outline_h = sh + expand * 2
+            outline_surf = pygame.Surface((outline_w, outline_h), pygame.SRCALPHA)
+            # Create a solid-color version of the sprite for the outline
+            solid = pygame.Surface((sw, sh), pygame.SRCALPHA)
+            solid.fill((*tier_color, alpha))
+            # Use the sprite's alpha as a mask
+            mask_surf = sprite.copy()
+            solid.blit(mask_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            # Blit in all 8 directions + center for the expanded outline
+            for ox, oy in [(-expand, 0), (expand, 0), (0, -expand), (0, expand),
+                           (-expand, -expand), (expand, -expand),
+                           (-expand, expand), (expand, expand)]:
+                outline_surf.blit(solid, (expand + ox, expand + oy))
+            # Draw the outline behind the sprite
+            draw_x = sx - outline_w // 2
+            draw_y = sy - outline_h // 2
+            g.screen.blit(outline_surf, (draw_x, draw_y),
+                          special_flags=pygame.BLEND_RGBA_ADD)
 
 
 # ======================================================================

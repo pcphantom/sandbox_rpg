@@ -38,7 +38,10 @@ from data import (
     ITEM_DATA, RANGED_DATA, AMMO_BONUS_DAMAGE,
     SPELL_DATA, SPELL_RECHARGE, BOMB_DATA, MOB_DATA,
 )
-from systems.damage_calc import calc_melee_damage, calc_ranged_damage, calc_damage_reduction
+from systems.damage_calc import (
+    calc_melee_damage, calc_ranged_damage, calc_damage_reduction,
+    calc_total_dr, apply_damage_reduction,
+)
 from core.item_stack import normalize_rarity
 
 
@@ -296,27 +299,102 @@ def on_proj_hit(g: 'Game', target_eid: int, damage: int,
         g.camera.shake(HIT_SHAKE_AMOUNT * 2, HIT_SHAKE_DURATION)
         return
 
-    g.dmg_numbers.append(
-        (proj_t.x, proj_t.y - 16, str(damage), CYAN, 0.8))
-    g.particles.emit(proj_t.x, proj_t.y, 5, CYAN, 40, 0.3)
+    # Determine spell type for proper explosion effects
+    from game_controller import SPELL_EXPLOSION_PARTICLES, SPELL_EXPLOSION_RADIUS
+    spell_id = proj.spell_id if proj else None
+    tier = 1
+    if spell_id:
+        tier = _get_spell_tier(spell_id)
 
-    if proj and proj.spell_id == 'spell_ice' and target_eid >= 0:
-        sdata = SPELL_DATA.get('spell_ice')
-        if sdata and g.em.has_component(target_eid, AI):
-            ai_c: AI = g.em.get_component(target_eid, AI)
-            slow_factor = sdata.get('slow_factor', 0.4)
-            slow_dur = sdata.get('slow_duration', 3.0)
-            ai_c.speed *= slow_factor
-            original_speed = MOB_DATA.get(ai_c.mob_type, {}).get(
-                'speed', ai_c.speed / slow_factor)
-            schedule_speed_restore(g, target_eid, original_speed, slow_dur)
-            g.particles.emit(
-                proj_t.x, proj_t.y, 8, PARTICLE_COLOR_ICE, 50, 0.4)
+    explosion_count = SPELL_EXPLOSION_PARTICLES.get(tier, 10)
+    explosion_radius = SPELL_EXPLOSION_RADIUS.get(tier, 50)
+
+    # Element-specific explosion effects
+    if spell_id and 'fireball' in spell_id:
+        # Fire explosion — red-orange burst
+        g.dmg_numbers.append(
+            (proj_t.x, proj_t.y - 16, str(damage), ORANGE, 0.8))
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count, PARTICLE_COLOR_FIRE,
+                         explosion_radius, 0.5)
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count // 2, RED,
+                         explosion_radius * 0.7, 0.4)
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count // 3, YELLOW,
+                         explosion_radius * 0.4, 0.3)
+        g.camera.shake(HIT_SHAKE_AMOUNT, HIT_SHAKE_DURATION)
+    elif spell_id and 'ice' in spell_id:
+        # Ice explosion — cyan-white burst + slow
+        g.dmg_numbers.append(
+            (proj_t.x, proj_t.y - 16, str(damage), PARTICLE_COLOR_ICE, 0.8))
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count, PARTICLE_COLOR_ICE,
+                         explosion_radius, 0.5)
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count // 2, (200, 240, 255),
+                         explosion_radius * 0.5, 0.3)
+        # Apply slow effect — look up the correct tier's data
+        if target_eid >= 0 and spell_id in SPELL_DATA:
+            sdata = SPELL_DATA[spell_id]
+            if g.em.has_component(target_eid, AI):
+                ai_c: AI = g.em.get_component(target_eid, AI)
+                slow_factor = sdata.get('slow_factor', 0.4)
+                slow_dur = sdata.get('slow_duration', 3.0)
+                ai_c.speed *= slow_factor
+                original_speed = MOB_DATA.get(ai_c.mob_type, {}).get(
+                    'speed', ai_c.speed / slow_factor)
+                schedule_speed_restore(g, target_eid, original_speed, slow_dur)
+    elif spell_id and 'lightning' in spell_id:
+        # Lightning explosion — white-blue electric burst
+        g.dmg_numbers.append(
+            (proj_t.x, proj_t.y - 16, str(damage), PARTICLE_COLOR_LIGHTNING_ARC, 0.8))
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count,
+                         PARTICLE_COLOR_LIGHTNING_ARC, explosion_radius, 0.4)
+        g.particles.emit(proj_t.x, proj_t.y, explosion_count // 2, (240, 245, 255),
+                         explosion_radius * 0.6, 0.3)
+        g.camera.shake(HIT_SHAKE_AMOUNT * 0.5, HIT_SHAKE_DURATION * 0.5)
+    else:
+        # Generic projectile hit (arrows, etc.)
+        g.dmg_numbers.append(
+            (proj_t.x, proj_t.y - 16, str(damage), CYAN, 0.8))
+        g.particles.emit(proj_t.x, proj_t.y, 5, CYAN, 40, 0.3)
 
 
 # ======================================================================
 # SPELLS & BOMBS
 # ======================================================================
+
+def _get_spell_level_multiplier(g: 'Game') -> float:
+    """Return the spell damage/heal multiplier based on player level.
+
+    Formula: 1.0 + (player_level - 1) * SPELL_LEVEL_SCALE_PERCENT
+    At level 1 → 1.0, at level 50 → ~2.0, at level 100 → ~3.0
+    """
+    from game_controller import SPELL_LEVEL_SCALE_PERCENT
+    ps: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
+    return 1.0 + (ps.level - 1) * SPELL_LEVEL_SCALE_PERCENT
+
+
+def _find_nearest_enemy(g: 'Game', world_x: float, world_y: float,
+                        radius: float) -> Optional[Transform]:
+    """Find the enemy nearest to (world_x, world_y) within radius.
+
+    Returns the Transform of the nearest enemy, or None.
+    """
+    best_dist = radius
+    best_t = None
+    for eid in g.em.get_entities_with(Transform, Health, AI):
+        mt = g.em.get_component(eid, Transform)
+        d = math.hypot(mt.x - world_x, mt.y - world_y)
+        if d < best_dist:
+            best_dist = d
+            best_t = mt
+    return best_t
+
+
+def _get_spell_tier(spell_item: str) -> int:
+    """Extract the tier (1-5) from a spell item_id like 'spell_fireball_3'."""
+    parts = spell_item.rsplit('_', 1)
+    if len(parts) == 2 and parts[1].isdigit():
+        return int(parts[1])
+    return 1  # Base spell (no suffix) is tier 1
+
 
 def spell_cast_at_mouse(g: 'Game') -> None:
     if not g.spell_targeting or not g.spell_item:
@@ -338,10 +416,13 @@ def spell_cast_at_mouse(g: 'Game') -> None:
         return
 
     pt: Transform = g.em.get_component(g.player_id, Transform)
+    level_mult = _get_spell_level_multiplier(g)
 
     if sdata.get('type') == 'self':
         heal_amt = sdata.get('heal', 0)
         if heal_amt > 0:
+            # Apply level scaling to heal amount
+            heal_amt = max(1, int(heal_amt * level_mult))
             ph: Health = g.em.get_component(g.player_id, Health)
             if ph.current >= ph.maximum:
                 g._notify("Already at full health!")
@@ -359,9 +440,20 @@ def spell_cast_at_mouse(g: 'Game') -> None:
         g.spell_item = None
         return
 
+    # --- Projectile spell ---
+    from game_controller import (
+        SPELL_AUTO_TARGET_RADIUS, SPELL_PROJ_SIZE,
+    )
     mx, my = pygame.mouse.get_pos()
     target_x = mx + g.camera.x
     target_y = my + g.camera.y
+
+    # Auto-target: snap to nearest enemy near the crosshair click
+    enemy_t = _find_nearest_enemy(g, target_x, target_y, SPELL_AUTO_TARGET_RADIUS)
+    if enemy_t:
+        target_x = enemy_t.x + 12  # center of enemy sprite
+        target_y = enemy_t.y + 12
+
     dx = target_x - pt.x
     dy = target_y - pt.y
     dist = math.hypot(dx, dy)
@@ -369,18 +461,29 @@ def spell_cast_at_mouse(g: 'Game') -> None:
         return
     dx /= dist
     dy /= dist
+
+    tier = _get_spell_tier(g.spell_item)
+    proj_w, proj_h = SPELL_PROJ_SIZE.get(tier, (12, 12))
+
     tex_key = f"proj_{g.spell_item.replace('spell_', '')}"
     tex = g.textures.cache.get(tex_key)
     if tex is None:
         tex = g.textures.get('proj_fireball')
+    # Scale texture to tier-based size
+    if tex:
+        tex = pygame.transform.scale(tex, (proj_w, proj_h))
+
+    # Apply level scaling to spell damage
+    spell_dmg = max(1, int(sdata['damage'] * level_mult))
+
     pid = g.em.create_entity()
     g.em.add_component(pid, Transform(pt.x + 10, pt.y + 14))
     g.em.add_component(pid, Velocity(
         dx * sdata['speed'], dy * sdata['speed'], 1.0))
     g.em.add_component(pid, Renderable(tex, layer=4))
-    g.em.add_component(pid, Collider(12, 12, False))
+    g.em.add_component(pid, Collider(proj_w, proj_h, False))
     proj = Projectile(
-        sdata['damage'], g.player_id, sdata['speed'], sdata['range'])
+        spell_dmg, g.player_id, sdata['speed'], sdata['range'])
     proj.spell_id = g.spell_item
     g.em.add_component(pid, proj)
     g.particles.emit(pt.x + 10, pt.y + 14, 8, sdata['color'], 60, 0.3)
@@ -549,10 +652,9 @@ def check_contact_damage(g: 'Game', pt: Transform) -> None:
     if g.player_hit_cd > 0:
         return
     eq: Equipment = g.em.get_component(g.player_id, Equipment)
-    dmg_red = calc_damage_reduction(eq)
-    if 'protection' in g.active_buffs:
-        dmg_red += int(g.active_buffs['protection'][1])
-    dmg_red += _get_equipment_enchant_dr(eq)
+    prot_val = int(g.active_buffs['protection'][1]) if 'protection' in g.active_buffs else 0
+    enchant_dr = _get_equipment_enchant_dr(eq)
+    total_dr = calc_total_dr(eq, prot_val, enchant_dr)
     night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
     for eid in g.em.get_entities_with(Transform, AI):
         t: Transform = g.em.get_component(eid, Transform)
@@ -561,7 +663,7 @@ def check_contact_damage(g: 'Game', pt: Transform) -> None:
         if dist < CONTACT_DAMAGE_RADIUS:
             ph: Health = g.em.get_component(g.player_id, Health)
             raw = ai_c.contact_damage * night_mult
-            dmg = max(1, raw - dmg_red)
+            dmg = apply_damage_reduction(raw, total_dr)
             ph.damage(dmg)
             g.health_bar.set_value(ph.current)
             g.player_hit_cd = PLAYER_HIT_INVULN
@@ -581,10 +683,9 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
     if g.god_mode:
         return
     eq: Equipment = g.em.get_component(g.player_id, Equipment)
-    dmg_red = calc_damage_reduction(eq)
-    if 'protection' in g.active_buffs:
-        dmg_red += int(g.active_buffs['protection'][1])
-    dmg_red += _get_equipment_enchant_dr(eq)
+    prot_val = int(g.active_buffs['protection'][1]) if 'protection' in g.active_buffs else 0
+    enchant_dr = _get_equipment_enchant_dr(eq)
+    total_dr_val = calc_total_dr(eq, prot_val, enchant_dr)
     night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
     to_remove = []
     for pid in g.em.get_entities_with(Transform, Projectile):
@@ -595,7 +696,8 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
         dist = math.hypot(proj_t.x - pt.x - 10, proj_t.y - pt.y - 14)
         if dist < ENEMY_PROJ_HIT_RADIUS:
             ph: Health = g.em.get_component(g.player_id, Health)
-            dmg = max(1, int(proj.damage * night_mult) - dmg_red)
+            raw = int(proj.damage * night_mult)
+            dmg = apply_damage_reduction(raw, total_dr_val)
             ph.damage(dmg)
             g.health_bar.set_value(ph.current)
             g.damage_flash = DAMAGE_FLASH_DURATION

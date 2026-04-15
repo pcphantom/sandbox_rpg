@@ -52,6 +52,7 @@ from game_controller import (
     ELITE_HP_MULT, ELITE_DMG_MULT, ELITE_XP_MULT,
     ELITE_START_DAY, ELITE_MAX_CHANCE, ELITE_CHANCE_PER_DAY,
     ELITE_MIN_WAVE_TIER, ELITE_WAVE_BASE_CHANCE,
+    ELITE_TIER_HP_MULT, ELITE_TIER_DMG_MULT, ELITE_TIER_XP_MULT,
 )
 
 
@@ -83,7 +84,18 @@ def create_player(g: 'Game') -> int:
 # ======================================================================
 
 def create_mob(g: 'Game', x: float, y: float, mob_type: str,
-               elite: bool = False) -> int:
+               elite: bool = False, elite_tier: int = 0) -> int:
+    """Create a mob entity.
+
+    Args:
+        elite: Legacy flag — if True and elite_tier==0, defaults to tier 1.
+        elite_tier: 0=normal, 1=blue, 2=purple, 3=gold, 4=red.
+    """
+    # Resolve tier: if caller passes elite=True without a tier, default to 1
+    if elite and elite_tier == 0:
+        elite_tier = 1
+    if elite_tier > 0:
+        elite = True
     data = MOB_DATA[mob_type]
     tex_key = mob_type
     eid = g.em.create_entity()
@@ -103,26 +115,31 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str,
     dmg_day_scale = 1.0 + days_elapsed * prof['enemy_dmg_per_day']
     scaled_hp = int(data['hp'] * hp_mult * hp_day_scale)
     scaled_dmg = int(data['damage'] * dmg_mult * dmg_day_scale)
-    # Elite scaling — tougher version with glow border
-    if elite:
-        scaled_hp = int(scaled_hp * ELITE_HP_MULT)
-        scaled_dmg = int(scaled_dmg * ELITE_DMG_MULT)
+    # Elite scaling — tiered multipliers (tier 0 = normal, 1-4 = blue/purple/gold/red)
+    if elite and elite_tier > 0:
+        hp_m = ELITE_TIER_HP_MULT.get(elite_tier, 2.0)
+        dmg_m = ELITE_TIER_DMG_MULT.get(elite_tier, 2.0)
+        scaled_hp = int(scaled_hp * hp_m)
+        scaled_dmg = int(scaled_dmg * dmg_m)
     g.em.add_component(eid, Health(scaled_hp))
     mob_ai = AI('wander', mob_type)
     mob_ai.speed = data['speed']
     mob_ai.detection_range = data['detection']
     mob_ai.contact_damage = scaled_dmg
     xp = data['xp']
-    if elite:
-        xp = int(xp * ELITE_XP_MULT)
+    if elite and elite_tier > 0:
+        xp_m = ELITE_TIER_XP_MULT.get(elite_tier, 2.0)
+        xp = int(xp * xp_m)
     mob_ai.xp_value = xp
     mob_ai.is_elite = elite
+    mob_ai.elite_tier = elite_tier
     if data.get('ranged', False):
         mob_ai.is_ranged = True
         mob_ai.ranged_damage = int(
             data.get('ranged_damage', 10) * dmg_mult * dmg_day_scale)
-        if elite:
-            mob_ai.ranged_damage = int(mob_ai.ranged_damage * ELITE_DMG_MULT)
+        if elite and elite_tier > 0:
+            dmg_m = ELITE_TIER_DMG_MULT.get(elite_tier, 2.0)
+            mob_ai.ranged_damage = int(mob_ai.ranged_damage * dmg_m)
         mob_ai.ranged_range = data.get('ranged_range', 200.0)
         mob_ai.ranged_cooldown = data.get('ranged_cooldown', 2.0)
         mob_ai.ranged_speed = data.get('ranged_speed', 350.0)
@@ -236,7 +253,20 @@ def spawn_mob(g: 'Game') -> None:
         elite = (days > 0 and random.random() < min(ELITE_MAX_CHANCE,
                  days * ELITE_CHANCE_PER_DAY)
                  and mob not in UNDEAD_MOB_TYPES)
-        create_mob(g, wx, wy, mob, elite=elite)
+        # Pick elite tier based on how many days past elite threshold
+        elite_tier = 0
+        if elite:
+            # Higher tiers become possible further into the game
+            tier_roll = random.random()
+            if days >= 30 and tier_roll < 0.05:
+                elite_tier = 4  # Red — very rare
+            elif days >= 20 and tier_roll < 0.15:
+                elite_tier = 3  # Gold
+            elif days >= 10 and tier_roll < 0.35:
+                elite_tier = 2  # Purple
+            else:
+                elite_tier = 1  # Blue — most common
+        create_mob(g, wx, wy, mob, elite=elite, elite_tier=elite_tier)
         return
 
 
@@ -274,7 +304,18 @@ def spawn_wave_mobs(g: 'Game', count: int, tier: int,
         elite = (tier >= ELITE_MIN_WAVE_TIER
                  and random.random() < ELITE_WAVE_BASE_CHANCE * (tier - 1)
                  and mob_type not in WAVE_BOSS_MOBS)
-        create_mob(g, wx, wy, mob_type, elite=elite)
+        wave_elite_tier = 0
+        if elite:
+            # Higher wave tiers can produce higher elite tiers
+            if tier >= 4 and random.random() < 0.10:
+                wave_elite_tier = 4
+            elif tier >= 3 and random.random() < 0.20:
+                wave_elite_tier = 3
+            elif tier >= 2 and random.random() < 0.40:
+                wave_elite_tier = 2
+            else:
+                wave_elite_tier = 1
+        create_mob(g, wx, wy, mob_type, elite=elite, elite_tier=wave_elite_tier)
 
 
 # ======================================================================

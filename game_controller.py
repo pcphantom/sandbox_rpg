@@ -198,11 +198,48 @@ BOSS_GLOW_COLORS: Dict[str, Tuple[int, int, int]] = {
     'shadow_dragon':    BOSS_GLOW_SHADOW_DRAGON,
 }
 
-# --- Elite enemy glow border color ---
-ELITE_GLOW_COLOR: Tuple[int, int, int] = (200, 180, 60)
-ELITE_HP_MULT: float = 1.8
-ELITE_DMG_MULT: float = 1.5
+# --- Elite enemy tier system ---
+# Elite enemies have a tiered glow outline (silhouette-based, not a box).
+# Each tier has a neon color and stat multipliers for HP, DMG, and XP.
+# Tier 0 = normal (no glow).  Tiers 1-4 = blue, purple, gold, red.
+ELITE_TIER_COLORS: Dict[int, Tuple[int, int, int]] = {
+    1: (60, 140, 255),     # Blue — strong
+    2: (180, 60, 255),     # Purple — very strong
+    3: (255, 200, 40),     # Gold — elite
+    4: (255, 40, 40),      # Red — apex
+}
+ELITE_TIER_HP_MULT: Dict[int, float] = {
+    1: 2.0,   # Blue:   2× HP
+    2: 3.0,   # Purple: 3× HP
+    3: 4.0,   # Gold:   4× HP
+    4: 5.0,   # Red:    5× HP
+}
+ELITE_TIER_DMG_MULT: Dict[int, float] = {
+    1: 2.0,   # Blue:   2× damage
+    2: 3.0,   # Purple: 3× damage
+    3: 4.0,   # Gold:   4× damage
+    4: 5.0,   # Red:    5× damage
+}
+ELITE_TIER_XP_MULT: Dict[int, float] = {
+    1: 2.0,   # Blue:   2× XP
+    2: 3.5,   # Purple: 3.5× XP
+    3: 5.0,   # Gold:   5× XP
+    4: 8.0,   # Red:    8× XP
+}
+# Glow outline expansion in pixels (how much bigger the outline is than the sprite)
+ELITE_GLOW_EXPAND: int = 3
+# Glow pulse speed (higher = faster pulse)
+ELITE_GLOW_PULSE_SPEED: float = 0.004
+# Glow alpha range (min, max) — controls brightness of the pulsing outline
+ELITE_GLOW_ALPHA_MIN: int = 100
+ELITE_GLOW_ALPHA_MAX: int = 200
+
+# Backwards compat alias — used nowhere now but kept for reference
+ELITE_GLOW_COLOR: Tuple[int, int, int] = ELITE_TIER_COLORS[3]
+ELITE_HP_MULT: float = 2.0
+ELITE_DMG_MULT: float = 2.0
 ELITE_XP_MULT: float = 2.0
+
 ELITE_START_DAY: int = 7             # No elite overworld spawns before this day
 ELITE_MAX_CHANCE: float = 0.1        # Max probability of elite overworld spawn
 ELITE_CHANCE_PER_DAY: float = 0.01   # Chance increase per day past ELITE_START_DAY
@@ -828,7 +865,46 @@ HIT_SHAKE_DURATION: float = 0.2
 ENEMY_PROJ_HIT_RADIUS: float = 20.0
 PROJ_SHAKE_AMOUNT: float = 3.0
 PROJ_SHAKE_DURATION: float = 0.15
-PROJ_MOB_HIT_RADIUS: float = 20.0
+PROJ_MOB_HIT_RADIUS: float = 28.0   # Radius for player projectile → mob collision (px)
+
+# --- Spell projectile sizes per tier (width, height in px) ---
+# Projectiles get slightly bigger with each spellbook level.
+SPELL_PROJ_SIZE: Dict[int, Tuple[int, int]] = {
+    1: (12, 12),
+    2: (14, 14),
+    3: (16, 16),
+    4: (18, 18),
+    5: (22, 22),
+}
+# --- Spell explosion particle counts per tier ---
+# How many explosion particles spawn on projectile impact per level.
+SPELL_EXPLOSION_PARTICLES: Dict[int, int] = {
+    1: 10,
+    2: 14,
+    3: 18,
+    4: 24,
+    5: 30,
+}
+# --- Spell explosion radius per tier (px) ---
+# Visual size of the explosion burst at impact.
+SPELL_EXPLOSION_RADIUS: Dict[int, int] = {
+    1: 50,
+    2: 60,
+    3: 75,
+    4: 90,
+    5: 110,
+}
+# --- Spell level scaling ---
+# All spell effects (damage, heal, regen, protection, strength) scale with
+# the player's level.  Each level adds this percentage bonus multiplicatively.
+# Example: at level 50 with 0.02, total multiplier = 1 + (50-1)*0.02 = 1.98
+SPELL_LEVEL_SCALE_PERCENT: float = 0.02  # 2% per player level
+
+# --- Spell auto-targeting ---
+# When casting a projectile spell, if an enemy is within this radius (px) of
+# the crosshair click position, the projectile will fly toward that enemy
+# instead of toward the raw click position.
+SPELL_AUTO_TARGET_RADIUS: float = 80.0
 
 # --- Interaction ---
 INTERACT_COOLDOWN: float = 0.25
@@ -989,6 +1065,34 @@ DEFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_OFFENSE_BONUS_PER_LEVEL: int = 2
 TURRET_DEFENSE_BONUS_PER_LEVEL: int = 2
 PROTECTION_DR_PER_LEVEL: int = 2
+
+# ######################################################################
+#                 DAMAGE RESISTANCE SCALING (Diminishing Returns)
+# ######################################################################
+# Instead of flat DR subtraction (which is either useless or makes you
+# invincible), we use a percentage-based reduction with diminishing returns.
+#
+# Formula:  effective_DR% = DR_total / (DR_total + DR_HALF_VALUE)
+#   where DR_HALF_VALUE is the DR needed to block 50% of incoming damage.
+#
+# Example with DR_HALF_VALUE = 100:
+#   DR 10  → 10/(10+100) = 9% reduction
+#   DR 50  → 50/(50+100) = 33% reduction
+#   DR 100 → 100/(100+100) = 50% reduction
+#   DR 200 → 200/(200+100) = 67% reduction
+#   DR 500 → 500/(500+100) = 83% reduction
+#
+# This ensures:
+#   - Low DR gives meaningful but not overpowered protection
+#   - High DR never makes you fully invincible (hard cap at DR_MAX_PERCENT)
+#   - Scales well into late-game with thousands-of-damage hits
+#
+# Adjusting DR_HALF_VALUE:
+#   - Lower value (50) = armor feels stronger earlier, caps sooner
+#   - Higher value (200) = armor feels weaker early, scales longer
+DR_HALF_VALUE: float = 100.0         # DR needed for 50% damage reduction
+DR_MAX_PERCENT: float = 0.85         # Hard cap — never reduce more than 85%
+DR_MIN_DAMAGE: int = 1               # Minimum damage always dealt (even with max DR)
 # Built from the individual color constants above.
 # PRESERVED for future use — currently no inner borders are drawn.
 # ENHANCEMENT_COLORS: Dict[int, Tuple[int, int, int]] = {

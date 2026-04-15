@@ -13,27 +13,27 @@ from game_controller import (
 
 # -- Protection I --------------------------------------------------------------
 PROTECTION_1_COOLDOWN: float = 5.0     # seconds between casts
-PROTECTION_1_DURATION: float = 60.0    # buff duration in seconds
+PROTECTION_1_DURATION: float = 60.0    # buff duration in seconds (1 minute)
 PROTECTION_1_VALUE: int = 2            # flat damage reduction while active
 
 # -- Protection II -------------------------------------------------------------
 PROTECTION_2_COOLDOWN: float = 5.0
-PROTECTION_2_DURATION: float = 60.0
+PROTECTION_2_DURATION: float = 75.0    # 1m 15s
 PROTECTION_2_VALUE: int = 4
 
 # -- Protection III ------------------------------------------------------------
 PROTECTION_3_COOLDOWN: float = 5.0
-PROTECTION_3_DURATION: float = 60.0
+PROTECTION_3_DURATION: float = 90.0    # 1m 30s
 PROTECTION_3_VALUE: int = 6
 
 # -- Protection IV -------------------------------------------------------------
 PROTECTION_4_COOLDOWN: float = 5.0
-PROTECTION_4_DURATION: float = 60.0
+PROTECTION_4_DURATION: float = 105.0   # 1m 45s
 PROTECTION_4_VALUE: int = 9
 
 # -- Protection V --------------------------------------------------------------
 PROTECTION_5_COOLDOWN: float = 5.0
-PROTECTION_5_DURATION: float = 60.0
+PROTECTION_5_DURATION: float = 120.0   # 2 minutes
 PROTECTION_5_VALUE: int = 12
 
 # Assembled spell data keyed by item_id
