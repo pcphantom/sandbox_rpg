@@ -158,10 +158,16 @@ def interact(g: 'Game') -> None:
             g.particles.emit(th.x + 14, th.y + 10, 8, GRAY, 40, 0.3)
         # Track harvested overworld resource positions (skip cave resources)
         if g.in_cave < 0 and not is_cave_res:
-            th_h = g.em.get_component(nearest, Transform)
-            gx = int(th_h.x // TILE_SIZE)
-            gy = int(th_h.y // TILE_SIZE)
-            g.harvested_resources.add((gx, gy))
+            col_h = g.em.get_component(nearest, Collider)
+            gpos = getattr(col_h, 'grid_pos', None) if col_h else None
+            if gpos:
+                g.harvested_resources.add(gpos)
+            else:
+                # Fallback for entities without grid_pos tag
+                th_h = g.em.get_component(nearest, Transform)
+                gx = int(th_h.x // TILE_SIZE)
+                gy = int(th_h.y // TILE_SIZE)
+                g.harvested_resources.add((gx, gy))
         g.em.destroy_entity(nearest)
 
 

@@ -265,6 +265,9 @@ def handle_events(g) -> None:
             if g.character_menu.equipment_changed:
                 g.character_menu.equipment_changed = False
                 g._rebuild_player_sprite()
+            if g.character_menu.unequip_failed:
+                g._notify(g.character_menu.unequip_failed)
+                g.character_menu.unequip_failed = ''
             if g.character_menu.dw.close_requested:
                 g._return_held_item()
                 g.show_character = False
