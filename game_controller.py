@@ -878,12 +878,33 @@ BEACON_ATTRACT_SPEED_INSIDE: float = 0.5   # speed mult for enemies inside beaco
 STONE_OVEN_HP: int = 80
 STONE_OVEN_SLOTS: int = 4               # 2×2 grid
 
+# --- Stone Oven fuel ---
+# Fuel items and how many "fuel units" they provide.
+# Sticks burn 5× faster than wood (1 stick = 1 fuel unit, 1 wood = 5 fuel units).
+OVEN_FUEL: dict = {
+    'wood':  5,   # 1 wood = 5 fuel units
+    'stick': 1,   # 1 stick = 1 fuel unit (burns 5× faster)
+}
+
 # --- Stone Oven smelting recipes ---
-# Each entry: ore_id, ingot_id, ore_per_ingot, wood_per_ingot, smelt_time_sec
+# fuel_cost is in abstract fuel units (see OVEN_FUEL above).
 SMELTING_RECIPES: list = [
-    {'ore': 'iron_ore',     'result': 'iron',            'ore_cost': 1, 'wood_cost': 2, 'time': 10.0},
-    {'ore': 'titanium_ore', 'result': 'titanium_ingot',  'ore_cost': 1, 'wood_cost': 2, 'time': 30.0},
+    {'ore': 'iron_ore',     'result': 'iron',            'ore_cost': 1, 'fuel_cost': 10, 'time': 10.0},
+    {'ore': 'titanium_ore', 'result': 'titanium_ingot',  'ore_cost': 1, 'fuel_cost': 10, 'time': 30.0},
 ]
+
+# --- Stone Oven cooking recipes ---
+# Cooking recipes: ingredient items + fuel cost → result item.
+OVEN_COOKING_RECIPES: list = [
+    {'ingredients': {'berry': 5}, 'fuel_cost': 5, 'result': 'pie', 'time': 8.0},
+]
+
+# --- Stone Oven valid input categories ---
+# Items whose category is in this set may be placed in the oven.
+# Gear (weapon, ranged, armor, shield, spell, tool, etc.) is rejected.
+OVEN_VALID_CATEGORIES: frozenset = frozenset({
+    'material', 'consumable', 'ammo',
+})
 
 
 # ######################################################################

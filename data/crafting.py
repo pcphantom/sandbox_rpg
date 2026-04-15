@@ -51,7 +51,6 @@ RECIPES: List[Dict[str, Any]] = [
     # =====================================================================
     # CONSUMABLES
     # =====================================================================
-    {'name': 'Berry Pie',       'cost': {'berry': 5, 'wood': 1},               'gives': 'pie'},
     {'name': 'Bandage',         'cost': {'cloth': 2, 'berry': 1},              'gives': 'bandage'},
     {'name': 'Health Potion',   'cost': {'berry': 8, 'stone': 2, 'cloth': 1},  'gives': 'health_potion'},
     {'name': 'Antidote',        'cost': {'berry': 3, 'bone': 1},               'gives': 'antidote'},

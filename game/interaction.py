@@ -74,7 +74,6 @@ def interact(g: 'Game') -> None:
                 g.show_chest = True
                 g.active_chest = eid
                 g.chest_ui.chest_scroll = 0
-                g.show_inventory = True  # Open inventory alongside chest
                 if g.in_cave >= 0:
                     g.caves.chest_looted[g.in_cave] = True
             return

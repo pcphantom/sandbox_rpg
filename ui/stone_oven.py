@@ -1,8 +1,8 @@
-"""Stone Oven UI — 4-slot (2×2) smelting interface.
+"""Stone Oven UI — 4-slot (2×2) smelting/cooking interface.
 
-The player places ore + wood to produce ingots.  The oven processes items
-in order: first match found consumes wood + ore, produces an ingot, then
-moves on to the next available recipe.
+The player places fuel (wood, sticks) and ingredients (ore, berries, etc.)
+to produce ingots, food, and other processed items.  The oven checks
+smelting recipes first, then cooking recipes.
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Dict, Tuple
@@ -22,11 +22,93 @@ from core.constants import (
 from core.components import (
     Transform, Renderable, Storage, Building, Health, LightSource,
 )
-from data import ITEM_DATA
+from data import ITEM_DATA, ITEM_CATEGORIES
 from game_controller import (
-    SMELTING_RECIPES, STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
+    SMELTING_RECIPES, OVEN_COOKING_RECIPES, OVEN_FUEL,
+    OVEN_VALID_CATEGORIES,
+    STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
 )
 from ui.draggable import DraggableWindow
+
+
+def _count_fuel(stor: Storage) -> int:
+    """Return total fuel units available in the oven's storage."""
+    total = 0
+    for slot_idx in range(STONE_OVEN_SLOTS):
+        item = stor.slots.get(slot_idx)
+        if item:
+            iid, cnt = item
+            fuel_per = OVEN_FUEL.get(iid, 0)
+            total += fuel_per * cnt
+    return total
+
+
+def _count_items(stor: Storage) -> Dict[str, int]:
+    """Return {item_id: total_count} for all items in the oven."""
+    counts: Dict[str, int] = {}
+    for slot_idx in range(STONE_OVEN_SLOTS):
+        item = stor.slots.get(slot_idx)
+        if item:
+            iid, cnt = item
+            counts[iid] = counts.get(iid, 0) + cnt
+    return counts
+
+
+def _consume_fuel(stor: Storage, fuel_needed: int) -> bool:
+    """Consume fuel_needed fuel units from storage.  Returns True on success."""
+    remaining = fuel_needed
+    for slot_idx in range(STONE_OVEN_SLOTS):
+        if remaining <= 0:
+            break
+        item = stor.slots.get(slot_idx)
+        if not item:
+            continue
+        iid, cnt = item
+        fuel_per = OVEN_FUEL.get(iid, 0)
+        if fuel_per <= 0:
+            continue
+        # How many of this item do we need to consume?
+        items_needed = (remaining + fuel_per - 1) // fuel_per  # ceiling div
+        consume = min(cnt, items_needed)
+        remaining -= consume * fuel_per
+        cnt -= consume
+        if cnt <= 0:
+            del stor.slots[slot_idx]
+        else:
+            stor.slots[slot_idx] = (iid, cnt)
+    return remaining <= 0
+
+
+def _consume_items(stor: Storage, item_id: str, amount: int) -> bool:
+    """Consume amount of item_id from storage.  Returns True on success."""
+    remaining = amount
+    for slot_idx in range(STONE_OVEN_SLOTS):
+        if remaining <= 0:
+            break
+        item = stor.slots.get(slot_idx)
+        if not item or item[0] != item_id:
+            continue
+        iid, cnt = item
+        consume = min(cnt, remaining)
+        cnt -= consume
+        remaining -= consume
+        if cnt <= 0:
+            del stor.slots[slot_idx]
+        else:
+            stor.slots[slot_idx] = (iid, cnt)
+    return remaining <= 0
+
+
+def is_valid_oven_item(item_id: str) -> bool:
+    """Return True if the item can be placed into the stone oven."""
+    # Fuel items are always valid
+    if item_id in OVEN_FUEL:
+        return True
+    # Check item category
+    cat = ITEM_CATEGORIES.get(item_id, '')
+    if cat in OVEN_VALID_CATEGORIES:
+        return True
+    return False
 
 
 class StoneOvenUI:
@@ -47,55 +129,40 @@ class StoneOvenUI:
         self._smelt_recipe: dict[int, dict] = {}   # eid -> current recipe dict
 
     def _find_recipe(self, stor: Storage) -> Optional[dict]:
-        """Find the first matching smelting recipe from items in storage."""
-        ore_available: Dict[str, int] = {}
-        wood_count = 0
-        for slot_idx in range(STONE_OVEN_SLOTS):
-            item = stor.slots.get(slot_idx)
-            if item:
-                iid, cnt = item
-                if iid == 'wood':
-                    wood_count += cnt
-                else:
-                    ore_available[iid] = ore_available.get(iid, 0) + cnt
+        """Find the first matching recipe from items in storage."""
+        counts = _count_items(stor)
+        fuel = _count_fuel(stor)
+        # Check smelting recipes first
         for recipe in SMELTING_RECIPES:
-            if ore_available.get(recipe['ore'], 0) >= recipe['ore_cost']:
-                if wood_count >= recipe['wood_cost']:
-                    return recipe
+            if counts.get(recipe['ore'], 0) >= recipe['ore_cost']:
+                if fuel >= recipe['fuel_cost']:
+                    return {'type': 'smelt', **recipe}
+        # Check cooking recipes
+        for recipe in OVEN_COOKING_RECIPES:
+            has_all = True
+            for ing_id, ing_amt in recipe['ingredients'].items():
+                if counts.get(ing_id, 0) < ing_amt:
+                    has_all = False
+                    break
+            if has_all and fuel >= recipe['fuel_cost']:
+                return {'type': 'cook', **recipe}
         return None
 
     def _consume_materials(self, stor: Storage, recipe: dict) -> bool:
-        """Consume ore and wood from storage for one smelt cycle."""
-        ore_needed = recipe['ore_cost']
-        wood_needed = recipe['wood_cost']
-        # Consume ore
-        for slot_idx in range(STONE_OVEN_SLOTS):
-            item = stor.slots.get(slot_idx)
-            if item and item[0] == recipe['ore'] and ore_needed > 0:
-                iid, cnt = item
-                consume = min(cnt, ore_needed)
-                cnt -= consume
-                ore_needed -= consume
-                if cnt <= 0:
-                    del stor.slots[slot_idx]
-                else:
-                    stor.slots[slot_idx] = (iid, cnt)
-        # Consume wood
-        for slot_idx in range(STONE_OVEN_SLOTS):
-            item = stor.slots.get(slot_idx)
-            if item and item[0] == 'wood' and wood_needed > 0:
-                iid, cnt = item
-                consume = min(cnt, wood_needed)
-                cnt -= consume
-                wood_needed -= consume
-                if cnt <= 0:
-                    del stor.slots[slot_idx]
-                else:
-                    stor.slots[slot_idx] = (iid, cnt)
-        return ore_needed == 0 and wood_needed == 0
+        """Consume ingredients and fuel for one processing cycle."""
+        rtype = recipe.get('type', 'smelt')
+        if rtype == 'smelt':
+            if not _consume_items(stor, recipe['ore'], recipe['ore_cost']):
+                return False
+        elif rtype == 'cook':
+            for ing_id, ing_amt in recipe['ingredients'].items():
+                if not _consume_items(stor, ing_id, ing_amt):
+                    return False
+        # Consume fuel
+        return _consume_fuel(stor, recipe['fuel_cost'])
 
     def _deposit_result(self, stor: Storage, result_id: str) -> bool:
-        """Add the smelting result to an available storage slot."""
+        """Add the result to an available storage slot."""
         # Try to stack into existing slot
         for slot_idx in range(STONE_OVEN_SLOTS):
             item = stor.slots.get(slot_idx)
@@ -133,7 +200,7 @@ class StoneOvenUI:
                     # Remove light when done
                     if g.em.has_component(eid, LightSource):
                         g.em.remove_component(eid, LightSource)
-            # Try to start next smelt if not currently smelting
+            # Try to start next cycle if not currently processing
             if eid not in self._smelt_timers:
                 recipe = self._find_recipe(stor)
                 if recipe:
@@ -218,16 +285,18 @@ class StoneOvenUI:
                 fill_rect = pygame.Rect(px + int(20 * scale), info_y, int(bar_w * progress), int(14 * scale))
                 pygame.draw.rect(surface, ORANGE, fill_rect)
                 pygame.draw.rect(surface, UI_SLOT_BORDER_NORMAL, bar_rect, 1)
+                label = "Cooking" if recipe.get('type') == 'cook' else "Smelting"
                 status = self.font_sm.render(
-                    f"Smelting {name}... {remaining:.1f}s", True, WHITE)
+                    f"{label} {name}... {remaining:.1f}s", True, WHITE)
                 surface.blit(status, (px + int(20 * scale), info_y + int(18 * scale)))
         else:
             recipe = self._find_recipe(stor)
             if recipe:
                 name = ITEM_DATA[recipe['result']][0] if recipe['result'] in ITEM_DATA else recipe['result']
-                info = self.font_sm.render(f"Ready to smelt: {name}", True, GREEN)
+                label = "cook" if recipe.get('type') == 'cook' else "smelt"
+                info = self.font_sm.render(f"Ready to {label}: {name}", True, GREEN)
             else:
-                info = self.font_sm.render("Add ore + wood to smelt", True, UI_TEXT_MUTED)
+                info = self.font_sm.render("Add fuel + ingredients", True, UI_TEXT_MUTED)
             surface.blit(info, (px + int(20 * scale), info_y))
 
         # Instructions
@@ -283,11 +352,7 @@ class StoneOvenUI:
                         # Put selected hotbar item in
                         eq_id = inv.get_equipped()
                         if eq_id and inv.has(eq_id):
-                            # Check if it's a valid oven input
-                            valid_inputs = {'wood'}
-                            for r in SMELTING_RECIPES:
-                                valid_inputs.add(r['ore'])
-                            if eq_id in valid_inputs:
+                            if is_valid_oven_item(eq_id):
                                 # Transfer entire stack from inventory
                                 total = inv.count(eq_id)
                                 if total > 0:
@@ -296,7 +361,7 @@ class StoneOvenUI:
                                     name = ITEM_DATA[eq_id][0] if eq_id in ITEM_DATA else eq_id
                                     g._notify(f"Added {total} {name}")
                             else:
-                                g._notify("Only ore and wood can go in the oven!")
+                                g._notify("You don't want to burn that.")
                     return True
         return False
 
