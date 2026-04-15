@@ -388,9 +388,9 @@ def _find_nearest_enemy(g: 'Game', world_x: float, world_y: float,
     return best_t
 
 
-def _get_spell_tier(spell_item: str) -> int:
+def _get_spell_tier(spell_id: str) -> int:
     """Extract the tier (1-5) from a spell item_id like 'spell_fireball_3'."""
-    parts = spell_item.rsplit('_', 1)
+    parts = spell_id.rsplit('_', 1)
     if len(parts) == 2 and parts[1].isdigit():
         return int(parts[1])
     return 1  # Base spell (no suffix) is tier 1
@@ -685,7 +685,7 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
     eq: Equipment = g.em.get_component(g.player_id, Equipment)
     prot_val = int(g.active_buffs['protection'][1]) if 'protection' in g.active_buffs else 0
     enchant_dr = _get_equipment_enchant_dr(eq)
-    total_dr_val = calc_total_dr(eq, prot_val, enchant_dr)
+    total_dr = calc_total_dr(eq, prot_val, enchant_dr)
     night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
     to_remove = []
     for pid in g.em.get_entities_with(Transform, Projectile):
@@ -697,7 +697,7 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
         if dist < ENEMY_PROJ_HIT_RADIUS:
             ph: Health = g.em.get_component(g.player_id, Health)
             raw = int(proj.damage * night_mult)
-            dmg = apply_damage_reduction(raw, total_dr_val)
+            dmg = apply_damage_reduction(raw, total_dr)
             ph.damage(dmg)
             g.health_bar.set_value(ph.current)
             g.damage_flash = DAMAGE_FLASH_DURATION

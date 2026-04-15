@@ -214,8 +214,8 @@ def use_equipped_item(g: 'Game') -> None:
             # Apply level scaling to buff value (protection DR, regen HP/s,
             # strength bonus dmg).  Levitate has no value to scale.
             from game_controller import SPELL_LEVEL_SCALE_PERCENT
-            ps_buf: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
-            level_mult = 1.0 + (ps_buf.level - 1) * SPELL_LEVEL_SCALE_PERCENT
+            player_stats: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
+            level_mult = 1.0 + (player_stats.level - 1) * SPELL_LEVEL_SCALE_PERCENT
             scaled_value = sdata['value']
             if effect != 'levitate':
                 scaled_value = max(1, int(sdata['value'] * level_mult))
