@@ -74,7 +74,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/elements.py` | UIElement, ProgressBar, Tooltip | Base widgets |
 | `ui/split_dialog.py` | SplitDialog | Stack splitting |
 | `ui/drop_confirm.py` | DropConfirmDialog | Drop item confirmation prompt |
-| `ui/inventory.py` | InventoryGrid | Inventory panel |
+| `ui/inventory.py` | InventoryGrid — hotbar cycling (hotbar_view_index), centred grid layout | Inventory panel with up/down arrows to cycle all active hotbars |
 | `ui/crafting.py` | CraftingPanel | Crafting panel (420×dynamic) |
 | `ui/pause_menu.py` | PauseMenu | Pause/save/load (460×440) — **DO NOT MODIFY dimensions or layout** |
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown (540×460) — **DO NOT MODIFY dimensions or layout** |
@@ -85,7 +85,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
-| `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager, ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
+| `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager (_return_bar_items, handle_close_click with inv param), ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
 | **character/** | Character customization package | |
 | `character/__init__.py` | Re-exports all character classes/data | CharacterData, CharacterGenerator, compose_character, palettes |
 | `character/layers.py` | Layered sprite rendering — skin, hair, shirt, pants, weapon/shield overlays | compose_character, draw_skin, draw_hair, draw_shirt, draw_pants, draw_weapon_overlay, draw_shield_overlay, SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS, HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES |
@@ -868,6 +868,12 @@ Fire enchant on equipped weapon (hotbar or equipment slot) counts as a light sou
 | `HOTBAR_SLOTS` | 6 | Number of hotbar slots |
 | `HOTBAR_SLOT_SIZE` | 48 | Hotbar slot pixel size |
 | `HOTBAR_SLOT_GAP` | 6 | Gap between hotbar slots |
+
+### HUD Layout (`game/drawing.py`)
+- HUD background box: (12, 10) size 250×88 → bottom at y=98
+- HP text at (24, 17), XP at (24, 39), Resources at (20, 58), Day/Kills at (20, 74)
+- Active buffs + spell cooldowns start at y=104 (below HUD box), 16px spacing per line
+- Buffs and cooldowns NEVER overlap HUD info or each other
 
 ## Window Limits (`core/constants.py`)
 
