@@ -173,6 +173,14 @@ class CharacterMenu:
             item_id = getattr(equipment, attr)
             name = ITEM_DATA[item_id][0] if item_id and item_id in ITEM_DATA else "\u2014"
             name_color = WHITE
+            # Rarity prefix + color (applied first)
+            if item_id:
+                eq_rar = equipment.rarities.get(attr, 'common')
+                if eq_rar and eq_rar != 'common':
+                    name = f"{eq_rar.title()} {name}"
+                    from data.quality import get_rarity_color
+                    name_color = get_rarity_color(eq_rar)
+            # Enchantment prefix overrides color if present
             eq_ench = equipment.enchantments.get(attr)
             if eq_ench and item_id:
                 from enchantments.effects import (
@@ -181,7 +189,7 @@ class CharacterMenu:
                 prefix = get_enchant_display_prefix(eq_ench)
                 if prefix:
                     name = f"{prefix} {name}"
-                    name_color = ENCHANT_COLORS.get(eq_ench['type'], WHITE)
+                    name_color = ENCHANT_COLORS.get(eq_ench['type'], name_color)
             surface.blit(self.font.render(f"{label}: ", True, GRAY), (ex, ey))
             # Show ammo count next to equipped ammo name
             if attr == 'ammo' and item_id and equipment.ammo_count > 0:
