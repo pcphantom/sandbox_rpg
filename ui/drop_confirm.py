@@ -14,7 +14,7 @@ from core.constants import (
     UI_DROP_YES_BUTTON, UI_DROP_NO_BUTTON,
     UI_BORDER_BUTTON,
 )
-from data import ITEM_DATA, get_item_color
+from core.item_presentation import build_item_presentation
 
 
 class DropConfirmDialog:
@@ -51,17 +51,13 @@ class DropConfirmDialog:
                            self.WIDTH, self.HEIGHT)
 
     def _build_label(self) -> str:
-        name = ITEM_DATA[self.item_id][0] if self.item_id in ITEM_DATA else self.item_id
-        if self.enchant:
-            from enchantments.effects import get_enchant_display_prefix
-            prefix = get_enchant_display_prefix(self.enchant)
-            if prefix:
-                name = f"{prefix} {name}"
-        if self.rarity != 'common':
-            name = f"{self.rarity.title()} {name}"
-        if self.count > 1:
-            name = f"{name} x{self.count}"
-        return name
+        return build_item_presentation(
+            self.item_id,
+            self.rarity,
+            self.enchant,
+            self.count,
+            include_count=True,
+        )['label']
 
     def draw(self, surface: pygame.Surface) -> None:
         if not self.active:
@@ -74,8 +70,15 @@ class DropConfirmDialog:
         mx, my = pygame.mouse.get_pos()
         title = self.font.render("Drop Item?", True, RED)
         surface.blit(title, (r.centerx - title.get_width() // 2, r.y + 8))
-        label = self._build_label()
-        name_color = get_item_color(self.item_id, self.rarity)
+        presentation = build_item_presentation(
+            self.item_id,
+            self.rarity,
+            self.enchant,
+            self.count,
+            include_count=True,
+        )
+        label = presentation['label']
+        name_color = presentation['color']
         name_surf = self.font.render(label, True, name_color)
         surface.blit(name_surf, (r.centerx - name_surf.get_width() // 2, r.y + 32))
         warn = self.font_sm.render("This item will be lost forever!", True, YELLOW)

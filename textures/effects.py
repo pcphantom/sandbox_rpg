@@ -282,3 +282,28 @@ def generate_enchantment_table_placed(gen) -> pygame.Surface:
         s.set_at((16, 7), (200, 100, 255, 230))
         return s
     return gen._get("enchantment_table_placed", make)
+
+
+def generate_greater_enchantment_table_placed(gen) -> pygame.Surface:
+    """Placed greater enchantment table texture derived from the item icon."""
+    def make() -> pygame.Surface:
+        s = pygame.Surface((32, 32), pygame.SRCALPHA)
+        icon = gen.get('item_greater_enchantment_table')
+        icon_large = pygame.transform.smoothscale(icon, (24, 24))
+
+        shadow = pygame.Surface((24, 8), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), (0, 1, 24, 6))
+        s.blit(shadow, (4, 22))
+
+        glow = pygame.Surface((28, 28), pygame.SRCALPHA)
+        pygame.draw.circle(glow, (120, 70, 180, 70), (14, 13), 11)
+        pygame.draw.circle(glow, (180, 220, 255, 60), (14, 10), 6)
+        s.blit(glow, (2, 1))
+
+        s.blit(icon_large, (4, 3))
+
+        for x in range(8, 24):
+            s.set_at((x, 27), (55, 28, 70, 180))
+            s.set_at((x, 28), (40, 20, 52, 150))
+        return s
+    return gen._get("greater_enchantment_table_placed", make)

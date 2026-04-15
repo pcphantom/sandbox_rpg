@@ -16,7 +16,8 @@ from core.constants import (WHITE, GRAY, CYAN, INVENTORY_SLOTS_PER_PAGE,
                             UI_CHEST_SORT_HOVER, UI_CHEST_SORT_NORMAL,
                             UI_CHEST_SORT_BORDER)
 from core.components import Inventory
-from data import ITEM_DATA, get_item_color
+from core.item_presentation import build_item_presentation
+from data import ITEM_DATA
 from ui.elements import UIElement, Tooltip
 from ui.split_dialog import SplitDialog
 from ui.drop_confirm import DropConfirmDialog
@@ -71,7 +72,7 @@ class InventoryGrid(UIElement):
     def _inv_slot_rect(self, i: int) -> pygame.Rect:
         col = i % self.cols
         row = i // self.cols
-        hotbar_h = self.slot_size + 18  # hotbar row + gap
+        hotbar_h = self.slot_size + 32  # hotbar row + gap + page indicator
         x = self._grid_left() + col * (self.slot_size + 6)
         y = self.rect.y + 40 + hotbar_h + row * (self.slot_size + 6)
         return pygame.Rect(x, y, self.slot_size, self.slot_size)
@@ -119,10 +120,19 @@ class InventoryGrid(UIElement):
         hotbar_label = self.font.render(bar_label_str, True, GRAY)
         surface.blit(hotbar_label, (gl, self.rect.y + 26))
 
-        # Up/down cycling arrows (right of hotbar label)
+        # Up/down cycling arrows + bar indicator
         if total_bars > 1:
-            arrow_x = gl + hotbar_label.get_width() + 8
-            arrow_y = self.rect.y + 24
+            # Bar indicator right after label
+            bar_num = self.hotbar_view_index + 2 if self.hotbar_view_index >= 0 else 1
+            ind_str = f"{bar_num}/{total_bars}"
+            ind_surf = self.font.render(ind_str, True, UI_TEXT_MUTED)
+            ind_x = gl + hotbar_label.get_width() + 8
+            surface.blit(ind_surf, (ind_x, self.rect.y + 27))
+            # Arrows to the right of the hotbar slots, vertically centred
+            grid_right = gl + self.cols * (self.slot_size + 6) - 6
+            arrow_x = grid_right + 8
+            hotbar_center_y = self.rect.y + 40 + self.slot_size // 2
+            arrow_y = hotbar_center_y - 13  # (12 + 2 + 12) / 2 = 13
             self._up_arrow_r = pygame.Rect(arrow_x, arrow_y, 20, 12)
             self._dn_arrow_r = pygame.Rect(arrow_x, arrow_y + 14, 20, 12)
             for ar, tri in [(self._up_arrow_r, 'up'),
@@ -142,12 +152,6 @@ class InventoryGrid(UIElement):
                     pygame.draw.polygon(surface, WHITE if hov else GRAY,
                                         [(cx, cy + 3), (cx - 5, cy - 3),
                                          (cx + 5, cy - 3)])
-            # Bar indicator
-            bar_num = self.hotbar_view_index + 2 if self.hotbar_view_index >= 0 else 1
-            ind_str = f"{bar_num}/{total_bars}"
-            ind_surf = self.font.render(ind_str, True, UI_TEXT_MUTED)
-            surface.blit(ind_surf,
-                         (arrow_x + 24, self.rect.y + 27))
         else:
             self._up_arrow_r = None
             self._dn_arrow_r = None
@@ -171,7 +175,7 @@ class InventoryGrid(UIElement):
                 self._draw_item(surface, sr, item_id, count, mx, my, tooltip, hb_ench, hb_rar)
 
         # -- Separator + page indicator --
-        hotbar_h = self.slot_size + 18
+        hotbar_h = self.slot_size + 32
         sep_y = self.rect.y + 40 + self.slot_size + 6
         pygame.draw.line(surface, UI_SLOT_SEPARATOR,
                          (gl, sep_y),
@@ -263,14 +267,10 @@ class InventoryGrid(UIElement):
             surface.blit(ct, (sr.x + self.slot_size - ct.get_width() - 4,
                               sr.y + self.slot_size - ct.get_height() - 2))
         if sr.collidepoint(mx, my) and item_id in ITEM_DATA:
-            d = ITEM_DATA[item_id]
-            name = d[0]
-            name_color = get_item_color(item_id, rarity)
-            if rarity and rarity != 'common':
-                name = f"{rarity.title()} {name}"
+            presentation = build_item_presentation(item_id, rarity, enchant)
             from data.quality import get_stat_description
-            lines = [name, get_stat_description(item_id, rarity)]
-            colors = [name_color, WHITE]
+            lines = [presentation['label'], get_stat_description(item_id, rarity)]
+            colors = [presentation['color'], WHITE]
             if rarity and rarity != 'common':
                 from ui.rarity_display import insert_rarity_tooltip
                 insert_rarity_tooltip(lines, colors, rarity)
@@ -278,10 +278,6 @@ class InventoryGrid(UIElement):
                 from enchantments.effects import (
                     get_enchant_display_prefix, ENCHANT_COLORS as EC2,
                 )
-                prefix = get_enchant_display_prefix(enchant)
-                if prefix:
-                    lines[0] = f"{prefix} {name}"
-                    colors[0] = EC2.get(enchant['type'], name_color)
                 ench_line = (f"Enchant: {enchant['type'].title()}"
                              f" Lv.{enchant['level']}")
                 lines.insert(1, ench_line)
@@ -346,7 +342,7 @@ class InventoryGrid(UIElement):
 
             # Page buttons + Sort button
             gl = self._grid_left()
-            hotbar_h = self.slot_size + 18
+            hotbar_h = self.slot_size + 32
             btn_area_w = self.cols * (self.slot_size + 6) - 6
             nav_y = (self.rect.y + 40 + hotbar_h
                      + self.rows * (self.slot_size + 6) + 4)

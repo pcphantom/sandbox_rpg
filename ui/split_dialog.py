@@ -15,12 +15,12 @@ from core.item_stack import normalize_rarity
 class SplitDialog:
     """Small popup for splitting a stack.  Scroll wheel / +/- / type amount."""
 
-    WIDTH  = 180
+    WIDTH = 180
     HEIGHT = 120
 
     def __init__(self) -> None:
         self.active = False
-        self.source: str = ''         # 'hotbar', 'slots', or 'extra_bar'
+        self.source: str = ''         # 'hotbar', 'slots', 'extra_bar', or 'chest'
         self.slot: int = 0
         self.item_id: str = ''
         self.total: int = 0
@@ -28,14 +28,16 @@ class SplitDialog:
         self.typing: str = ''         # keyboard buffer
         self.font = pygame.font.SysFont('consolas', 16)
         self.font_sm = pygame.font.SysFont('consolas', 13)
-        # External storage refs (used for extra_bar splits)
+        # External storage refs (used for extra_bar splits or chest splits)
         self._ext_slots = None
         self._ext_enchants = None
         self._ext_rarities = None
+        self._transfer_to_inventory = False
 
     def open(self, source: str, slot: int, item_id: str, total: int,
              mx: int, my: int, *,
-             ext_slots=None, ext_enchants=None, ext_rarities=None) -> None:
+             ext_slots=None, ext_enchants=None, ext_rarities=None,
+             transfer_to_inventory: bool = False) -> None:
         self.active = True
         self.source = source
         self.slot = slot
@@ -46,12 +48,17 @@ class SplitDialog:
         self._ext_slots = ext_slots
         self._ext_enchants = ext_enchants
         self._ext_rarities = ext_rarities
+        self._transfer_to_inventory = transfer_to_inventory
         # Position near the mouse, clamped to screen
         self.x = min(mx, SCREEN_WIDTH - self.WIDTH - 4)
         self.y = min(my, SCREEN_HEIGHT - self.HEIGHT - 4)
 
     def close(self) -> None:
         self.active = False
+        self._ext_slots = None
+        self._ext_enchants = None
+        self._ext_rarities = None
+        self._transfer_to_inventory = False
 
     def draw(self, surface: pygame.Surface) -> None:
         if not self.active:
@@ -64,21 +71,18 @@ class SplitDialog:
 
         mx, my = pygame.mouse.get_pos()
 
-        # Title
-        title = self.font.render("Split Stack", True, WHITE)
+        title = self.font.render('Split Stack', True, WHITE)
         surface.blit(title, (r.centerx - title.get_width() // 2, r.y + 6))
 
-        # Amount display
         amt_text = self.font.render(
-            f"{self.amount} / {self.total}", True, YELLOW)
+            f'{self.amount} / {self.total}', True, YELLOW)
         surface.blit(amt_text,
                      (r.centerx - amt_text.get_width() // 2, r.y + 30))
 
-        # Minus / Plus buttons
         btn_w, btn_h = 36, 24
         minus_r = pygame.Rect(r.x + 14, r.y + 56, btn_w, btn_h)
-        plus_r  = pygame.Rect(r.right - 14 - btn_w, r.y + 56, btn_w, btn_h)
-        for br, label in [(minus_r, "-"), (plus_r, "+")]:
+        plus_r = pygame.Rect(r.right - 14 - btn_w, r.y + 56, btn_w, btn_h)
+        for br, label in [(minus_r, '-'), (plus_r, '+')]:
             hov = br.collidepoint(mx, my)
             pygame.draw.rect(surface,
                              UI_SLOT_BG_SELECTED if hov else UI_SPLIT_BUTTON_NORMAL,
@@ -88,21 +92,19 @@ class SplitDialog:
             surface.blit(lt, (br.centerx - lt.get_width() // 2,
                               br.centery - lt.get_height() // 2))
 
-        # Typing hint
-        hint = self.font_sm.render("Scroll / type / +/-", True, GRAY)
+        hint = self.font_sm.render('Scroll / type / +/-', True, GRAY)
         surface.blit(hint,
                      (r.centerx - hint.get_width() // 2, r.y + 56 + 4))
 
-        # Confirm / Cancel
         conf_r = pygame.Rect(r.x + 10, r.bottom - 28, 75, 22)
         canc_r = pygame.Rect(r.right - 85, r.bottom - 28, 75, 22)
         for br, label, color in [
-            (conf_r, "Confirm", UI_CONFIRM_BUTTON),
-            (canc_r, "Cancel",  UI_CANCEL_BUTTON),
+            (conf_r, 'Confirm', UI_CONFIRM_BUTTON),
+            (canc_r, 'Cancel', UI_CANCEL_BUTTON),
         ]:
             hov = br.collidepoint(mx, my)
-            c = tuple(min(255, ch + 30) for ch in color) if hov else color
-            pygame.draw.rect(surface, c, br, border_radius=4)
+            button_color = tuple(min(255, ch + 30) for ch in color) if hov else color
+            pygame.draw.rect(surface, button_color, br, border_radius=4)
             pygame.draw.rect(surface, UI_BORDER_BUTTON, br, 1, border_radius=4)
             lt = self.font_sm.render(label, True, WHITE)
             surface.blit(lt, (br.centerx - lt.get_width() // 2,
@@ -110,13 +112,12 @@ class SplitDialog:
 
     def handle_event(self, event: pygame.event.Event,
                      inventory: 'Inventory') -> bool:
-        """Returns True if the event was consumed."""
+        """Return True if the event was consumed."""
         if not self.active:
             return False
 
         if event.type == pygame.MOUSEWHEEL:
-            self.amount = max(1, min(self.total - 1,
-                                     self.amount + event.y))
+            self.amount = max(1, min(self.total - 1, self.amount + event.y))
             return True
 
         if event.type == pygame.KEYDOWN:
@@ -145,7 +146,7 @@ class SplitDialog:
 
             btn_w, btn_h = 36, 24
             minus_r = pygame.Rect(r.x + 14, r.y + 56, btn_w, btn_h)
-            plus_r  = pygame.Rect(r.right - 14 - btn_w, r.y + 56, btn_w, btn_h)
+            plus_r = pygame.Rect(r.right - 14 - btn_w, r.y + 56, btn_w, btn_h)
             if minus_r.collidepoint(mx, my):
                 self.amount = max(1, self.amount - 1)
                 return True
@@ -161,17 +162,17 @@ class SplitDialog:
             if canc_r.collidepoint(mx, my):
                 self.close()
                 return True
-            return True  # click inside dialog is consumed
+            return True
 
         return False
 
     def _confirm(self, inventory: 'Inventory') -> None:
-        """Split: reduce source slot, put split amount into held_item."""
-        if self.amount < 1 or self.amount >= self.total:
+        """Split a stack into held item or directly into inventory."""
+        if self.amount < 1:
             self.close()
             return
-        remain = self.total - self.amount
-        if self.source == 'extra_bar' and self._ext_slots is not None:
+
+        if self.source in ('extra_bar', 'chest') and self._ext_slots is not None:
             storage = self._ext_slots
             ench_dict = self._ext_enchants or {}
             rar_dict = self._ext_rarities or {}
@@ -183,11 +184,35 @@ class SplitDialog:
             storage = inventory.slots
             ench_dict = inventory.slot_enchantments
             rar_dict = inventory.slot_rarities
-        if self.slot in storage:
-            storage[self.slot] = (self.item_id, remain)
-            inventory.held_item = (self.item_id, self.amount)
-            ench = ench_dict.get(self.slot)
-            if ench:
-                inventory.held_enchant = dict(ench)
-            inventory.held_rarity = normalize_rarity(rar_dict.get(self.slot, 'common'))
+
+        if self.slot not in storage:
+            self.close()
+            return
+
+        current_total = storage[self.slot][1]
+        if self.amount >= current_total:
+            self.close()
+            return
+
+        ench = ench_dict.get(self.slot)
+        rarity = normalize_rarity(rar_dict.get(self.slot, 'common'))
+
+        if self._transfer_to_inventory:
+            overflow = inventory.add_item_enchanted(
+                self.item_id,
+                dict(ench) if ench else None,
+                self.amount,
+                rarity,
+            )
+            moved = self.amount - overflow
+            if moved > 0:
+                storage[self.slot] = (self.item_id, current_total - moved)
+            self.close()
+            return
+
+        storage[self.slot] = (self.item_id, current_total - self.amount)
+        inventory.held_item = (self.item_id, self.amount)
+        if ench:
+            inventory.held_enchant = dict(ench)
+        inventory.held_rarity = rarity
         self.close()

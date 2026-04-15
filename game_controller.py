@@ -510,6 +510,7 @@ CAVE_BOSS_TYPES: Tuple[str, ...] = (
     'dragon_red', 'dragon_green', 'dragon_black', 'dragon_white',
 )
 CAVE_ORE_COUNT: int = 8
+CAVE_TITANIUM_COUNT: int = 4
 CAVE_DIAMOND_COUNT: int = 3
 CAVE_HP_MULT: float = 1.5
 CAVE_DMG_MULT: float = 1.3
@@ -940,7 +941,8 @@ CAMPFIRE_HEAL_INTERVAL: float = 1.0
 # --- Light radii ---
 CAMPFIRE_LIGHT_RADIUS: int = 180
 TORCH_LIGHT_RADIUS: int = 120
-BEACON_LIGHT_RADIUS: int = 720          # 4× campfire
+BEACON_LIGHT_RADIUS: int = 720          # Beacon gameplay radius for AI / beacon-zone logic
+BEACON_VISUAL_LIGHT_RADIUS: int = 320   # Beacon on-screen lighting radius
 STONE_OVEN_LIGHT_RADIUS: int = 120      # same as torch, only when burning
 REPAIR_RANGE: float = 60.0
 

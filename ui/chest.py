@@ -16,7 +16,8 @@ from core.constants import (
     UI_NAV_HOVER, UI_NAV_NORMAL, UI_TEXT_MUTED,
 )
 from core.components import Storage, Inventory
-from data import ITEM_DATA, get_item_color, get_stat_description
+from core.item_presentation import build_item_presentation
+from data import ITEM_DATA, get_stat_description
 from ui.rarity_display import (
     draw_rarity_border, insert_rarity_tooltip,
 )
@@ -186,7 +187,7 @@ class ChestUI:
                    ox: int, oy: int, mx: int, my: int,
                    tooltip, side: str) -> None:
         from enchantments.effects import (
-            get_enchant_display_prefix, ENCHANT_COLORS,
+            ENCHANT_COLORS,
         )
         ss = self.slot_size
         for i in range(capacity):
@@ -214,23 +215,16 @@ class ChestUI:
                     surface.blit(ct, (x + ss - ct.get_width() - 3,
                                       y + ss - ct.get_height() - 2))
                 if sr.collidepoint(mx, my) and item_id in ITEM_DATA:
-                    d = ITEM_DATA[item_id]
-                    name = d[0]
-                    name_color = get_item_color(item_id, rar)
+                    presentation = build_item_presentation(item_id, rar, ench)
                     action = "Click: Move to " + (
                         "Inventory" if side == 'chest' else "Chest")
-                    lines = [name, get_stat_description(item_id, rar), action]
-                    colors = [name_color, WHITE, GRAY]
+                    lines = [presentation['label'], get_stat_description(item_id, rar), action]
+                    colors = [presentation['color'], WHITE, GRAY]
                     if side == 'chest' and count > 1:
                         lines.append("Right-click: Choose amount")
                         colors.append(GRAY)
                     insert_rarity_tooltip(lines, colors, rar)
                     if ench:
-                        prefix = get_enchant_display_prefix(ench)
-                        if prefix:
-                            lines[0] = f"{prefix} {name}"
-                            colors[0] = ENCHANT_COLORS.get(
-                                ench['type'], name_color)
                         ench_line = (f"Enchant: {ench['type'].title()}"
                                      f" Lv.{ench['level']}")
                         lines.insert(1, ench_line)
@@ -288,9 +282,12 @@ class ChestUI:
                     if real in storage.slots:
                         iid, cnt = storage.slots[real]
                         if cnt > 1:
-                            self.split_dialog.open_chest(
-                                real, iid, cnt, mx, my,
-                                storage, inventory)
+                            self.split_dialog.open(
+                                'chest', real, iid, cnt, mx, my,
+                                ext_slots=storage.slots,
+                                ext_enchants=storage.slot_enchantments,
+                                ext_rarities=storage.slot_rarities,
+                                transfer_to_inventory=True)
                             return True
             return False
 

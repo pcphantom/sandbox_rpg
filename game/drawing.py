@@ -43,6 +43,7 @@ from core.constants import (
     PLACEMENT_UPGRADE_BORDER, PLACEMENT_VALID_BORDER, PLACEMENT_INVALID_BORDER,
     SPELL_TARGET_RETICLE, SPELL_HELP_TEXT,
 )
+from core.item_presentation import build_item_presentation
 from data.day_night import (
     DAY_FLASH_FADE_DIVISOR, DAY_FLASH_TEXT, DAY_FLASH_COLOR,
     NIGHT_FLASH_FADE_DIVISOR, NIGHT_FLASH_TEXT, NIGHT_FLASH_COLOR,
@@ -431,52 +432,31 @@ def draw_hotbar(g: 'Game') -> None:
                 from ui.rarity_display import draw_rarity_border
                 draw_rarity_border(g.screen, rect, hb_rar)
             if rect.collidepoint(mx, my) and item_id in ITEM_DATA:
-                d = ITEM_DATA[item_id]
-                name = d[0]
                 hb_rar = inv.hotbar_rarities.get(i, 'common')
-                if hb_rar and hb_rar != 'common':
-                    name = f"{hb_rar.title()} {name}"
+                presentation = build_item_presentation(item_id, hb_rar, hb_ench)
                 from data.quality import get_stat_description
-                lines = [name, get_stat_description(item_id, hb_rar)]
-                colors = [WHITE, WHITE]
-                if hb_rar and hb_rar != 'common':
-                    from data.quality import get_rarity_color
-                    colors[0] = get_rarity_color(hb_rar)
-                if hb_ench:
-                    from enchantments.effects import (
-                        get_enchant_display_prefix, ENCHANT_COLORS as EC2,
-                    )
-                    prefix = get_enchant_display_prefix(hb_ench)
-                    if prefix:
-                        lines[0] = f"{prefix} {name}"
-                        colors[0] = EC2.get(hb_ench['type'], colors[0])
-                    ench_line = (f"Enchant: {hb_ench['type'].title()}"
-                                 f" Lv.{hb_ench['level']}")
-                    lines.insert(1, ench_line)
-                    colors.insert(1, EC2.get(hb_ench['type'], CYAN))
+                lines = [presentation['label'], get_stat_description(item_id, hb_rar)]
+                colors = [presentation['color'], WHITE]
                 if hb_rar and hb_rar != 'common':
                     from ui.rarity_display import insert_rarity_tooltip
                     insert_rarity_tooltip(lines, colors, hb_rar)
+                    if hb_ench:
+                        from enchantments.effects import (
+                            ENCHANT_COLORS as EC2,
+                        )
+                        ench_line = (f"Enchant: {hb_ench['type'].title()}"
+                                     f" Lv.{hb_ench['level']}")
+                        lines.insert(1, ench_line)
+                        colors.insert(1, EC2.get(hb_ench['type'], CYAN))
                 g.tooltip.show(lines, (mx, my), colors)
     # Equipped item name below hotbar
     eq_item = inv.get_equipped()
     if eq_item and eq_item in ITEM_DATA:
         eq_ench = inv.get_equipped_enchant()
         eq_rar = inv.get_equipped_rarity()
-        name = ITEM_DATA[eq_item][0]
-        name_color = UI_NOTIFICATION_TEXT
-        if eq_rar and eq_rar != 'common':
-            name = f"{eq_rar.title()} {name}"
-            from data.quality import get_rarity_color
-            name_color = get_rarity_color(eq_rar)
-        if eq_ench:
-            from enchantments.effects import (
-                get_enchant_display_prefix, ENCHANT_COLORS as EC3,
-            )
-            prefix = get_enchant_display_prefix(eq_ench)
-            if prefix:
-                name = f"{prefix} {name}"
-                name_color = EC3.get(eq_ench['type'], name_color)
+        presentation = build_item_presentation(eq_item, eq_rar, eq_ench)
+        name = presentation['label']
+        name_color = presentation['color']
         nt = g.font.render(name, True, name_color)
         name_cx = bx + tw // 2
         g.screen.blit(nt, (name_cx - nt.get_width() // 2, by - 22))
@@ -646,16 +626,14 @@ def draw_hud(g: 'Game') -> None:
                 continue
             pl_h = g.em.get_component(eid, Placeable)
             h = g.em.get_component(eid, Health)
-            struct_name = ITEM_DATA[pl_h.item_type][0] if pl_h.item_type in ITEM_DATA else pl_h.item_type
+            struct_name = build_item_presentation(pl_h.item_type)['label']
             if g.em.has_component(eid, Turret):
                 turr = g.em.get_component(eid, Turret)
-                if turr.rarity and turr.rarity != 'common':
-                    struct_name = f"{turr.rarity.title()} {struct_name}"
-                if turr.enchant:
-                    from enchantments.effects import get_enchant_display_prefix
-                    prefix = get_enchant_display_prefix(turr.enchant)
-                    if prefix:
-                        struct_name = f"{prefix} {struct_name}"
+                struct_name = build_item_presentation(
+                    pl_h.item_type,
+                    turr.rarity,
+                    turr.enchant,
+                )['label']
             if h.current < h.maximum:
                 label = f"{struct_name} - Press F to Repair"
                 color = HUD_REPAIR_DAMAGED_TEXT
@@ -959,21 +937,14 @@ def _draw_cheat_help(g: 'Game') -> None:
 
     lines = [
         "enable cheats      - Enable cheat mode",
-        "set health <val>   - Set HP",
-        "set maxhp <val>    - Set max HP",
-        "set level <val>    - Set player level",
-        "set xp <val>       - Set XP",
-        "set points <val>   - Set stat points",
-        "set str <val>      - Set strength",
-        "set agi <val>      - Set agility",
-        "set vit <val>      - Set vitality",
-        "set luck <val>     - Set luck",
-        "set kills <val>    - Set kill count",
-        "set day <val>      - Set day number",
-        "give <item> [n]    - Give item(s)",
+        "disable cheats     - Turn cheats back off",
+        "set <stat> <val>   - health, maxhp, level, xp, points, str, agi, vit, luck, kills, day",
+        "give <item> [n]    - Give a plain item by id or name",
+        "give Regen V Mythic Turret +5  - Give a fully-specified item",
+        "autokill on|off    - Kill enemies every 1 second",
         "god                - Toggle invincibility",
         "heal               - Full heal",
-        "kill               - Kill all enemies",
+        "kill               - Kill all enemies now",
         "levelup [n]        - Level up n times",
     ]
     y = py + 38

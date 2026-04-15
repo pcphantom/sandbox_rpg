@@ -14,6 +14,8 @@ This document tracks all global constants, key variables, and data structures us
 | `core/constants.py` | Re-exports from `game_controller.py` + data modules | ~240 re-exported constants |
 | `core/components.py` | ECS component definitions | 15 component types |
 | `core/item_stack.py` | Centralised item identity, stacking, transfer, sort | normalize_rarity, items_match, add_to_slots, remove_from_slots, sort_slots, transfer_slot, transfer_all |
+| `core/item_presentation.py` | Canonical item label + rarity styling helpers | get_base_item_display_name, get_item_upgrade_suffix, get_item_display_label, build_item_presentation |
+| `core/item_metadata.py` | Shared item metadata helpers for cheats and loot | parse_level_token, resolve_enchant_type_token, resolve_rarity_token, can_apply_enchant_to_item, set_item_enhancement_level, roll_item_metadata |
 | `core/ecs.py` | EntityManager | Core ECS, _query_cache for per-frame dedup |
 | `core/spatial.py` | SpatialHash grid-based spatial index | spatial_hash singleton, SPATIAL_CELL_SIZE=128 |
 | `core/utils.py` | Math/geometry helpers | clamp, lerp, hash_noise, fbm_noise |
@@ -26,9 +28,9 @@ This document tracks all global constants, key variables, and data structures us
 | `game/entities.py` | Entity creation, population, lifecycle | 12 functions |
 | `game/interaction.py` | Interact, placement, crafting, sleep | 8 functions |
 | `game/menus.py` | Main menu, options menu | 6 functions |
-| `game/persistence.py` | Save/load orchestration (includes cheats_enabled) | 8 functions |
+| `game/persistence.py` | Save/load orchestration (includes cheats_enabled and has_cheated) | 8 functions |
 | `game/save_load.py` | Low-level save file I/O | File operations |
-| `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, levelup |
+| `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, autokill, levelup, kill_all_enemies |
 | **systems/** | ECS systems | |
 | `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
 | `systems/physics.py` | Physics / collision | PhysicsSystem |
@@ -83,7 +85,7 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting/cooking interface |
 | `ui/inventory_sort.py` | sort_inventory_slots | Inventory sorting (respects non-stackable rules) |
 | `ui/minimap.py` | Minimap | Minimap drawing |
-| `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
+| `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands; owns keyboard focus via `blocks_game_input()` while visible and supports `give` item autocomplete |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
 | `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager (_return_bar_items, handle_close_click with inv param), ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
 | **character/** | Character customization package | |
@@ -514,7 +516,8 @@ Single source of truth for ALL stat effects. Change `game_controller.py` to tune
 | `ENCHANT_TABLE_CAPACITY` | 9 | Enchantment table storage slots |
 | `ENCHANT_TABLE_HP` | 60 | Enchantment table hit points |
 | `CAMPFIRE_LIGHT_RADIUS` | 180 | Campfire light radius in px |
-| `BEACON_LIGHT_RADIUS` | 720 | Beacon light radius in px (4× campfire) |
+| `BEACON_LIGHT_RADIUS` | 720 | Beacon gameplay influence radius in px for AI / beacon-zone logic |
+| `BEACON_VISUAL_LIGHT_RADIUS` | 320 | Beacon on-screen lighting radius in px so night remains visibly dark outside the beacon area |
 | `STONE_OVEN_LIGHT_RADIUS` | 120 | Stone oven light radius (only when burning) |
 | `BEACON_HP` | 120 | Beacon hit points |
 | `BEACON_ATTRACT_RADIUS` | 1440.0 | Distance enemies start moving toward beacon at night |
@@ -1212,6 +1215,15 @@ Rarity is a **per-slot attribute** independent of enhancement (+1..+5) and encha
 
 **CRITICAL**: `None` is NEVER a valid rarity value. All items always have a rarity; the baseline is `'common'`. The canonical normalisation function is `core.item_stack.normalize_rarity()` which maps falsy values → `'common'`. All stacking, sorting, transfer, save/load, and display code must go through this normalisation.
 
+**Display Contract**: Rarity is styling and metadata, not part of the canonical item label. Visible item labels are built centrally in `core/item_presentation.py` as:
+- effect prefix
+- base item name
+- upgrade suffix (`+N`)
+
+Example: `Flaming V Iron Axe +5`
+
+Rarity appears through colour, border, and the dedicated tooltip line `Rarity: <Tier>`.
+
 | Tier | Color Constant | RGB | Stat Multiplier |
 |------|---------------|-----|-----------------|
 | common | `RARITY_COLOR_COMMON` | (255, 255, 255) | 1.0× (100%) |
@@ -1512,11 +1524,12 @@ Right-click a stack (count > 1) in the inventory to open a split dialog.
 - Type a number for precise control.
 - Press Enter or click Confirm to split; Esc or Cancel to close.
 - Default split amount is half the stack.
+- Right-clicking a chest stack uses the same dialog, but moves the chosen amount directly from the chest into the player inventory.
 
 ### Drop Item Confirm (`ui/drop_confirm.py: DropConfirmDialog`)
 
 Left-click outside the inventory panel while holding an item opens a confirmation dialog.
-- Shows item name (with rarity, enchant prefix, and count).
+- Shows the canonical item label plus count; rarity remains styling/metadata rather than part of the label text.
 - Warns the item will be lost forever.
 - "Yes, Drop" destroys the held item (clears `held_item`, `held_enchant`, `held_rarity`).
 - "Cancel" or Esc closes the dialog; the item remains held.
@@ -1894,6 +1907,7 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | Command | Requires Cheats | Description |
 |---------|-----------------|-------------|
 | `enable cheats` | No | Enables cheat mode (saved to save data) |
+| `disable cheats` | No | Disables cheat mode and turns off timed cheat effects |
 | `help` | No | Lists available commands |
 | `set health <val>` | Yes | Set current HP |
 | `set maxhp <val>` | Yes | Set max HP |
@@ -1906,10 +1920,12 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | `set luck <val>` | Yes | Set luck |
 | `set kills <val>` | Yes | Set kill count |
 | `set day <val>` | Yes | Set day number |
-| `give <item_id> [n]` | Yes | Give n items (default 1) |
+| `give <item_id> [n]` | Yes | Give n plain items (default 1) |
+| `give Regen V Mythic Turret +5 [n]` | Yes | Give fully-specified enchant/rarity/enhancement items |
 | `god` | Yes | Toggle invincibility |
 | `heal` | Yes | Full heal |
 | `kill` | Yes | Kill all enemies |
+| `autokill on|off` | Yes | Kill enemies every 1 second while enabled |
 | `levelup [n]` | Yes | Level up n times (default 1) |
 
 ### Save Data Fields
@@ -1917,15 +1933,23 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `cheats_enabled` | bool | false | Whether cheats are enabled |
+| `has_cheated` | bool | false | Permanent flag that becomes true once cheats were ever enabled |
 
 ### Game State
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `Game.cheats_enabled` | bool | Cheat mode active |
+| `Game.has_cheated` | bool | Persistent save flag tracking whether cheats were ever enabled |
 | `Game.god_mode` | bool | Invincibility (not saved) |
+| `Game.autokill_enabled` | bool | Timed cheat toggle that kills enemies every 1 second |
+| `Game.autokill_timer` | float | Accumulator for the autokill interval |
 | `Game.show_cheat_help` | bool | Cheat help overlay visible |
 | `Game.command_bar` | CommandBar | F12 command bar instance |
+
+When `Game.command_bar.blocks_game_input()` is true, command text entry has exclusive keyboard focus. Global UI toggles (`I`, `C`, `P`, etc.), action-bar hotkeys, mouse-wheel hotbar cycling, and held-key gameplay actions (`WASD`, `E`, `R`, `Space`) must not react until the command bar closes. `give` accepts item ids or multi-word item names plus optional enchant level, rarity, and `+N` enhancement tokens. Example: `give Regen V Mythic Turret +5 2`. `Tab` autocompletes the item portion while preserving the metadata tokens already typed.
+
+Loot metadata now also flows through `core/item_metadata.roll_item_metadata()`. Enemy-specific tables still decide what can drop; day count, elite tier, boss status, and item type now decide whether the drop also rolls rarity, enchant, and enhancement metadata.
 
 ---
 

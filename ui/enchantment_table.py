@@ -24,9 +24,9 @@ from core.constants import (
     UI_NAV_HOVER, UI_NAV_NORMAL,
     UI_TEXT_MUTED,
 )
-from data import ITEM_DATA, get_item_color, get_stat_description
+from core.item_presentation import build_item_presentation
+from data import ITEM_DATA, get_stat_description
 from core.components import Storage, Inventory
-from core.item_stack import normalize_rarity
 from ui.rarity_display import draw_rarity_border, insert_rarity_tooltip
 from ui.draggable import DraggableWindow
 
@@ -156,22 +156,9 @@ class EnchantmentTableUI:
         if result:
             rid = result['result_item']
             if rid in ITEM_DATA:
-                d = ITEM_DATA[rid]
-                name = d[0]
                 ench = result.get('result_enchant')
                 rr = result.get('result_rarity', 'common')
-                color = get_item_color(rid, rr)
-                if ench:
-                    from enchantments.effects import (
-                        get_enchant_display_prefix, ENCHANT_COLORS,
-                    )
-                    prefix = get_enchant_display_prefix(ench)
-                    if prefix:
-                        name = f"{prefix} {name}"
-                    if not rr or rr == 'common':
-                        color = ENCHANT_COLORS.get(ench['type'], WHITE)
-                if rr and rr != 'common':
-                    name = f"{rr.title()} {name}"
+                presentation = build_item_presentation(rid, rr, ench)
                 icon = self.textures.cache.get(f'item_{rid}')
                 icon_x = px + 14
                 text_x = icon_x + 26
@@ -179,7 +166,8 @@ class EnchantmentTableUI:
                 if icon:
                     surface.blit(pygame.transform.scale(icon, (20, 20)),
                                  (icon_x, center_y - 10))
-                nt = self.font.render(name, True, color)
+                nt = self.font.render(presentation['label'], True,
+                                      presentation['color'])
                 surface.blit(nt, (text_x, center_y - nt.get_height() // 2))
 
         # Chrome
@@ -224,21 +212,12 @@ class EnchantmentTableUI:
             surface.blit(ct, (sr.x + ss - ct.get_width() - 3,
                               sr.y + ss - ct.get_height() - 2))
         if sr.collidepoint(mx, my) and item_id in ITEM_DATA:
-            d = ITEM_DATA[item_id]
-            name = d[0]
-            lines = [name, get_stat_description(item_id, rarity), action]
-            colors = [get_item_color(item_id, rarity), WHITE, GRAY]
+            presentation = build_item_presentation(item_id, rarity, enchant)
+            lines = [presentation['label'], get_stat_description(item_id, rarity), action]
+            colors = [presentation['color'], WHITE, GRAY]
             insert_rarity_tooltip(lines, colors, rarity)
             if enchant:
-                from enchantments.effects import (
-                    get_enchant_display_prefix, ENCHANT_COLORS as EC,
-                )
-                prefix = get_enchant_display_prefix(enchant)
-                if prefix:
-                    lines[0] = f"{prefix} {name}"
-                    # Only use enchant color when there's no rarity color
-                    if normalize_rarity(rarity) == 'common':
-                        colors[0] = EC.get(enchant['type'], WHITE)
+                from enchantments.effects import ENCHANT_COLORS as EC
                 ench_line = (f"Enchant: {enchant['type'].title()}"
                              f" Lv.{enchant['level']}")
                 lines.insert(1, ench_line)

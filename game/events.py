@@ -5,6 +5,26 @@ from core.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from core.components import Inventory, PlayerStats, Equipment, Storage, Building
 
 
+def _handle_command_bar_event(g, event) -> bool:
+    """Handle command-bar focus before any gameplay or UI hotkeys."""
+    if (event.type == pygame.KEYDOWN
+            and event.key == pygame.K_F12
+            and not g.dead and not g.paused):
+        g.command_bar.toggle()
+        return True
+
+    if not g.command_bar.blocks_game_input():
+        return False
+
+    from game.cheats import execute_command, autocomplete_command
+    g.command_bar.handle_event(
+        event,
+        lambda cmd: execute_command(g, cmd),
+        lambda raw, apply=False: autocomplete_command(g, raw, apply),
+    )
+    return True
+
+
 def handle_events(g) -> None:
     """Process all pygame events for one frame.
 
@@ -26,18 +46,9 @@ def handle_events(g) -> None:
         if hasattr(event, 'pos'):
             event.pos = g._scale_mouse_pos(event.pos)
 
-        # F12 toggles command bar (works in all non-dead, non-menu states)
-        if (event.type == pygame.KEYDOWN
-                and event.key == pygame.K_F12
-                and not g.dead and not g.paused):
-            g.command_bar.toggle()
-            continue
-
-        # Command bar consumes events when visible
-        if g.command_bar.visible:
-            from game.cheats import execute_command
-            g.command_bar.handle_event(
-                event, lambda cmd: execute_command(g, cmd))
+        # Command bar owns focus when visible, so typed input cannot leak
+        # into gameplay hotkeys, action bars, or held-key movement/actions.
+        if _handle_command_bar_event(g, event):
             continue
 
         # Cheat help overlay close

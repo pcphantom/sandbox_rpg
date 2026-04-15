@@ -14,6 +14,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, CYAN, GREEN,
                             UI_BORDER_DIALOG, UI_DROPDOWN_HOVER,
                             UI_DROPDOWN_NORMAL)
 from core.components import Inventory, Health, PlayerStats, Equipment
+from core.item_presentation import build_item_presentation
 from data import ITEM_DATA, ITEM_CATEGORIES
 from ui.elements import Tooltip
 from ui.draggable import DraggableWindow
@@ -165,19 +166,12 @@ class CharacterMenu:
             f"Harvest luck: +{luck_bonus}%", True, GRAY), (bx, by))
 
         # ---- Bottom: Equipment (full width) ----
-        # IMPORTANT — Equipment name display must show ALL THREE layers:
-        #   1. Rarity prefix + rarity color  (e.g. "Epic" in gold)
-        #      Source: equipment.rarities[attr]
-        #   2. Enhancement level (+N) is already in ITEM_DATA name
-        #      (e.g. ITEM_DATA["iron_sword_3"][0] == "Iron Sword +3")
-        #      Source: core/enhancement.py get_enhancement_level()
-        #   3. Enchantment prefix + color override  (e.g. "Flaming V" in red)
-        #      Source: equipment.enchantments[attr], enchantments/effects.py
-        #
-        # Final result example: "Flaming V Epic Iron Sword +3"
-        #   - color = enchantment color (overrides rarity color when present)
-        #
-        # DO NOT remove any of these three layers.
+        # IMPORTANT — Equipment display uses one canonical label path:
+        #   1. Effect prefix (e.g. "Flaming V")
+        #   2. Base item name (e.g. "Iron Sword")
+        #   3. Upgrade suffix (e.g. "+3")
+        # Rarity is NOT part of the item label text. It only affects styling,
+        # tooltip metadata, and slot border colour.
         ex = px + 20
         ey = py + 260
         surface.blit(self.font.render("Equipment", True, YELLOW), (ex, ey))
@@ -186,39 +180,23 @@ class CharacterMenu:
             item_id = getattr(equipment, attr)
 
             # --- Build display name and color ---
-            # Step 0: Base name from ITEM_DATA (already includes "+N"
-            # enhancement suffix for enhanced items like "Iron Sword +3")
-            name = ITEM_DATA[item_id][0] if item_id and item_id in ITEM_DATA else "\u2014"
+            name = "—"
             name_color = WHITE
-
-            # Step 1: Rarity prefix + rarity color (e.g. "Epic Iron Sword +3")
-            # Must be applied BEFORE enchantment prefix so the final order is
-            # "Enchantment Rarity BaseName +N"
             if item_id:
                 eq_rar = equipment.rarities.get(attr, 'common')
-                if eq_rar and eq_rar != 'common':
-                    name = f"{eq_rar.title()} {name}"
-                    from data.quality import get_rarity_color
-                    name_color = get_rarity_color(eq_rar)
-
-            # Step 2: Enchantment prefix + color override
-            # (e.g. "Flaming V Epic Iron Sword +3" in enchantment color)
-            # Enchantment color takes priority over rarity color when present.
-            eq_ench = equipment.enchantments.get(attr)
-            if eq_ench and item_id:
-                from enchantments.effects import (
-                    get_enchant_display_prefix, ENCHANT_COLORS,
+                eq_ench = equipment.enchantments.get(attr)
+                presentation = build_item_presentation(
+                    item_id,
+                    eq_rar,
+                    eq_ench,
+                    equipment.ammo_count if attr == 'ammo' else 1,
+                    include_count=(attr == 'ammo' and equipment.ammo_count > 0),
                 )
-                prefix = get_enchant_display_prefix(eq_ench)
-                if prefix:
-                    name = f"{prefix} {name}"
-                    name_color = ENCHANT_COLORS.get(eq_ench['type'], name_color)
+                name = presentation['label']
+                name_color = presentation['color']
 
             # --- Render slot label + item name ---
             surface.blit(self.font.render(f"{label}: ", True, GRAY), (ex, ey))
-            # Ammo shows count after name
-            if attr == 'ammo' and item_id and equipment.ammo_count > 0:
-                name = f"{name} x{equipment.ammo_count}"
             surface.blit(self.font.render(name, True, name_color), (ex + 80, ey))
 
             # --- Icon + rarity border ---
@@ -295,27 +273,9 @@ class CharacterMenu:
                 surface.blit(
                     pygame.transform.scale(icon, (18, 18)),
                     (row_r.x + 4, row_r.y + 3))
-            # Name display — must show all three layers:
-            #   1. Rarity prefix + color (e.g. "Epic" in gold)
-            #   2. Enhancement +N already in ITEM_DATA name (e.g. "Iron Sword +3")
-            #   3. Enchantment prefix + color override (e.g. "Flaming V" in red)
-            # DO NOT remove any of these three layers.
-            name = ITEM_DATA[iid][0] if iid in ITEM_DATA else iid
-            name_color = WHITE
-            # Step 1: Rarity
-            if rar and rar != 'common':
-                name = f"{rar.title()} {name}"
-                from data.quality import get_rarity_color
-                name_color = get_rarity_color(rar)
-            # Step 2: Enchantment prefix (overrides rarity color)
-            if ench:
-                from enchantments.effects import (
-                    get_enchant_display_prefix, ENCHANT_COLORS,
-                )
-                prefix = get_enchant_display_prefix(ench)
-                if prefix:
-                    name = f"{prefix} {name}"
-                    name_color = ENCHANT_COLORS.get(ench['type'], name_color)
+            presentation = build_item_presentation(iid, rar, ench)
+            name = presentation['label']
+            name_color = presentation['color']
             surface.blit(self.font_sm.render(name, True, name_color),
                          (row_r.x + 26, row_r.y + 5))
             iy += rh

@@ -29,7 +29,7 @@ from core.constants import (
     LEVEL_UP_BASE_HP, VIT_HP_BONUS_PER_LEVEL,
     MOB_RESPAWN_MIN_DIST,
     CAVE_MOB_TYPES, CAVE_MOB_COUNT, CAVE_BOSS_TYPES,
-    CAVE_ORE_COUNT, CAVE_DIAMOND_COUNT,
+    CAVE_ORE_COUNT, CAVE_TITANIUM_COUNT, CAVE_DIAMOND_COUNT,
     CAVE_HP_MULT, CAVE_DMG_MULT,
     CHEST_CAPACITY, CHEST_HP_VALUE,
 )
@@ -41,7 +41,7 @@ from core.components import (
 from data import (
     ITEM_DATA, MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS,
 )
-from drops import LOOT_TABLES, CAVE_CHEST_LOOT, roll_loot, pick_weighted, maybe_enhance
+from drops import LOOT_TABLES, CAVE_CHEST_LOOT, roll_loot, pick_weighted
 from world.generator import WorldGenerator
 from game_controller import (
     MOB_COLOR_SLIME, MOB_COLOR_SKELETON, MOB_COLOR_WOLF, MOB_COLOR_GOBLIN,
@@ -231,7 +231,7 @@ def populate_world(g: 'Game') -> None:
                 create_mob(g, x * TILE_SIZE + 8, y * TILE_SIZE + 8, mob_type)
 
 
-def spawn_mob(g: 'Game') -> None:
+def spawn_mob(g: 'Game') -> bool:
     from data.mobs import (UNDEAD_MOB_TYPES, DAY_SPAWN_TABLE,
                            NIGHT_SPAWN_TABLE)
     pt: Transform = g.em.get_component(g.player_id, Transform)
@@ -277,7 +277,8 @@ def spawn_mob(g: 'Game') -> None:
             else:
                 elite_tier = 1  # Blue — most common
         create_mob(g, wx, wy, mob, elite=elite, elite_tier=elite_tier)
-        return
+        return True
+    return False
 
 
 def spawn_wave_mobs(g: 'Game', count: int, tier: int,
@@ -342,11 +343,22 @@ def on_mob_killed(g: 'Game', eid: int) -> None:
     if table:
         from data.difficulty import get_profile
         luck = get_profile(g.difficulty)['loot_luck_bonus']
-        drops = roll_loot(table, luck_bonus=luck)
-        for item_id, amt, rar in drops:
-            pinv.add_item_enchanted(item_id, None, amt, rar)
+        drops = roll_loot(
+            table,
+            luck_bonus=luck,
+            day_number=g.daynight.day_number,
+            elite_tier=mob_ai.elite_tier,
+        )
+        for item_id, amt, rar, enchant in drops:
+            pinv.add_item_enchanted(item_id, enchant, amt, rar)
         if drops:
-            has_notable = any(rar and rar != 'common' for _, _, rar in drops)
+            from core.enhancement import get_enhancement_level
+            has_notable = any(
+                (rar and rar != 'common')
+                or enchant is not None
+                or get_enhancement_level(item_id) > 0
+                for item_id, _, rar, enchant in drops
+            )
             if has_notable:
                 g.dmg_numbers.append((td.x, td.y - 10, '+Loot', CYAN, 1.2))
 
@@ -465,6 +477,15 @@ def populate_cave(g: 'Game', cave_index: int) -> None:
             'ore_node', 'iron_ore')
         g.cave_entities.append(eid)
 
+    for _ in range(CAVE_TITANIUM_COUNT):
+        if tile_idx >= len(floor_tiles):
+            break
+        tx, ty = floor_tiles[tile_idx]; tile_idx += 1
+        eid = create_cave_resource(
+            g, tx * TILE_SIZE + 4, ty * TILE_SIZE + 6,
+            'ore_node', 'titanium_ore')
+        g.cave_entities.append(eid)
+
     for _ in range(CAVE_DIAMOND_COUNT):
         if tile_idx >= len(floor_tiles):
             break
@@ -525,35 +546,48 @@ def create_cave_chest(g: 'Game', x: float, y: float,
     g.em.add_component(eid, Health(200))
     stor = Storage(CHEST_CAPACITY)
     # -- Use data-driven cave chest loot from drops/ package --
-    from systems.rarity import roll_rarity
-    from core.item_stack import normalize_rarity
+    from core.item_metadata import roll_item_metadata
     slot_idx = 0
+    enhancement_chance = CAVE_CHEST_LOOT.get('enhanced_chance', 0.0)
+    enchant_chance = CAVE_CHEST_LOOT.get('enchant_chance', 0.25)
     # Guaranteed base items
     for item_id, lo, hi in CAVE_CHEST_LOOT['base']:
         amt = rng.randint(lo, hi)
         if amt > 0 and slot_idx < CHEST_CAPACITY:
-            stor.slots[slot_idx] = (item_id, amt)
-            rar = roll_rarity(item_id, True, rng)
-            stor.slot_rarities[slot_idx] = normalize_rarity(rar)
+            rolled_item_id, enchant, rarity = roll_item_metadata(
+                item_id,
+                rng,
+                is_boss=True,
+                day_number=g.daynight.day_number,
+                elite_tier=2,
+                enhancement_chance=enhancement_chance,
+                enchant_chance=enchant_chance,
+            )
+            stor.slots[slot_idx] = (rolled_item_id, amt)
+            if enchant:
+                stor.slot_enchantments[slot_idx] = enchant
+            stor.slot_rarities[slot_idx] = rarity
             slot_idx += 1
     # Weighted pool rolls (equipment, spells, tomes, consumables)
     num_pool = rng.randint(
         CAVE_CHEST_LOOT['min_pool_rolls'],
         CAVE_CHEST_LOOT['max_pool_rolls'])
     pool_drops = pick_weighted(CAVE_CHEST_LOOT['pool'], num_pool, rng)
-    # Enhancement roll: one random pool item may become +1..+5
-    enhanced_chance = CAVE_CHEST_LOOT.get('enhanced_chance', 0.0)
-    if enhanced_chance > 0 and pool_drops and rng.random() < enhanced_chance:
-        idx = rng.randrange(len(pool_drops))
-        iid, cnt = pool_drops[idx]
-        enhanced = maybe_enhance(iid, rng)
-        if enhanced != iid:
-            pool_drops[idx] = (enhanced, cnt)
     for item_id, amt in pool_drops:
         if slot_idx < CHEST_CAPACITY:
-            stor.slots[slot_idx] = (item_id, amt)
-            rar = roll_rarity(item_id, True, rng)
-            stor.slot_rarities[slot_idx] = normalize_rarity(rar)
+            rolled_item_id, enchant, rarity = roll_item_metadata(
+                item_id,
+                rng,
+                is_boss=True,
+                day_number=g.daynight.day_number,
+                elite_tier=2,
+                enhancement_chance=enhancement_chance,
+                enchant_chance=enchant_chance,
+            )
+            stor.slots[slot_idx] = (rolled_item_id, amt)
+            if enchant:
+                stor.slot_enchantments[slot_idx] = enchant
+            stor.slot_rarities[slot_idx] = rarity
             slot_idx += 1
     g.em.add_component(eid, stor)
     g.em.add_component(eid, Placeable('chest'))

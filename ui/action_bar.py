@@ -17,10 +17,11 @@ from core.constants import (
     HOTBAR_SELECTED_BORDER, HOTBAR_NORMAL_BORDER,
     HOTBAR_SLOT_NUMBER_COLOR, RED,
 )
+from core.item_presentation import build_item_presentation
 from data import ITEM_DATA, SPELL_DATA, SPELL_RECHARGE
-from data.quality import get_stat_description, get_rarity_color
+from data.quality import get_stat_description
 from enchantments.effects import (
-    get_enchant_display_prefix, ENCHANT_COLORS,
+    ENCHANT_COLORS,
 )
 from ui.rarity_display import draw_rarity_border, insert_rarity_tooltip
 
@@ -442,29 +443,19 @@ class ActionBarManager:
                 # Tooltip on hover
                 if rect.collidepoint(mx, my):
                     if item_id in ITEM_DATA:
-                        d = ITEM_DATA[item_id]
-                        name = d[0]
                         hb_rar = bar.slot_rarities.get(i, 'common')
-                        if hb_rar and hb_rar != 'common':
-                            name = f"{hb_rar.title()} {name}"
-                        lines = [name, get_stat_description(item_id, hb_rar)]
-                        colors = [WHITE, WHITE]
-                        if hb_rar and hb_rar != 'common':
-                            colors[0] = get_rarity_color(hb_rar)
                         hb_ench = bar.slot_enchantments.get(i)
-                        if hb_ench:
-                            prefix = get_enchant_display_prefix(hb_ench)
-                            if prefix:
-                                lines[0] = f"{prefix} {name}"
-                                colors[0] = ENCHANT_COLORS.get(
-                                    hb_ench['type'], colors[0])
-                            ench_line = (f"Enchant: {hb_ench['type'].title()}"
-                                         f" Lv.{hb_ench['level']}")
-                            lines.insert(1, ench_line)
-                            colors.insert(1, ENCHANT_COLORS.get(
-                                hb_ench['type'], CYAN))
+                        presentation = build_item_presentation(item_id, hb_rar, hb_ench)
+                        lines = [presentation['label'], get_stat_description(item_id, hb_rar)]
+                        colors = [presentation['color'], WHITE]
                         if hb_rar and hb_rar != 'common':
                             insert_rarity_tooltip(lines, colors, hb_rar)
+                            if hb_ench:
+                                ench_line = (f"Enchant: {hb_ench['type'].title()}"
+                                             f" Lv.{hb_ench['level']}")
+                                lines.insert(1, ench_line)
+                                colors.insert(1, ENCHANT_COLORS.get(
+                                    hb_ench['type'], CYAN))
                         g.tooltip.show(lines, (mx, my), colors)
 
     def _draw_context_menu(self, surface: pygame.Surface) -> None:

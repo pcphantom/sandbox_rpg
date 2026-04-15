@@ -30,27 +30,49 @@ class CommandBar:
         self.result_msg: str = ""
         self.result_ok: bool = True
         self.result_timer: float = 0.0
+        self.autocomplete_hint: str = ""
         self.font = pygame.font.SysFont('consolas', 16)
         self.font_sm = pygame.font.SysFont('consolas', 13)
 
     def toggle(self) -> None:
-        self.visible = not self.visible
         if self.visible:
-            self.text = ""
-            self.result_msg = ""
-            self.result_timer = 0.0
+            self.close()
+            return
+        self.visible = True
+        self.text = ""
+        self.result_msg = ""
+        self.result_timer = 0.0
+        self.autocomplete_hint = ""
+        pygame.key.start_text_input()
 
     def close(self) -> None:
         self.visible = False
         self.text = ""
+        self.autocomplete_hint = ""
+        pygame.key.stop_text_input()
+
+    def blocks_game_input(self) -> bool:
+        """Return True while the command bar owns keyboard focus."""
+        return self.visible
 
     def _set_result(self, msg: str, ok: bool = True) -> None:
         self.result_msg = msg
         self.result_ok = ok
         self.result_timer = 3.0
 
+    def _refresh_autocomplete_hint(
+            self,
+            autocomplete_cb: Optional[Callable[[str, bool], Tuple[str, str]]]
+    ) -> None:
+        if autocomplete_cb is None or not self.visible:
+            self.autocomplete_hint = ""
+            return
+        _new_text, hint = autocomplete_cb(self.text, False)
+        self.autocomplete_hint = hint
+
     def handle_event(self, event: pygame.event.Event,
-                     execute_cb: Callable[[str], Tuple[bool, str]]) -> bool:
+                     execute_cb: Callable[[str], Tuple[bool, str]],
+                     autocomplete_cb: Optional[Callable[[str, bool], Tuple[str, str]]] = None) -> bool:
         """Process keyboard events. Returns True if event was consumed."""
         if not self.visible:
             return False
@@ -65,14 +87,24 @@ class CommandBar:
                     ok, msg = execute_cb(cmd)
                     self._set_result(msg, ok)
                 self.text = ""
+                self._refresh_autocomplete_hint(autocomplete_cb)
                 return True
             if event.key == pygame.K_BACKSPACE:
                 self.text = self.text[:-1]
+                self._refresh_autocomplete_hint(autocomplete_cb)
                 return True
-            return False
+            if event.key == pygame.K_TAB and autocomplete_cb is not None:
+                self.text, self.autocomplete_hint = autocomplete_cb(
+                    self.text, True)
+                return True
+            return True
 
         if event.type == pygame.TEXTINPUT:
             self.text += event.text
+            self._refresh_autocomplete_hint(autocomplete_cb)
+            return True
+
+        if event.type == pygame.MOUSEWHEEL:
             return True
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -82,7 +114,10 @@ class CommandBar:
             close_r = pygame.Rect(bx, by, CLOSE_SIZE, CLOSE_SIZE)
             if close_r.collidepoint(event.pos):
                 self.close()
-                return True
+            return True
+
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            return True
 
         return False
 
@@ -148,6 +183,6 @@ class CommandBar:
             surface.blit(rt, (px + 12, py + 66))
 
         # Hint
-        hint = self.font_sm.render(
-            'Type "help" for a list of commands', True, GRAY)
+        hint_text = self.autocomplete_hint or 'Type "help" for a list of commands'
+        hint = self.font_sm.render(hint_text, True, GRAY)
         surface.blit(hint, (px + 12, py + BAR_HEIGHT - 20))

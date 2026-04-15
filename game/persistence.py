@@ -23,7 +23,7 @@ from core.constants import (
     LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
 from game_controller import (
-    BEACON_HP, BEACON_LIGHT_RADIUS,
+    BEACON_HP, BEACON_VISUAL_LIGHT_RADIUS,
     STONE_OVEN_HP, STONE_OVEN_SLOTS,
 )
 from core.components import (
@@ -118,6 +118,7 @@ def build_save_data(g: 'Game') -> Dict[str, Any]:
         'last_resource_respawn_day': g._last_resource_respawn_day,
         'last_cave_reset_day': g._last_cave_reset_day,
         'cheats_enabled': g.cheats_enabled,
+        'has_cheated': g.has_cheated,
         'harvested_resources': list(g.harvested_resources),
         'cave_snapshots': g.cave_snapshots,
         'action_bars': g.action_bar_mgr.get_save_data(),
@@ -252,6 +253,9 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     g._last_resource_respawn_day = data.get('last_resource_respawn_day', 1)
     g._last_cave_reset_day = data.get('last_cave_reset_day', 1)
     g.cheats_enabled = data.get('cheats_enabled', False)
+    g.has_cheated = data.get('has_cheated', g.cheats_enabled)
+    g.autokill_enabled = False
+    g.autokill_timer = 0.0
 
     # Reset camera bounds & position for the loaded world
     if g.in_cave >= 0:
@@ -410,7 +414,7 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
         h = Health(struct.get('max_hp', BEACON_HP))
         h.current = struct.get('hp', h.maximum)
         g.em.add_component(eid, h)
-        g.em.add_component(eid, LightSource(BEACON_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
+        g.em.add_component(eid, LightSource(BEACON_VISUAL_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
         g.em.add_component(eid, Building('beacon'))
     elif item_id == 'stone_oven':
         # Determine if oven was burning (has items being smelted)

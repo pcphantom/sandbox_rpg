@@ -10,39 +10,74 @@ from core.constants import (
     DMG_NUMBER_FLOAT_SPEED, HUD_REFRESH_INTERVAL,
     MOB_RESPAWN_INTERVAL, MOB_MAX_COUNT, MOB_RESPAWN_BATCH,
     DIFFICULTY_MULTIPLIERS,
-    TILE_SIZE, TILE_SAND, TILE_WATER, TILE_DIRT,
+    TILE_SIZE, TILE_SAND, TILE_WATER, TILE_DIRT, TILE_STONE_WALL,
     TERRAIN_SPEED_SAND, TERRAIN_SPEED_WATER, TERRAIN_SPEED_DIRT,
 )
 from data import RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS
 from core.components import (
-    Transform, Velocity, Renderable, Health, Inventory,
-    AI, PlayerStats, Equipment, Placeable,
+    Transform, Velocity, Renderable, Health, Inventory, Collider,
+    AI, PlayerStats, Equipment, Placeable, Building,
 )
+from game.cheats import kill_all_enemies
 from game import entities as game_entities
 from enchantments.effects import get_enchant_regen_rate
+
+
+def _get_levitate_ignored_entity_ids(g) -> set[int]:
+    """Return static natural/resource blockers the player may float through."""
+    ignored_entity_ids: set[int] = set()
+    tree_surface = g.textures.get('tree')
+    rock_surface = g.textures.get('rock')
+    for eid in g.em.get_entities_with(Transform, Collider):
+        if eid == g.player_id:
+            continue
+        collider = g.em.get_component(eid, Collider)
+        if not collider.solid:
+            continue
+        if g.em.has_component(eid, Velocity) or g.em.has_component(eid, AI):
+            continue
+        if g.em.has_component(eid, Building):
+            continue
+        if g.em.has_component(eid, Placeable):
+            placeable = g.em.get_component(eid, Placeable)
+            if placeable.drop_item:
+                ignored_entity_ids.add(eid)
+                continue
+        if not g.em.has_component(eid, Renderable):
+            continue
+        renderable = g.em.get_component(eid, Renderable)
+        if renderable.surface in (tree_surface, rock_surface):
+            ignored_entity_ids.add(eid)
+    return ignored_entity_ids
 
 
 def update(g, dt: float) -> None:
     """Run one simulation tick.  ``g`` is the :class:`sandbox_rpg.Game` instance."""
     # Invalidate per-frame ECS query cache at the very start of each tick.
     g.em.clear_query_cache()
+    autokill_triggered = False
 
     # Command bar timer update (runs even when no keys are pressed)
     g.command_bar.update(dt)
 
     keys = pygame.key.get_pressed()
+    command_bar_blocks_input = g.command_bar.blocks_game_input()
     pv: Velocity = g.em.get_component(g.player_id, Velocity)
     pt: Transform = g.em.get_component(g.player_id, Transform)
     pr: Renderable = g.em.get_component(g.player_id, Renderable)
     ps: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
+    pc: Collider = g.em.get_component(g.player_id, Collider)
 
     # Movement (AGI speed bonus with cap)
     agi_bonus = min(AGI_SPEED_BONUS_CAP, ps.agility * AGI_SPEED_BONUS)
     base_speed = PLAYER_BASE_SPEED * (1.0 + agi_bonus)
+    levitate_active = 'levitate' in g.active_buffs
     # Terrain speed modifier (negated by levitate buff)
-    if 'levitate' not in g.active_buffs:
-        tile_x = int(pt.x // TILE_SIZE)
-        tile_y = int(pt.y // TILE_SIZE)
+    if not levitate_active:
+        sample_x = pt.x + (pc.width * 0.5 if pc else TILE_SIZE * 0.5)
+        sample_y = pt.y + (pc.height * 0.5 if pc else TILE_SIZE * 0.5)
+        tile_x = int(sample_x // TILE_SIZE)
+        tile_y = int(sample_y // TILE_SIZE)
         tile = g.world.get_tile(tile_x, tile_y)
         if tile == TILE_SAND:
             base_speed *= TERRAIN_SPEED_SAND
@@ -50,14 +85,15 @@ def update(g, dt: float) -> None:
             base_speed *= TERRAIN_SPEED_WATER
         elif tile == TILE_DIRT:
             base_speed *= TERRAIN_SPEED_DIRT
-    if keys[pygame.K_w]:
-        pv.vy -= base_speed * dt * MOVEMENT_ACCEL_MULT
-    if keys[pygame.K_s]:
-        pv.vy += base_speed * dt * MOVEMENT_ACCEL_MULT
-    if keys[pygame.K_a]:
-        pv.vx -= base_speed * dt * MOVEMENT_ACCEL_MULT
-    if keys[pygame.K_d]:
-        pv.vx += base_speed * dt * MOVEMENT_ACCEL_MULT
+    if not command_bar_blocks_input:
+        if keys[pygame.K_w]:
+            pv.vy -= base_speed * dt * MOVEMENT_ACCEL_MULT
+        if keys[pygame.K_s]:
+            pv.vy += base_speed * dt * MOVEMENT_ACCEL_MULT
+        if keys[pygame.K_a]:
+            pv.vx -= base_speed * dt * MOVEMENT_ACCEL_MULT
+        if keys[pygame.K_d]:
+            pv.vx += base_speed * dt * MOVEMENT_ACCEL_MULT
     if pv.vx < -SPRITE_FLIP_THRESHOLD:
         pr.flip_x = True
     elif pv.vx > SPRITE_FLIP_THRESHOLD:
@@ -65,7 +101,14 @@ def update(g, dt: float) -> None:
 
     # Systems tick
     g.movement.update(dt, g.em)
-    g.physics.update(dt, g.em, g.world)
+    ignored_world_tiles = None
+    ignored_entity_ids = None
+    if levitate_active:
+        ignored_world_tiles = {g.player_id: (TILE_WATER, TILE_STONE_WALL)}
+        ignored_entity_ids = {g.player_id: tuple(_get_levitate_ignored_entity_ids(g))}
+    g.physics.update(dt, g.em, g.world,
+                     ignored_world_tiles_by_entity=ignored_world_tiles,
+                     ignored_entity_ids_by_entity=ignored_entity_ids)
     # Calculate night damage multiplier for structures
     _struct_night_mult = 1
     _is_night = g.daynight.is_night() and g.in_cave < 0
@@ -192,7 +235,8 @@ def update(g, dt: float) -> None:
     g._tick_speed_restores(dt)
 
     # Melee attack
-    if keys[pygame.K_SPACE] and g.attack_cd == 0:
+    if (not command_bar_blocks_input
+            and keys[pygame.K_SPACE] and g.attack_cd == 0):
         g._attack()
         cd = max(MIN_ATTACK_COOLDOWN,
                  BASE_ATTACK_COOLDOWN - ps.agility * AGILITY_COOLDOWN_REDUCTION)
@@ -200,11 +244,13 @@ def update(g, dt: float) -> None:
         g.attack_anim = ATTACK_ANIM_DURATION
 
     # Ranged attack (R key)
-    if keys[pygame.K_r] and g.ranged_cd == 0:
+    if (not command_bar_blocks_input
+            and keys[pygame.K_r] and g.ranged_cd == 0):
         g._ranged_attack()
 
     # Interact
-    if keys[pygame.K_e] and g.interact_cd == 0:
+    if (not command_bar_blocks_input
+            and keys[pygame.K_e] and g.interact_cd == 0):
         g._interact()
         g.interact_cd = INTERACT_COOLDOWN
 
@@ -257,14 +303,38 @@ def update(g, dt: float) -> None:
         _, _, spawn_mult, _ = DIFFICULTY_MULTIPLIERS.get(
             g.difficulty, (1.0, 1.0, 1.0, 1.0))
         respawn_interval = MOB_RESPAWN_INTERVAL / spawn_mult
-        if g.mob_spawn_timer > respawn_interval:
-            g.mob_spawn_timer = 0.0
+        while g.mob_spawn_timer >= respawn_interval:
+            g.mob_spawn_timer -= respawn_interval
             mob_count = len(g.em.get_entities_with(AI))
-            if mob_count < MOB_MAX_COUNT:
-                # Spawn a batch when population is low
-                batch = min(MOB_RESPAWN_BATCH, MOB_MAX_COUNT - mob_count)
-                for _ in range(batch):
-                    g._spawn_mob()
+            if mob_count >= MOB_MAX_COUNT:
+                break
+            # Spawn a full batch when population is low, even if some random
+            # spawn picks fail due to blocked or invalid positions.
+            batch = min(MOB_RESPAWN_BATCH, MOB_MAX_COUNT - mob_count)
+            spawned = 0
+            spawn_attempts = 0
+            max_spawn_attempts = max(batch * 4, batch)
+            while spawned < batch and spawn_attempts < max_spawn_attempts:
+                spawn_attempts += 1
+                if g._spawn_mob():
+                    spawned += 1
+
+    # Timed cheat effects run after spawning so each 1-second tick clears the
+    # full current field, including anything respawned later in the frame.
+    if g.autokill_enabled and g.cheats_enabled:
+        g.autokill_timer += dt
+        while g.autokill_timer >= 1.0:
+            g.autokill_timer -= 1.0
+            kill_all_enemies(g)
+            autokill_triggered = True
+    else:
+        g.autokill_timer = 0.0
+
+    if autokill_triggered:
+        for eid in list(g.em.get_entities_with(Health, AI)):
+            h: Health = g.em.get_component(eid, Health)
+            if not h.is_alive():
+                g._on_mob_killed(eid)
 
     # HUD refresh
     g.survival_timer += dt

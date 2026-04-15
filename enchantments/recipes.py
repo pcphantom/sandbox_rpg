@@ -34,6 +34,7 @@ _TRANSFER_TOMES = {
 _TABLE_MATERIAL_RECIPES: List[Dict[str, Any]] = [
     {'cost': {'diamond': 9},                                          'gives': 'brilliant_diamond'},
     {'cost': {'titanium_axe': 1, 'brilliant_diamond': 8},             'gives': 'diamond_axe'},
+    {'cost': {'titanium_pickaxe': 1, 'brilliant_diamond': 8},         'gives': 'diamond_pickaxe'},
     {'cost': {'enchantment_table': 1, 'diamond': 8},                  'gives': 'greater_enchantment_table'},
 ]
 

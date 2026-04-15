@@ -182,6 +182,7 @@ class TextureGenerator:
         effects.generate_transfer_tomes(self)
         effects.generate_item_enchantment_table(self)
         effects.generate_enchantment_table_placed(self)
+        effects.generate_greater_enchantment_table_placed(self)
 
     # Delegate methods — support code that calls gen.generate_X() directly
     def generate_water_tile(self, frame: int = 0) -> pygame.Surface:

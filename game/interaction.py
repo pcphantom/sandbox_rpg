@@ -31,7 +31,7 @@ from core.constants import (
     PARTICLE_COLOR_TREE, LIGHT_COLOR_CAMPFIRE, LIGHT_COLOR_TORCH,
 )
 from game_controller import (
-    BEACON_LIGHT_RADIUS, BEACON_HP,
+    BEACON_LIGHT_RADIUS, BEACON_VISUAL_LIGHT_RADIUS, BEACON_HP,
     STONE_OVEN_HP, STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
 )
 from core.components import (
@@ -39,6 +39,7 @@ from core.components import (
     AI, PlayerStats, Equipment, Placeable, LightSource, Storage, Turret,
     Building,
 )
+from core.item_presentation import build_item_presentation
 from data import (
     ITEM_DATA, ITEM_CATEGORIES, RECIPES,
     RANGED_DATA, AMMO_BONUS_DAMAGE,
@@ -371,16 +372,11 @@ def _try_repair(g: 'Game', inv: Inventory, pt: Transform) -> None:
     h.current = h.maximum
     t: Transform = g.em.get_component(nearest, Transform)
     g.particles.emit(t.x + 10, t.y + 10, 10, GREEN, 50, 0.4)
-    name = ITEM_DATA.get(pl.item_type, (pl.item_type,))[0]
+    name = build_item_presentation(pl.item_type)['label']
     if g.em.has_component(nearest, Turret):
         turr = g.em.get_component(nearest, Turret)
-        if turr.rarity and turr.rarity != 'common':
-            name = f"{turr.rarity.title()} {name}"
-        if turr.enchant:
-            from enchantments.effects import get_enchant_display_prefix
-            pfx = get_enchant_display_prefix(turr.enchant)
-            if pfx:
-                name = f"{pfx} {name}"
+        name = build_item_presentation(pl.item_type, turr.rarity,
+                                       turr.enchant)['label']
     cost_str = ", ".join(
         f"{n} {ITEM_DATA.get(m, (m,))[0]}" for m, n in repair_cost.items())
     g._notify(f"Repaired {name}! (Used {cost_str})")
@@ -483,16 +479,11 @@ def placement_confirm(g: 'Game') -> None:
                        rotation=g.placement_rotation,
                        rarity=getattr(g, 'placement_rarity', 'common'),
                        enchant=getattr(g, 'placement_enchant', None))
-            new_name = ITEM_DATA[g.placement_item][0]
-            ench = getattr(g, 'placement_enchant', None)
-            rar = getattr(g, 'placement_rarity', 'common')
-            if rar and rar != 'common':
-                new_name = f"{rar.title()} {new_name}"
-            if ench:
-                from enchantments.effects import get_enchant_display_prefix
-                pfx = get_enchant_display_prefix(ench)
-                if pfx:
-                    new_name = f"{pfx} {new_name}"
+            new_name = build_item_presentation(
+                g.placement_item,
+                getattr(g, 'placement_rarity', 'common'),
+                getattr(g, 'placement_enchant', None),
+            )['label']
             g._notify(f"Replaced {old_name} with {new_name}")
             if not inv_check.has(g.placement_item):
                 g.placement_mode = False
@@ -541,16 +532,11 @@ def placement_confirm(g: 'Game') -> None:
                rotation=g.placement_rotation,
                rarity=getattr(g, 'placement_rarity', 'common'),
                enchant=getattr(g, 'placement_enchant', None))
-    placed_name = ITEM_DATA[g.placement_item][0]
-    p_rar = getattr(g, 'placement_rarity', 'common')
-    p_ench = getattr(g, 'placement_enchant', None)
-    if p_rar and p_rar != 'common':
-        placed_name = f"{p_rar.title()} {placed_name}"
-    if p_ench:
-        from enchantments.effects import get_enchant_display_prefix
-        pfx = get_enchant_display_prefix(p_ench)
-        if pfx:
-            placed_name = f"{pfx} {placed_name}"
+    placed_name = build_item_presentation(
+        g.placement_item,
+        getattr(g, 'placement_rarity', 'common'),
+        getattr(g, 'placement_enchant', None),
+    )['label']
     g._notify(f"Placed {placed_name}")
     if not inv.has(g.placement_item):
         g.placement_mode = False
@@ -650,6 +636,12 @@ def place_item(g: 'Game', item_id: str,
         g.em.add_component(eid, Health(apply_rarity(ENCHANT_TABLE_HP, rarity)))
         g.em.add_component(eid, Storage(ENCHANT_TABLE_CAPACITY))
         g.em.add_component(eid, Building('enchantment_table'))
+    elif item_id == 'greater_enchantment_table':
+        g.em.add_component(eid, Renderable(
+            g.textures.get('greater_enchantment_table_placed'), layer=1))
+        g.em.add_component(eid, Health(apply_rarity(ENCHANT_TABLE_HP, rarity)))
+        g.em.add_component(eid, Storage(ENCHANT_TABLE_CAPACITY))
+        g.em.add_component(eid, Building('enchantment_table'))
     elif item_id == 'door':
         g.em.add_component(eid, Renderable(
             g.textures.get('door_placed'), layer=2))
@@ -663,7 +655,7 @@ def place_item(g: 'Game', item_id: str,
         g.em.add_component(eid, Collider(64, 64, True))
         g.em.add_component(eid, Health(apply_rarity(BEACON_HP, rarity)))
         g.em.add_component(eid, LightSource(
-            BEACON_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
+            BEACON_VISUAL_LIGHT_RADIUS, LIGHT_COLOR_CAMPFIRE, 1.0))
         g.em.add_component(eid, Building('beacon'))
     elif item_id == 'stone_oven':
         g.em.add_component(eid, Renderable(

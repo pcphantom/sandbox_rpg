@@ -236,7 +236,10 @@ class Game:
         # Command bar (F12) and cheats
         self.command_bar = CommandBar()
         self.cheats_enabled: bool = False
+        self.has_cheated: bool = False
         self.god_mode: bool = False
+        self.autokill_enabled: bool = False
+        self.autokill_timer: float = 0.0
         self.show_cheat_help: bool = False
 
         # Music
@@ -352,8 +355,8 @@ class Game:
     def _populate_world(self) -> None:
         game_entities.populate_world(self)
 
-    def _spawn_mob(self) -> None:
-        game_entities.spawn_mob(self)
+    def _spawn_mob(self) -> bool:
+        return game_entities.spawn_mob(self)
 
     def _spawn_wave_mobs(self, count: int, tier: int,
                          include_ranged: bool = False,

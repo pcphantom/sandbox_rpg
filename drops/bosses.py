@@ -4,6 +4,7 @@ Boss loot tables have the same base keys as normal tables plus:
     guaranteed      – list of (item_id, min_count, max_count) always dropped
     enhanced_chance – probability (0.0–1.0) that ONE pool drop is upgraded
                       to an enhanced (+1..+5) variant (using ENHANCEMENT_ODDS)
+    enchant_chance  – optional base chance for random enchant metadata rolls
 
 Cave chest loot is separate; it defines the contents placed into the
 loot chest that spawns after a cave boss is killed.
@@ -46,7 +47,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                6, 1, 1),
             ('iron_armor',          6, 1, 1),
             ('iron_shield',         5, 1, 1),
-            ('diamond',             8, 1, 3),
+            ('titanium_ore',        8, 1, 3),
             ('health_potion',      10, 2, 4),
             ('spell_strength_1',     4, 1, 1),
             ('spell_strength_2',     3, 1, 1),
@@ -64,6 +65,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('enchant_tome_3',      4, 1, 1),
             ('enchant_tome_4',      3, 1, 1),
             ('enchant_tome_5',      2, 1, 1),
+            ('turret',              3, 1, 1),
             ('enchant_transfer_tome',  2, 1, 1),
             ('enhance_transfer_tome',  2, 1, 1),
             ('superior_transfer_tome', 1, 1, 1),
@@ -103,7 +105,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                5, 1, 1),
             ('iron_armor',          5, 1, 1),
             ('iron_shield',         4, 1, 1),
-            ('diamond',            10, 1, 3),
+            ('titanium_ore',       10, 1, 3),
             ('health_potion',       8, 2, 4),
             ('spell_regen_2',        4, 1, 1),
             ('spell_regen_3',        2, 1, 1),
@@ -133,7 +135,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
         'max_items': 6,
         'guaranteed': [
             ('iron', 6, 12),
-            ('diamond', 2, 4),
+            ('titanium_ore', 2, 4),
         ],
         'enhanced_chance': 0.55,
         'pool': [
@@ -158,7 +160,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                5, 1, 1),
             ('iron_armor',          7, 1, 1),
             ('iron_shield',         5, 1, 1),
-            ('diamond',            10, 1, 3),
+            ('titanium_ore',       10, 1, 3),
             ('health_potion',      10, 2, 5),
             ('spell_strength_3',    4, 1, 1),
             ('spell_strength_4',    2, 1, 1),
@@ -171,6 +173,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('spell_regen_5',       1, 1, 1),
             ('bomb',                6, 2, 4),
             ('gunpowder',           6, 3, 6),
+            ('turret',              3, 1, 1),
             ('enchant_tome_3',      5, 1, 1),
             ('enchant_tome_4',      4, 1, 1),
             ('enchant_tome_5',      3, 1, 1),
@@ -212,7 +215,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                5, 1, 1),
             ('iron_armor',          5, 1, 1),
             ('iron_shield',         4, 1, 1),
-            ('diamond',             8, 1, 2),
+            ('titanium_ore',        8, 1, 2),
             ('health_potion',      10, 2, 4),
             ('spell_regen_2',       5, 1, 1),
             ('spell_regen_3',       3, 1, 1),
@@ -268,7 +271,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                8, 1, 1),
             ('iron_armor',          8, 1, 1),
             ('iron_shield',         6, 1, 1),
-            ('diamond',             8, 1, 3),
+            ('titanium_ore',        8, 1, 3),
             ('health_potion',      12, 3, 6),
             ('spell_strength_2',    4, 1, 1),
             ('spell_strength_3',    2, 1, 1),
@@ -299,7 +302,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
         'max_items': 6,
         'guaranteed': [
             ('iron', 6, 12),
-            ('diamond', 2, 4),
+            ('titanium_ore', 2, 4),
         ],
         'enhanced_chance': 0.55,
         'pool': [
@@ -314,7 +317,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('iron_axe',            6, 1, 1),
             ('iron_armor',          7, 1, 1),
             ('iron_shield',         5, 1, 1),
-            ('diamond',            10, 1, 3),
+            ('titanium_ore',       10, 1, 3),
             ('health_potion',      10, 3, 6),
             ('spell_strength_3',    4, 1, 1),
             ('spell_strength_4',    2, 1, 1),
@@ -347,7 +350,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('spell_heal_4',        3, 1, 1),
             ('iron_sword',          6, 1, 1),
             ('iron_armor',          6, 1, 1),
-            ('diamond',             8, 1, 3),
+            ('titanium_ore',        8, 1, 3),
             ('health_potion',      10, 3, 5),
             ('spell_protection_3',  5, 1, 1),
             ('spell_protection_4',  2, 1, 1),
@@ -365,7 +368,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
         'max_items': 7,
         'guaranteed': [
             ('iron', 8, 14),
-            ('diamond', 3, 5),
+            ('titanium_ore', 3, 5),
         ],
         'enhanced_chance': 0.60,
         'pool': [
@@ -382,11 +385,12 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                5, 1, 1),
             ('iron_armor',          6, 1, 1),
             ('iron_shield',         5, 1, 1),
-            ('diamond',            12, 2, 4),
+            ('titanium_ore',       12, 2, 4),
             ('health_potion',      10, 3, 6),
             ('spell_strength_4',    3, 1, 1),
             ('spell_protection_4',  3, 1, 1),
             ('spell_regen_4',       3, 1, 1),
+            ('turret',              3, 1, 1),
             ('enchant_tome_4',      5, 1, 1),
             ('enchant_tome_5',      4, 1, 1),
             ('enchant_transfer_tome',  4, 1, 1),
@@ -401,7 +405,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
         'max_items': 6,
         'guaranteed': [
             ('iron', 5, 10),
-            ('diamond', 2, 4),
+            ('titanium_ore', 2, 4),
         ],
         'enhanced_chance': 0.55,
         'pool': [
@@ -414,7 +418,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('spell_protection_4',   3, 1, 1),
             ('iron_armor',           6, 1, 1),
             ('iron_shield',          5, 1, 1),
-            ('diamond',             10, 1, 3),
+            ('titanium_ore',        10, 1, 3),
             ('health_potion',       10, 3, 5),
             ('spell_regen_3',        4, 1, 1),
             ('spell_regen_4',        2, 1, 1),
@@ -432,8 +436,7 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
         'max_items': 8,
         'guaranteed': [
             ('iron', 10, 20),
-            ('diamond', 4, 8),
-            ('titanium_ore', 2, 4),
+            ('titanium_ore', 4, 8),
         ],
         'enhanced_chance': 0.70,
         'pool': [
@@ -456,11 +459,14 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
             ('mace',                6, 1, 1),
             ('iron_armor',          8, 1, 1),
             ('iron_shield',         6, 1, 1),
-            ('diamond',            12, 3, 6),
-            ('brilliant_diamond',   4, 1, 2),
-            ('titanium_ore',        6, 1, 3),
+            ('titanium_ore',        8, 1, 3),
             ('health_potion',      10, 4, 8),
             ('bomb',                5, 2, 5),
+            ('turret',              5, 1, 1),
+            ('spell_levitate_4',    2, 1, 1),
+            ('spell_levitate_5',    1, 1, 1),
+            ('spell_return_4',      2, 1, 1),
+            ('spell_return_5',      1, 1, 1),
             ('enchant_tome_4',      5, 1, 1),
             ('enchant_tome_5',      5, 1, 1),
             ('enchant_transfer_tome',  4, 1, 1),
@@ -478,15 +484,17 @@ BOSS_LOOT: Dict[str, Dict[str, Any]] = {
 # 'pool': weighted random items — same format as boss pools (item_id, weight, min, max)
 # 'min_pool_rolls' / 'max_pool_rolls': how many distinct items to pull from pool
 # 'enhanced_chance': probability that ONE pool item gets upgraded to +1..+5
+# 'enchant_chance': base chance for a dropped item to roll a random enchant
 CAVE_CHEST_LOOT: Dict[str, Any] = {
     'base': [
         ('iron',          5, 15),
         ('iron_ore',      3,  8),
-        ('diamond',       1,  3),
+        ('titanium_ore',  2,  4),
         ('health_potion', 2,  5),
         ('gunpowder',     2,  6),
     ],
     'enhanced_chance': 0.50,
+    'enchant_chance': 0.25,
     'min_pool_rolls': 3,
     'max_pool_rolls': 6,
     'pool': [
@@ -503,6 +511,7 @@ CAVE_CHEST_LOOT: Dict[str, Any] = {
         ('bow',                 5, 1, 1),
         ('crossbow',            3, 1, 1),
         ('sling',               3, 1, 1),
+        ('turret',              4, 1, 1),
         # -- Ammo --
         ('arrow',               6, 10, 30),
         ('fire_arrow',          4,  5, 15),
@@ -531,6 +540,16 @@ CAVE_CHEST_LOOT: Dict[str, Any] = {
         ('spell_regen_1',       4, 1, 1),
         ('spell_regen_2',       3, 1, 1),
         ('spell_regen_3',       2, 1, 1),
+        ('spell_levitate_1',    4, 1, 1),
+        ('spell_levitate_2',    3, 1, 1),
+        ('spell_levitate_3',    2, 1, 1),
+        ('spell_levitate_4',    1, 1, 1),
+        ('spell_levitate_5',    1, 1, 1),
+        ('spell_return_1',      4, 1, 1),
+        ('spell_return_2',      3, 1, 1),
+        ('spell_return_3',      2, 1, 1),
+        ('spell_return_4',      1, 1, 1),
+        ('spell_return_5',      1, 1, 1),
         # -- Tomes --
         ('enchant_tome_1',      6, 1, 1),
         ('enchant_tome_2',      5, 1, 1),
@@ -547,7 +566,6 @@ CAVE_CHEST_LOOT: Dict[str, Any] = {
         ('pie',                 4, 2, 4),
         ('bomb',                5, 1, 3),
         # -- Materials --
-        ('diamond',             6, 1, 3),
-        ('titanium_ore',        4, 1, 2),
+        ('titanium_ore',        6, 1, 2),
     ],
 }

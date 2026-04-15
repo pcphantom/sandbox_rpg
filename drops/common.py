@@ -11,7 +11,7 @@ from game_controller import (                                         # noqa: F4
 
 # -- Material tier groupings (for building varied loot pools) --
 BASIC_MATERIALS: List[str] = ['wood', 'stone', 'stick', 'bone', 'cloth', 'leather']
-ADVANCED_MATERIALS: List[str] = ['iron', 'iron_ore', 'diamond', 'gunpowder']
+ADVANCED_MATERIALS: List[str] = ['iron', 'iron_ore', 'titanium_ore', 'gunpowder']
 
 # -- Consumable pools --
 BASIC_CONSUMABLES: List[str] = ['berry', 'bandage']
