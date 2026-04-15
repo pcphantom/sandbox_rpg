@@ -147,6 +147,10 @@ class ActionBarManager:
                     if close_rect.collidepoint(mx, my):
                         idx = self.context_menu_bar_index
                         if 0 <= idx < len(self.extra_bars):
+                            from core.components import Inventory
+                            inv = g.em.get_component(g.player_id, Inventory)
+                            self._return_bar_items(
+                                self.extra_bars[idx], inv)
                             self.extra_bars.pop(idx)
                         self.show_context_menu = False
                         return True
@@ -253,8 +257,27 @@ class ActionBarManager:
 
         return False
 
-    def handle_close_click(self, event: pygame.event.Event) -> bool:
-        """Handle close-button clicks on extra bars.  Returns True if consumed."""
+    def _return_bar_items(self, bar: ExtraActionBar, inv: Any) -> None:
+        """Return all items from an extra bar back to the player inventory."""
+        # Collect items first, then clear bar so add_item_enchanted doesn't
+        # auto-stack back into the same bar.
+        items = []
+        for slot in list(bar.slots.keys()):
+            items.append((bar.slots[slot],
+                          bar.slot_enchantments.get(slot),
+                          bar.slot_rarities.get(slot, 'common')))
+        bar.slots.clear()
+        bar.slot_enchantments.clear()
+        bar.slot_rarities.clear()
+        for (item_id, count), ench, rar in items:
+            inv.add_item_enchanted(item_id, ench, count, rar)
+
+    def handle_close_click(self, event: pygame.event.Event,
+                           inv: Any = None) -> bool:
+        """Handle close-button clicks on extra bars.  Returns True if consumed.
+
+        If *inv* is provided, items are returned to inventory before removal.
+        """
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         mx, my = event.pos
@@ -266,6 +289,8 @@ class ActionBarManager:
             close_y = bar.y - 6
             close_r = pygame.Rect(close_x, close_y, 14, 14)
             if close_r.collidepoint(mx, my):
+                if inv is not None:
+                    self._return_bar_items(bar, inv)
                 self.extra_bars.pop(i)
                 return True
         return False

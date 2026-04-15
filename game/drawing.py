@@ -554,25 +554,24 @@ def draw_hud(g: 'Game') -> None:
         g.screen.blit(cbg, (cx - 8, 30))
         g.screen.blit(ct_surf, (cx, 33))
 
-    # Active buffs
-    buff_y = 76
+    # Active buffs + Spell cooldowns — rendered below HUD box
+    status_y = 104
     buff_colors = {'regen': GREEN, 'protection': LIGHT_BLUE, 'strength': RED}
     for effect, (level, value, remaining) in g.active_buffs.items():
         bc = buff_colors.get(effect, WHITE)
         bt = g.font_sm.render(
             f"{effect.title()} {level}  {remaining:.0f}s", True, bc)
-        g.screen.blit(bt, (20, buff_y))
-        buff_y += 14
+        g.screen.blit(bt, (20, status_y))
+        status_y += 16
 
-    # Spell cooldowns
     if g.spell_cooldowns:
         for spell_id, cd_remaining in g.spell_cooldowns.items():
             sdata = SPELL_DATA.get(spell_id)
             if sdata:
                 sct = g.font_sm.render(
                     f"{sdata['name']}: {cd_remaining:.1f}s", True, GRAY)
-                g.screen.blit(sct, (20, buff_y))
-                buff_y += 14
+                g.screen.blit(sct, (20, status_y))
+                status_y += 16
 
     # Warnings — only during dusk (evening)
     dn_period = g.daynight.get_period_name()

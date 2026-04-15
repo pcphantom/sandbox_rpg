@@ -139,7 +139,8 @@ def handle_events(g) -> None:
 
             # Action bar manager events (close button, drag, context menu,
             # extra bar slot clicks, secondary bar hotkeys)
-            if g.action_bar_mgr.handle_close_click(event):
+            if g.action_bar_mgr.handle_close_click(
+                    event, g.em.get_component(g.player_id, Inventory)):
                 continue
             if g.action_bar_mgr.handle_event(event, g):
                 continue
@@ -172,7 +173,8 @@ def handle_events(g) -> None:
                 if inv.held_item is not None:
                     if g.action_bar_mgr.handle_extra_bar_drop(event, inv):
                         continue
-            if g.action_bar_mgr.handle_close_click(event):
+            if g.action_bar_mgr.handle_close_click(
+                    event, g.em.get_component(g.player_id, Inventory)):
                 continue
             if g.action_bar_mgr.handle_event(event, g):
                 continue

@@ -39,6 +39,11 @@ class InventoryGrid(UIElement):
         self.title_font = pygame.font.SysFont('consolas', 20, bold=True)
         self.split_dialog = SplitDialog()
         self.drop_confirm = DropConfirmDialog()
+        # Which hotbar is shown: -1 = primary, 0+ = extra bar index
+        self.hotbar_view_index: int = -1
+        # Arrow rects for hotbar cycling (set during draw)
+        self._up_arrow_r: pygame.Rect | None = None
+        self._dn_arrow_r: pygame.Rect | None = None
         # Draggable window — positioned on right side for stone oven pairing
         self.dw = DraggableWindow(
             rect.width, rect.height, title="Inventory",
@@ -53,18 +58,45 @@ class InventoryGrid(UIElement):
     def _page_offset(self) -> int:
         return self.page * INVENTORY_SLOTS_PER_PAGE
 
+    def _grid_left(self) -> int:
+        """Left x for centred slot grid (used for both hotbar and inventory)."""
+        grid_w = self.cols * (self.slot_size + 6) - 6
+        return self.rect.x + (self.rect.width - grid_w) // 2
+
     def _hotbar_slot_rect(self, i: int) -> pygame.Rect:
-        x = self.rect.x + 12 + i * (self.slot_size + 6)
-        y = self.rect.y + 38
+        x = self._grid_left() + i * (self.slot_size + 6)
+        y = self.rect.y + 40
         return pygame.Rect(x, y, self.slot_size, self.slot_size)
 
     def _inv_slot_rect(self, i: int) -> pygame.Rect:
         col = i % self.cols
         row = i // self.cols
-        hotbar_h = self.slot_size + 14  # hotbar row height + gap
-        x = self.rect.x + 12 + col * (self.slot_size + 6)
-        y = self.rect.y + 38 + hotbar_h + row * (self.slot_size + 6)
+        hotbar_h = self.slot_size + 18  # hotbar row + gap
+        x = self._grid_left() + col * (self.slot_size + 6)
+        y = self.rect.y + 40 + hotbar_h + row * (self.slot_size + 6)
         return pygame.Rect(x, y, self.slot_size, self.slot_size)
+
+    def _total_hotbar_count(self) -> int:
+        """Total number of hotbars: 1 primary + N extras."""
+        abm = self.inventory._action_bar_ref
+        return 1 + (len(abm.extra_bars) if abm else 0)
+
+    def _get_viewed_bar(self):
+        """Return (slots, enchants, rarities, is_primary) for current view."""
+        if self.hotbar_view_index < 0:
+            return (self.inventory.hotbar,
+                    self.inventory.hotbar_enchantments,
+                    self.inventory.hotbar_rarities, True)
+        abm = self.inventory._action_bar_ref
+        if abm and 0 <= self.hotbar_view_index < len(abm.extra_bars):
+            bar = abm.extra_bars[self.hotbar_view_index]
+            return (bar.slots, bar.slot_enchantments,
+                    bar.slot_rarities, False)
+        # Fallback to primary if index is out of range
+        self.hotbar_view_index = -1
+        return (self.inventory.hotbar,
+                self.inventory.hotbar_enchantments,
+                self.inventory.hotbar_rarities, True)
 
     def draw(self, surface: pygame.Surface, tooltip: Tooltip) -> None:
         if not self.visible:
@@ -76,13 +108,55 @@ class InventoryGrid(UIElement):
         surface.blit(bg, self.rect.topleft)
 
         mx, my = pygame.mouse.get_pos()
+        gl = self._grid_left()
 
-        # -- Hotbar row (always visible) --
-        hotbar_label = self.font.render("Hotbar", True, GRAY)
-        surface.blit(hotbar_label, (self.rect.x + 12, self.rect.y + 26))
+        # -- Hotbar row label + cycling arrows --
+        total_bars = self._total_hotbar_count()
+        if self.hotbar_view_index < 0:
+            bar_label_str = "Hotbar"
+        else:
+            bar_label_str = f"Bar {self.hotbar_view_index + 2}"
+        hotbar_label = self.font.render(bar_label_str, True, GRAY)
+        surface.blit(hotbar_label, (gl, self.rect.y + 26))
+
+        # Up/down cycling arrows (right of hotbar label)
+        if total_bars > 1:
+            arrow_x = gl + hotbar_label.get_width() + 8
+            arrow_y = self.rect.y + 24
+            self._up_arrow_r = pygame.Rect(arrow_x, arrow_y, 20, 12)
+            self._dn_arrow_r = pygame.Rect(arrow_x, arrow_y + 14, 20, 12)
+            for ar, tri in [(self._up_arrow_r, 'up'),
+                            (self._dn_arrow_r, 'dn')]:
+                hov = ar.collidepoint(mx, my)
+                pygame.draw.rect(surface,
+                                 (70, 70, 100) if hov else (40, 40, 60),
+                                 ar, border_radius=2)
+                pygame.draw.rect(surface, (110, 110, 140), ar, 1,
+                                 border_radius=2)
+                cx, cy = ar.centerx, ar.centery
+                if tri == 'up':
+                    pygame.draw.polygon(surface, WHITE if hov else GRAY,
+                                        [(cx, cy - 3), (cx - 5, cy + 3),
+                                         (cx + 5, cy + 3)])
+                else:
+                    pygame.draw.polygon(surface, WHITE if hov else GRAY,
+                                        [(cx, cy + 3), (cx - 5, cy - 3),
+                                         (cx + 5, cy - 3)])
+            # Bar indicator
+            bar_num = self.hotbar_view_index + 2 if self.hotbar_view_index >= 0 else 1
+            ind_str = f"{bar_num}/{total_bars}"
+            ind_surf = self.font.render(ind_str, True, UI_TEXT_MUTED)
+            surface.blit(ind_surf,
+                         (arrow_x + 24, self.rect.y + 27))
+        else:
+            self._up_arrow_r = None
+            self._dn_arrow_r = None
+
+        # -- Hotbar slots (primary or extra bar) --
+        slots_d, enchants_d, rarities_d, is_primary = self._get_viewed_bar()
         for i in range(HOTBAR_CAPACITY):
             sr = self._hotbar_slot_rect(i)
-            sel = i == self.inventory.equipped_slot
+            sel = is_primary and i == self.inventory.equipped_slot
             bg_c = UI_SLOT_BG_SELECTED if sel else UI_SLOT_BG_NORMAL
             pygame.draw.rect(surface, bg_c, sr, border_radius=4)
             bd = UI_TEXT_HIGHLIGHT if sel else UI_SLOT_BORDER_NORMAL
@@ -90,18 +164,19 @@ class InventoryGrid(UIElement):
             # Slot number
             ns = self.font.render(str(i + 1), True, HOTBAR_SLOT_NUMBER_COLOR)
             surface.blit(ns, (sr.x + 3, sr.y + 2))
-            if i in self.inventory.hotbar:
-                item_id, count = self.inventory.hotbar[i]
-                hb_ench = self.inventory.hotbar_enchantments.get(i)
-                hb_rar = self.inventory.hotbar_rarities.get(i, 'common')
+            if i in slots_d:
+                item_id, count = slots_d[i]
+                hb_ench = enchants_d.get(i)
+                hb_rar = rarities_d.get(i, 'common')
                 self._draw_item(surface, sr, item_id, count, mx, my, tooltip, hb_ench, hb_rar)
 
         # -- Separator + page indicator --
-        hotbar_h = self.slot_size + 14
-        sep_y = self.rect.y + 38 + self.slot_size + 4
+        hotbar_h = self.slot_size + 18
+        sep_y = self.rect.y + 40 + self.slot_size + 6
         pygame.draw.line(surface, UI_SLOT_SEPARATOR,
-                         (self.rect.x + 12, sep_y),
-                         (self.rect.right - 12, sep_y), 1)
+                         (gl, sep_y),
+                         (self.rect.right - (self.rect.right - gl
+                          - self.cols * (self.slot_size + 6) + 6), sep_y), 1)
         page_label = self.font.render(
             f"Page {self.page + 1}/{INVENTORY_PAGES}", True, GRAY)
         surface.blit(page_label,
@@ -122,12 +197,13 @@ class InventoryGrid(UIElement):
                 self._draw_item(surface, sr, item_id, count, mx, my, tooltip, sl_ench, sl_rar)
 
         # -- Page navigation arrows + Sort button --
-        nav_y = (self.rect.y + 38 + hotbar_h
+        nav_y = (self.rect.y + 40 + hotbar_h
                  + self.rows * (self.slot_size + 6) + 4)
-        prev_r = pygame.Rect(self.rect.x + 12, nav_y, 60, 28)
-        next_r = pygame.Rect(self.rect.right - 72, nav_y, 60, 28)
+        btn_area_w = self.cols * (self.slot_size + 6) - 6
+        prev_r = pygame.Rect(gl, nav_y, 60, 28)
+        next_r = pygame.Rect(gl + btn_area_w - 60, nav_y, 60, 28)
         # Sort button centred between prev and next
-        sort_r = pygame.Rect(self.rect.x + 12 + 60 + 10, nav_y, 55, 28)
+        sort_r = pygame.Rect(gl + 60 + 10, nav_y, 55, 28)
         for r, label in [(prev_r, "< Prev"), (next_r, "Next >")]:
             hov = r.collidepoint(mx, my)
             pygame.draw.rect(surface, UI_NAV_HOVER if hov else UI_NAV_NORMAL,
@@ -230,6 +306,28 @@ class InventoryGrid(UIElement):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
 
+            # Hotbar cycling arrows
+            total_bars = self._total_hotbar_count()
+            if total_bars > 1:
+                if (self._up_arrow_r is not None
+                        and self._up_arrow_r.collidepoint(mx, my)):
+                    # Cycle up: primary(-1) → last extra, or current-1
+                    if self.hotbar_view_index < 0:
+                        self.hotbar_view_index = total_bars - 2
+                    else:
+                        self.hotbar_view_index -= 1
+                        if self.hotbar_view_index < -1:
+                            self.hotbar_view_index = total_bars - 2
+                    return True
+                if (self._dn_arrow_r is not None
+                        and self._dn_arrow_r.collidepoint(mx, my)):
+                    # Cycle down: last extra → primary(-1)
+                    if self.hotbar_view_index >= total_bars - 2:
+                        self.hotbar_view_index = -1
+                    else:
+                        self.hotbar_view_index += 1
+                    return True
+
             # Check hotbar slots
             for i in range(HOTBAR_CAPACITY):
                 sr = self._hotbar_slot_rect(i)
@@ -247,12 +345,14 @@ class InventoryGrid(UIElement):
                     return True
 
             # Page buttons + Sort button
-            hotbar_h = self.slot_size + 14
-            nav_y = (self.rect.y + 38 + hotbar_h
+            gl = self._grid_left()
+            hotbar_h = self.slot_size + 18
+            btn_area_w = self.cols * (self.slot_size + 6) - 6
+            nav_y = (self.rect.y + 40 + hotbar_h
                      + self.rows * (self.slot_size + 6) + 4)
-            prev_r = pygame.Rect(self.rect.x + 12, nav_y, 60, 28)
-            next_r = pygame.Rect(self.rect.right - 72, nav_y, 60, 28)
-            sort_r = pygame.Rect(self.rect.x + 12 + 60 + 10, nav_y, 55, 28)
+            prev_r = pygame.Rect(gl, nav_y, 60, 28)
+            next_r = pygame.Rect(gl + btn_area_w - 60, nav_y, 60, 28)
+            sort_r = pygame.Rect(gl + 60 + 10, nav_y, 55, 28)
             if prev_r.collidepoint(mx, my):
                 self.page = (self.page - 1) % INVENTORY_PAGES
                 return True
@@ -293,12 +393,22 @@ class InventoryGrid(UIElement):
                     self.inventory.held_rarity = 'common'
                 return True
             # Check hotbar slots for split
+            slots_d, enchants_d, rarities_d, is_primary = self._get_viewed_bar()
+            src_type = 'hotbar' if is_primary else 'extra_bar'
             for i in range(HOTBAR_CAPACITY):
                 sr = self._hotbar_slot_rect(i)
-                if sr.collidepoint(mx, my) and i in self.inventory.hotbar:
-                    iid, cnt = self.inventory.hotbar[i]
+                if sr.collidepoint(mx, my) and i in slots_d:
+                    iid, cnt = slots_d[i]
                     if cnt > 1:
-                        self.split_dialog.open('hotbar', i, iid, cnt, mx, my)
+                        if is_primary:
+                            self.split_dialog.open(
+                                src_type, i, iid, cnt, mx, my)
+                        else:
+                            self.split_dialog.open(
+                                src_type, i, iid, cnt, mx, my,
+                                ext_slots=slots_d,
+                                ext_enchants=enchants_d,
+                                ext_rarities=rarities_d)
                         return True
             # Check inventory slots for split
             off = self._page_offset()
@@ -318,32 +428,46 @@ class InventoryGrid(UIElement):
         return False
 
     def _click_hotbar_slot(self, slot: int) -> None:
+        """Handle click on a hotbar slot — works for both primary and extra bars."""
         inv = self.inventory
+        slots_d, enchants_d, rarities_d, is_primary = self._get_viewed_bar()
         has_held = inv.held_item is not None
-        has_slot = slot in inv.hotbar
+        has_slot = slot in slots_d
         if not has_held and not has_slot:
             return
         if not has_held and has_slot:
-            # Pick up from hotbar
-            inv.held_item = inv.hotbar.pop(slot)
-            inv.held_enchant = inv.hotbar_enchantments.pop(slot, None)
-            pick_up_rarity(inv, 'hotbar', slot)
+            # Pick up from this bar
+            inv.held_item = slots_d.pop(slot)
+            inv.held_enchant = enchants_d.pop(slot, None)
+            if is_primary:
+                pick_up_rarity(inv, 'hotbar', slot)
+            else:
+                inv.held_rarity = rarities_d.pop(slot, 'common')
         elif has_held and not has_slot:
-            # Place into empty hotbar slot
-            inv.hotbar[slot] = inv.held_item
+            # Place into empty slot
+            slots_d[slot] = inv.held_item
             inv.held_item = None
             if inv.held_enchant:
-                inv.hotbar_enchantments[slot] = inv.held_enchant
+                enchants_d[slot] = inv.held_enchant
             inv.held_enchant = None
-            place_rarity(inv, 'hotbar', slot)
+            if is_primary:
+                place_rarity(inv, 'hotbar', slot)
+            else:
+                rarities_d[slot] = inv.held_rarity or 'common'
+                inv.held_rarity = 'common'
         else:
-            # Swap held with hotbar slot
-            old_ench = inv.hotbar_enchantments.pop(slot, None)
+            # Swap held with slot
+            old_ench = enchants_d.pop(slot, None)
             if inv.held_enchant:
-                inv.hotbar_enchantments[slot] = inv.held_enchant
+                enchants_d[slot] = inv.held_enchant
             inv.held_enchant = old_ench
-            swap_rarity(inv, 'hotbar', slot)
-            inv.hotbar[slot], inv.held_item = inv.held_item, inv.hotbar[slot]
+            if is_primary:
+                swap_rarity(inv, 'hotbar', slot)
+            else:
+                old_rar = rarities_d.get(slot, 'common')
+                rarities_d[slot] = inv.held_rarity or 'common'
+                inv.held_rarity = old_rar
+            slots_d[slot], inv.held_item = inv.held_item, slots_d[slot]
 
     def _click_inv_slot(self, slot: int) -> None:
         inv = self.inventory
