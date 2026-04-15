@@ -84,6 +84,11 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
 | `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager, ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
+| **character/** | Character customization package | |
+| `character/__init__.py` | Re-exports all character classes/data | CharacterData, CharacterGenerator, compose_character, palettes |
+| `character/layers.py` | Layered sprite rendering — skin, hair, shirt, pants, weapon/shield overlays | compose_character, draw_skin, draw_hair, draw_shirt, draw_pants, draw_weapon_overlay, draw_shield_overlay, SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS, HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES |
+| `character/generator.py` | Character data model + customization screen UI | CharacterData (to_dict/from_dict/build_sprite), CharacterGenerator (_start_game, _is_legacy_migration) |
+| `character/legacy_save_migration.py` | **REMOVABLE** — Detects legacy saves missing character data | check_needs_migration(data) — *Delete once all legacy saves are migrated* |
 
 > ⚠️ **UI LAYOUT PROTECTION**: Panel dimensions and element positions in `pause_menu.py`, `character_menu.py`, and `chest.py` must NEVER be changed without explicit user instruction. Modifying sizes, positions, or rearranging layout sections is strictly prohibited.
 | **enchantments/** | Enchantment system | |
@@ -2064,3 +2069,72 @@ Enemies with `'large': True` in MOB_DATA:
 - `dragon_red`, `dragon_green`, `dragon_black`, `dragon_white`, `shadow_dragon`
 
 These use larger texture surfaces (36×48 for ogres/golems, 48×48 for dragons).
+
+---
+
+## Character Customization System (`character/` package)
+
+### Sprite Composition
+The player sprite is a 24×32 SRCALPHA surface composed of layered pixel art:
+1. **Skin** (body shape: head, arms, legs) — `draw_skin(color)`
+2. **Pants/shorts/skirt** — `draw_pants(style, color)`
+3. **Shirt/tunic/vest/tank** — `draw_shirt(style, color)`
+4. **Hair** — `draw_hair(style, color)`
+5. **Weapon overlay** (right hand) — `draw_weapon_overlay(weapon_id)` — optional
+6. **Shield overlay** (left hand) — `draw_shield_overlay(shield_id)` — optional
+
+`compose_character()` blits all layers in order and returns the final sprite.
+
+### CharacterData (serializable state)
+| Field | Type | Default | Range |
+|-------|------|---------|-------|
+| `skin_color_idx` | int | 0 | 0–5 (SKIN_COLORS) |
+| `hair_style_idx` | int | 0 | 0–5 (HAIR_STYLES: short, long, spiky, bald, ponytail, mohawk) |
+| `hair_color_idx` | int | 0 | 0–7 (HAIR_COLORS) |
+| `shirt_style_idx` | int | 0 | 0–2 (SHIRT_STYLES: tunic, vest, tank) |
+| `shirt_color_idx` | int | 0 | 0–7 (SHIRT_COLORS) |
+| `pants_style_idx` | int | 0 | 0–5 (PANTS_COLORS) / 0–2 (PANTS_STYLES: pants, shorts, skirt) |
+| `pants_color_idx` | int | 0 | 0–5 (PANTS_COLORS) |
+| `show_equipment` | bool | True | Whether weapon/shield show on sprite |
+
+### Weapon Overlay Profiles
+Each weapon_id is matched (first match wins) to a (weapon_type, handle_color, head_color) tuple:
+| Match Key | Type | Handle Color | Head Color |
+|-----------|------|-------------|------------|
+| `iron_sword` | sword | (80,60,30) | (200,210,230) |
+| `sword` | sword | (100,70,35) | (180,180,200) |
+| `diamond_pickaxe` | pickaxe | (120,80,40) | (140,200,255) |
+| `titanium_pickaxe` | pickaxe | (120,80,40) | (160,170,200) |
+| `iron_pickaxe` | pickaxe | (120,80,40) | (170,170,190) |
+| `pickaxe` | pickaxe | (120,80,40) | (160,160,170) |
+| `diamond_axe` | axe | (120,80,40) | (140,200,255) |
+| `titanium_axe` | axe | (120,80,40) | (160,170,200) |
+| `iron_axe` | axe | (120,80,40) | (170,170,190) |
+| `axe` | axe | (120,80,40) | (180,180,200) |
+| `mace` | mace | (120,80,40) | (160,160,175) |
+| `spear` | spear | (120,80,40) | (180,190,210) |
+| `bone_club` | club | (200,195,180) | (230,225,210) |
+
+### Shield Overlay Profiles
+| Match Key | Fill Color | Border Color | Emblem Color |
+|-----------|-----------|-------------|-------------|
+| `iron_shield` | (160,160,180) | (120,120,135) | (200,205,220) |
+| `wood_shield` | (130,91,30) | (80,60,40) | (180,180,200) |
+
+### Game Integration
+- `Game.char_data` — CharacterData instance, persisted in saves as `'character'` key
+- `Game.char_gen_ui` — CharacterGenerator instance
+- `Game.in_char_gen` — True when character creation screen is active
+- `Game._rebuild_player_sprite()` — Rebuilds player texture from char_data + current equipment; called after equip/unequip changes and on save load
+- `CharacterMenu.equipment_changed` — Flag set True on equip/unequip, checked in game/events.py to trigger sprite rebuild
+
+### Legacy Save Migration (`character/legacy_save_migration.py`)
+- **REMOVABLE MODULE** — exists only to handle saves created before character gen was added
+- `check_needs_migration(data)` → True if save dict lacks `'character'` key
+- When True, game routes player to character generator before resuming
+- References: `game/menus.py` (load game handler), `character/generator.py` (`_is_legacy_migration` flag)
+
+### UI Window System
+- Opening one window (I/C/P) does NOT close other windows
+- Only ESC closes all windows simultaneously
+- Stone oven, chest, and enchantment table all auto-open inventory alongside themselves

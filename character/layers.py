@@ -310,7 +310,7 @@ def draw_weapon_overlay(weapon_id: str) -> pygame.Surface:
         # Spikes
         s.set_at((21, 12), hi4)
         s.set_at((19, 15), hi4)
-        s.set_at((23, 15), hi4) if 23 < 24 else None
+        s.set_at((23, 15), hi4)
     elif wtype == 'spear':
         # Long shaft
         for y in range(10, 24):
