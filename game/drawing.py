@@ -227,6 +227,29 @@ def draw_world(g: 'Game') -> None:
 # LIGHTING
 # ======================================================================
 
+# Cache: (radius, color_r, color_g, color_b) -> pre-blitted light surface
+_light_surface_cache: dict[tuple[int, int, int, int], pygame.Surface] = {}
+
+
+def _get_light_surface(radius: int,
+                       color: Tuple[int, int, int]) -> pygame.Surface:
+    """Return a cached concentric-ring light punch surface."""
+    key = (radius, color[0], color[1], color[2])
+    surf = _light_surface_cache.get(key)
+    if surf is not None:
+        return surf
+    surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    for r in range(radius, 15, -18):
+        ts = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+        a = int(30 * (r / radius))
+        pygame.draw.circle(
+            ts, (color[0], color[1], color[2], max(1, a)), (r, r), r)
+        surf.blit(ts, (radius - r, radius - r),
+                  special_flags=pygame.BLEND_RGBA_SUB)
+    _light_surface_cache[key] = surf
+    return surf
+
+
 def draw_lighting(g: 'Game') -> None:
     darkness = g.daynight.get_darkness()
     lights = g.em.get_entities_with(Transform, LightSource)
@@ -251,13 +274,9 @@ def draw_lighting(g: 'Game') -> None:
 
     def punch_light(sx: int, sy: int, radius: int,
                     color: Tuple[int, int, int]) -> None:
-        for r in range(radius, 15, -18):
-            ts = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-            a = int(30 * (r / radius))
-            pygame.draw.circle(
-                ts, (color[0], color[1], color[2], max(1, a)), (r, r), r)
-            overlay.blit(ts, (sx - r, sy - r),
-                         special_flags=pygame.BLEND_RGBA_SUB)
+        light_surf = _get_light_surface(radius, color)
+        overlay.blit(light_surf, (sx - radius, sy - radius),
+                     special_flags=pygame.BLEND_RGBA_SUB)
 
     for eid in lights:
         t: Transform = g.em.get_component(eid, Transform)
@@ -804,19 +823,28 @@ def draw_spell_targeting(g: 'Game') -> None:
 # ELITE OUTLINE (drawn BEFORE sprites so it sits behind them)
 # ======================================================================
 
+# Cache: (id(sprite_surface), flip_x, elite_tier) -> outline Surface
+_elite_outline_cache: dict[tuple[int, bool, int], pygame.Surface] = {}
+
+
 def draw_elite_outlines(g: 'Game') -> None:
     """Draw a precise pixel-perfect outline behind every elite mob sprite.
 
-    Uses pygame.mask to extract the exact silhouette of each sprite,
-    then stamps it shifted by 1-2 px in all 8 directions to form a
-    solid outline ring.  The sprite itself (drawn later by the renderer)
-    covers the interior so only the border is visible.
+    The expensive mask->silhouette->8-dir stamp computation is cached per
+    (sprite id, flip_x, tier).  Only set_alpha() is called each frame
+    for the pulsing effect.
     """
     from game_controller import (
         ELITE_TIER_COLORS, ELITE_GLOW_EXPAND,
         ELITE_GLOW_PULSE_SPEED, ELITE_GLOW_ALPHA_MIN, ELITE_GLOW_ALPHA_MAX,
         RENDER_CULL_MARGIN,
     )
+    expand = ELITE_GLOW_EXPAND
+
+    # Compute pulsing alpha once per frame
+    pulse = (math.sin(pygame.time.get_ticks() * ELITE_GLOW_PULSE_SPEED) + 1.0) * 0.5
+    alpha = int(ELITE_GLOW_ALPHA_MIN + pulse * (ELITE_GLOW_ALPHA_MAX - ELITE_GLOW_ALPHA_MIN))
+
     for eid in g.em.get_entities_with(Transform, AI):
         ai_c = g.em.get_component(eid, AI)
         if not (ai_c.is_elite and ai_c.elite_tier > 0):
@@ -834,38 +862,32 @@ def draw_elite_outlines(g: 'Game') -> None:
                 or sy < -RENDER_CULL_MARGIN or sy > SCREEN_HEIGHT + RENDER_CULL_MARGIN):
             continue
 
-        sprite = (pygame.transform.flip(rend.surface, rend.flip_x, False)
-                  if rend.flip_x else rend.surface)
-        sw, sh = sprite.get_size()
+        cache_key = (id(rend.surface), rend.flip_x, ai_c.elite_tier)
+        outline_surf = _elite_outline_cache.get(cache_key)
 
-        tier_color = ELITE_TIER_COLORS.get(ai_c.elite_tier, (60, 140, 255))
+        if outline_surf is None:
+            sprite = (pygame.transform.flip(rend.surface, rend.flip_x, False)
+                      if rend.flip_x else rend.surface)
+            sw, sh = sprite.get_size()
+            tier_color = ELITE_TIER_COLORS.get(ai_c.elite_tier, (60, 140, 255))
 
-        # Pulsing alpha
-        pulse = (math.sin(pygame.time.get_ticks() * ELITE_GLOW_PULSE_SPEED) + 1.0) * 0.5
-        alpha = int(ELITE_GLOW_ALPHA_MIN + pulse * (ELITE_GLOW_ALPHA_MAX - ELITE_GLOW_ALPHA_MIN))
+            # Build the outline at full alpha (255) -- pulsing via set_alpha
+            mask = pygame.mask.from_surface(sprite)
+            silhouette = mask.to_surface(
+                setcolor=(*tier_color, 255),
+                unsetcolor=(0, 0, 0, 0),
+            )
+            outline_w = sw + expand * 2
+            outline_h = sh + expand * 2
+            outline_surf = pygame.Surface((outline_w, outline_h), pygame.SRCALPHA)
+            for d in range(1, expand + 1):
+                for ox, oy in [(-d, 0), (d, 0), (0, -d), (0, d),
+                               (-d, -d), (d, -d), (-d, d), (d, d)]:
+                    outline_surf.blit(silhouette, (expand + ox, expand + oy))
+            _elite_outline_cache[cache_key] = outline_surf
 
-        expand = ELITE_GLOW_EXPAND  # 2-3 px outline thickness
-
-        # Extract the exact pixel mask from the sprite
-        mask = pygame.mask.from_surface(sprite)
-        # Create a solid-color silhouette from the mask
-        silhouette = mask.to_surface(
-            setcolor=(*tier_color, alpha),
-            unsetcolor=(0, 0, 0, 0),
-        )
-
-        # Stamp the silhouette shifted in all 8 directions to form the outline
-        outline_w = sw + expand * 2
-        outline_h = sh + expand * 2
-        outline_surf = pygame.Surface((outline_w, outline_h), pygame.SRCALPHA)
-
-        # All offsets from 1..expand in 8 cardinal/diagonal directions
-        for d in range(1, expand + 1):
-            for ox, oy in [(-d, 0), (d, 0), (0, -d), (0, d),
-                           (-d, -d), (d, -d), (-d, d), (d, d)]:
-                outline_surf.blit(silhouette, (expand + ox, expand + oy))
-
-        # Blit the outline behind where the sprite will be drawn
+        # Pulse via set_alpha (fast, no surface re-creation)
+        outline_surf.set_alpha(alpha)
         g.screen.blit(outline_surf, (sx - expand, sy - expand))
 
 
