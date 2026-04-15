@@ -74,7 +74,6 @@ def interact(g: 'Game') -> None:
                 g.show_chest = True
                 g.active_chest = eid
                 g.chest_ui.chest_scroll = 0
-                g.show_inventory = True  # Open inventory alongside chest
                 if g.in_cave >= 0:
                     g.caves.chest_looted[g.in_cave] = True
             return
@@ -212,8 +211,16 @@ def use_equipped_item(g: 'Game') -> None:
                 if sdata['level'] <= cur_level:
                     g._notify(f"Already have {effect.title()} {cur_level}!")
                     return
+            # Apply level scaling to buff value (protection DR, regen HP/s,
+            # strength bonus dmg).  Levitate has no value to scale.
+            from game_controller import SPELL_LEVEL_SCALE_PERCENT
+            player_stats: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
+            level_mult = 1.0 + (player_stats.level - 1) * SPELL_LEVEL_SCALE_PERCENT
+            scaled_value = sdata['value']
+            if effect != 'levitate':
+                scaled_value = max(1, int(sdata['value'] * level_mult))
             g.active_buffs[effect] = (
-                sdata['level'], sdata['value'], sdata['duration'])
+                sdata['level'], scaled_value, sdata['duration'])
             g.spell_cooldowns[eq_id] = sdata.get('cooldown', 5.0)
             color = sdata.get('color', CYAN)
             g._notify(f"Applied {sdata['name']} ({sdata['duration']:.0f}s)")

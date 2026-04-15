@@ -180,6 +180,7 @@ class AI(Component):
         self.glow_color: Optional[Tuple[int, int, int]] = None
         self.aggro = False  # set True when hit by player
         self.is_elite = False  # elite variant with glow border
+        self.elite_tier: int = 0  # 0=normal, 1=blue, 2=purple, 3=gold, 4=red
 
 
 class PlayerStats(Component):

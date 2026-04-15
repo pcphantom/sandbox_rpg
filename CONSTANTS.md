@@ -79,7 +79,8 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/character_menu.py` | CharacterMenu | Stats + equip with dropdown (540×460) — **DO NOT MODIFY dimensions or layout** |
 | `ui/chest.py` | ChestUI | Chest storage with stacking rules (620×320) — **DO NOT MODIFY dimensions** |
 | `ui/enchantment_table.py` | EnchantmentTableUI | Enchantment table 3×3 grid |
-| `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting interface |
+| `ui/stone_oven.py` | StoneOvenUI | Stone oven 2×2 smelting/cooking interface |
+| `ui/inventory_sort.py` | sort_inventory_slots | Inventory sorting (respects non-stackable rules) |
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
@@ -1123,6 +1124,10 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 ## Spell Data (`spells/: SPELL_DATA`)
 
 ### Offensive Spells
+**Note**: All spell damage/heal/buff values scale with player level at 2% per level (`SPELL_LEVEL_SCALE_PERCENT`).
+Projectile spells auto-target the nearest enemy within 80px of the crosshair click.
+Projectile size and explosion effects scale with spell tier (I-V).
+
 | Spell | Type | Damage | Heal | Radius | Speed | Range | Cooldown | Special |
 |-------|------|--------|------|--------|-------|-------|----------|---------|
 | spell_fireball | projectile | 60 | — | 80.0 | 350.0 | 400.0 | 3.0 | — |
@@ -1155,10 +1160,10 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | spell_regen_4 | regen | 4 | 30.0s | 9 HP/sec | 5.0 |
 | spell_regen_5 | regen | 5 | 30.0s | 12 HP/sec | 5.0 |
 | spell_protection_1 | protection | 1 | 60.0s | 2 DR | 5.0 |
-| spell_protection_2 | protection | 2 | 60.0s | 4 DR | 5.0 |
-| spell_protection_3 | protection | 3 | 60.0s | 6 DR | 5.0 |
-| spell_protection_4 | protection | 4 | 60.0s | 9 DR | 5.0 |
-| spell_protection_5 | protection | 5 | 60.0s | 12 DR | 5.0 |
+| spell_protection_2 | protection | 2 | 75.0s | 4 DR | 5.0 |
+| spell_protection_3 | protection | 3 | 90.0s | 6 DR | 5.0 |
+| spell_protection_4 | protection | 4 | 105.0s | 9 DR | 5.0 |
+| spell_protection_5 | protection | 5 | 120.0s | 12 DR | 5.0 |
 | spell_strength_1 | strength | 1 | 60.0s | +3 DMG | 5.0 |
 | spell_strength_2 | strength | 2 | 60.0s | +6 DMG | 5.0 |
 | spell_strength_3 | strength | 3 | 60.0s | +10 DMG | 5.0 |
@@ -1378,7 +1383,6 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 ### Consumables
 | Result | Cost |
 |--------|------|
-| Berry Pie | berry×5, wood×1 |
 | Bandage | cloth×2, berry×1 |
 | Health Potion | berry×8, stone×2, cloth×1 |
 | Antidote | berry×3, bone×1 |
@@ -1408,11 +1412,26 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 |--------|------|
 | Brilliant Diamond | diamond×9 |
 
+### Stone Oven Fuel
+| Fuel Item | Fuel Units per Item | Notes |
+|-----------|--------------------:|-------|
+| wood | 5 | Standard fuel |
+| stick | 1 | Burns 5× faster than wood |
+
 ### Stone Oven Smelting Recipes
-| Result | Ore Cost | Wood Cost | Smelt Time |
+| Result | Ore Cost | Fuel Cost | Smelt Time |
 |--------|----------|-----------|------------|
-| Iron Ingot | iron_ore×1 | wood×2 | 10s |
-| Titanium Ingot | titanium_ore×1 | wood×2 | 30s |
+| Iron Ingot | iron_ore×1 | 10 fuel units | 10s |
+| Titanium Ingot | titanium_ore×1 | 10 fuel units | 30s |
+
+### Stone Oven Cooking Recipes
+| Result | Ingredients | Fuel Cost | Cook Time |
+|--------|-------------|-----------|-----------|
+| Berry Pie | berry×5 | 5 fuel units | 8s |
+
+### Stone Oven Valid Input Categories
+Items whose category is `material`, `consumable`, or `ammo` may be placed in the oven.
+Gear items (weapon, ranged, armor, shield, spell, tool, etc.) are rejected with "You don't want to burn that."
 
 ### Titanium & Diamond Gear
 | Result | Cost |
@@ -1479,7 +1498,7 @@ torch, campfire, trap, bed, wall, stone_wall_b, turret, chest, door, enchantment
 Items in these categories always occupy their own slot (count = 1 each):
 `weapon`, `ranged`, `armor`, `shield`, `spell`, `tool`, `enchantment`
 
-### Stack Splitting (`gui.py: SplitDialog`)
+### Stack Splitting (`ui/split_dialog.py: SplitDialog`)
 
 Right-click a stack (count > 1) in the inventory to open a split dialog.
 - Scroll wheel or +/- buttons adjust the split amount.
@@ -1487,7 +1506,7 @@ Right-click a stack (count > 1) in the inventory to open a split dialog.
 - Press Enter or click Confirm to split; Esc or Cancel to close.
 - Default split amount is half the stack.
 
-### Drop Item Confirm (`gui.py: DropConfirmDialog`)
+### Drop Item Confirm (`ui/drop_confirm.py: DropConfirmDialog`)
 
 Left-click outside the inventory panel while holding an item opens a confirmation dialog.
 - Shows item name (with rarity, enchant prefix, and count).
@@ -1495,6 +1514,13 @@ Left-click outside the inventory panel while holding an item opens a confirmatio
 - "Yes, Drop" destroys the held item (clears `held_item`, `held_enchant`, `held_rarity`).
 - "Cancel" or Esc closes the dialog; the item remains held.
 - Enter confirms the drop.
+
+### Inventory Sort (`ui/inventory_sort.py: sort_inventory_slots`)
+
+Click the "Sort" button below the inventory page navigation to sort and compact inventory slots.
+- Stackable items with matching identity (id + enchant + rarity) are merged.
+- Non-stackable items (weapons, armor, etc.) keep one unit per slot and are never merged.
+- Slots are compacted so there are no gaps, sorted alphabetically by item_id.
 
 ## Key Game State Fields (`sandbox_rpg.py: Game`)
 
@@ -1990,13 +2016,51 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | `BOSS_GLOW_DRAGON_WHITE` | (200, 220, 255) |
 | `BOSS_GLOW_SHADOW_DRAGON` | (160, 40, 220) |
 
-### Elite Enemy System
+### Elite Enemy Tier System
+Elite enemies use a tiered system with silhouette-based neon glow outlines (not a box).
+Each tier has a color and stat multipliers (HP, DMG, XP).
+
+| Tier | Color | HP Mult | DMG Mult | XP Mult | RGB |
+|------|-------|---------|----------|---------|-----|
+| 1 (Blue) | Blue | 2× | 2× | 2× | (60, 140, 255) |
+| 2 (Purple) | Purple | 3× | 3× | 3.5× | (180, 60, 255) |
+| 3 (Gold) | Gold | 4× | 4× | 5× | (255, 200, 40) |
+| 4 (Red) | Red | 5× | 5× | 8× | (255, 40, 40) |
+
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `ELITE_GLOW_COLOR` | (200, 180, 60) | Gold-tinted glow border for elite enemies |
-| `ELITE_HP_MULT` | 1.8 | HP multiplier for elite variants |
-| `ELITE_DMG_MULT` | 1.5 | Damage multiplier for elite variants |
-| `ELITE_XP_MULT` | 2.0 | XP multiplier for elite variants |
+| `ELITE_GLOW_EXPAND` | 3 | Outline expansion in px beyond sprite edge |
+| `ELITE_GLOW_PULSE_SPEED` | 0.004 | Pulse animation speed |
+| `ELITE_GLOW_ALPHA_MIN` | 100 | Minimum glow alpha |
+| `ELITE_GLOW_ALPHA_MAX` | 200 | Maximum glow alpha |
+| `ELITE_START_DAY` | 7 | No elites before this day |
+| `ELITE_MAX_CHANCE` | 0.1 | Max spawn probability |
+
+### Spell Level Scaling
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `SPELL_LEVEL_SCALE_PERCENT` | 0.02 | 2% per player level bonus to all spell effects |
+| `SPELL_AUTO_TARGET_RADIUS` | 80.0 | Auto-target enemy within this radius of click |
+| `SPELL_PROJ_SIZE` | {1:(12,12)..5:(22,22)} | Projectile size per spell tier |
+| `SPELL_EXPLOSION_PARTICLES` | {1:10..5:30} | Explosion particle count per tier |
+| `SPELL_EXPLOSION_RADIUS` | {1:50..5:110} | Visual explosion radius per tier |
+| `PROJ_MOB_HIT_RADIUS` | 28.0 | Projectile→mob collision radius |
+
+### Damage Resistance (Diminishing Returns)
+Formula: `reduction% = DR / (DR + DR_HALF_VALUE)`, capped at `DR_MAX_PERCENT`.
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DR_HALF_VALUE` | 100.0 | DR needed for 50% damage reduction |
+| `DR_MAX_PERCENT` | 0.85 | Hard cap at 85% reduction |
+| `DR_MIN_DAMAGE` | 1 | Minimum damage always dealt |
+
+Example DR values at half=100:
+- DR 10 → 9% reduction
+- DR 50 → 33% reduction  
+- DR 100 → 50% reduction
+- DR 200 → 67% reduction
+- DR 500 → 83% reduction
 
 ### Multi-Wave Night System
 | Constant | Value | Description |
@@ -2137,4 +2201,5 @@ Each weapon_id is matched (first match wins) to a (weapon_type, handle_color, he
 ### UI Window System
 - Opening one window (I/C/P) does NOT close other windows
 - Only ESC closes all windows simultaneously
-- Stone oven, chest, and enchantment table all auto-open inventory alongside themselves
+- Stone oven and enchantment table auto-open inventory alongside themselves
+- Chest does NOT auto-open inventory (chest UI has its own built-in inventory panel)
