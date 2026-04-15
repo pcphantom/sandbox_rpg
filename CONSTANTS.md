@@ -1124,6 +1124,10 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 ## Spell Data (`spells/: SPELL_DATA`)
 
 ### Offensive Spells
+**Note**: All spell damage/heal/buff values scale with player level at 2% per level (`SPELL_LEVEL_SCALE_PERCENT`).
+Projectile spells auto-target the nearest enemy within 80px of the crosshair click.
+Projectile size and explosion effects scale with spell tier (I-V).
+
 | Spell | Type | Damage | Heal | Radius | Speed | Range | Cooldown | Special |
 |-------|------|--------|------|--------|-------|-------|----------|---------|
 | spell_fireball | projectile | 60 | — | 80.0 | 350.0 | 400.0 | 3.0 | — |
@@ -1156,10 +1160,10 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | spell_regen_4 | regen | 4 | 30.0s | 9 HP/sec | 5.0 |
 | spell_regen_5 | regen | 5 | 30.0s | 12 HP/sec | 5.0 |
 | spell_protection_1 | protection | 1 | 60.0s | 2 DR | 5.0 |
-| spell_protection_2 | protection | 2 | 60.0s | 4 DR | 5.0 |
-| spell_protection_3 | protection | 3 | 60.0s | 6 DR | 5.0 |
-| spell_protection_4 | protection | 4 | 60.0s | 9 DR | 5.0 |
-| spell_protection_5 | protection | 5 | 60.0s | 12 DR | 5.0 |
+| spell_protection_2 | protection | 2 | 75.0s | 4 DR | 5.0 |
+| spell_protection_3 | protection | 3 | 90.0s | 6 DR | 5.0 |
+| spell_protection_4 | protection | 4 | 105.0s | 9 DR | 5.0 |
+| spell_protection_5 | protection | 5 | 120.0s | 12 DR | 5.0 |
 | spell_strength_1 | strength | 1 | 60.0s | +3 DMG | 5.0 |
 | spell_strength_2 | strength | 2 | 60.0s | +6 DMG | 5.0 |
 | spell_strength_3 | strength | 3 | 60.0s | +10 DMG | 5.0 |
@@ -2012,13 +2016,51 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | `BOSS_GLOW_DRAGON_WHITE` | (200, 220, 255) |
 | `BOSS_GLOW_SHADOW_DRAGON` | (160, 40, 220) |
 
-### Elite Enemy System
+### Elite Enemy Tier System
+Elite enemies use a tiered system with silhouette-based neon glow outlines (not a box).
+Each tier has a color and stat multipliers (HP, DMG, XP).
+
+| Tier | Color | HP Mult | DMG Mult | XP Mult | RGB |
+|------|-------|---------|----------|---------|-----|
+| 1 (Blue) | Blue | 2× | 2× | 2× | (60, 140, 255) |
+| 2 (Purple) | Purple | 3× | 3× | 3.5× | (180, 60, 255) |
+| 3 (Gold) | Gold | 4× | 4× | 5× | (255, 200, 40) |
+| 4 (Red) | Red | 5× | 5× | 8× | (255, 40, 40) |
+
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `ELITE_GLOW_COLOR` | (200, 180, 60) | Gold-tinted glow border for elite enemies |
-| `ELITE_HP_MULT` | 1.8 | HP multiplier for elite variants |
-| `ELITE_DMG_MULT` | 1.5 | Damage multiplier for elite variants |
-| `ELITE_XP_MULT` | 2.0 | XP multiplier for elite variants |
+| `ELITE_GLOW_EXPAND` | 3 | Outline expansion in px beyond sprite edge |
+| `ELITE_GLOW_PULSE_SPEED` | 0.004 | Pulse animation speed |
+| `ELITE_GLOW_ALPHA_MIN` | 100 | Minimum glow alpha |
+| `ELITE_GLOW_ALPHA_MAX` | 200 | Maximum glow alpha |
+| `ELITE_START_DAY` | 7 | No elites before this day |
+| `ELITE_MAX_CHANCE` | 0.1 | Max spawn probability |
+
+### Spell Level Scaling
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `SPELL_LEVEL_SCALE_PERCENT` | 0.02 | 2% per player level bonus to all spell effects |
+| `SPELL_AUTO_TARGET_RADIUS` | 80.0 | Auto-target enemy within this radius of click |
+| `SPELL_PROJ_SIZE` | {1:(12,12)..5:(22,22)} | Projectile size per spell tier |
+| `SPELL_EXPLOSION_PARTICLES` | {1:10..5:30} | Explosion particle count per tier |
+| `SPELL_EXPLOSION_RADIUS` | {1:50..5:110} | Visual explosion radius per tier |
+| `PROJ_MOB_HIT_RADIUS` | 28.0 | Projectile→mob collision radius |
+
+### Damage Resistance (Diminishing Returns)
+Formula: `reduction% = DR / (DR + DR_HALF_VALUE)`, capped at `DR_MAX_PERCENT`.
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DR_HALF_VALUE` | 100.0 | DR needed for 50% damage reduction |
+| `DR_MAX_PERCENT` | 0.85 | Hard cap at 85% reduction |
+| `DR_MIN_DAMAGE` | 1 | Minimum damage always dealt |
+
+Example DR values at half=100:
+- DR 10 → 9% reduction
+- DR 50 → 33% reduction  
+- DR 100 → 50% reduction
+- DR 200 → 67% reduction
+- DR 500 → 83% reduction
 
 ### Multi-Wave Night System
 | Constant | Value | Description |
