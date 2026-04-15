@@ -158,6 +158,9 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str,
         if mob_ai.is_ranged:
             mob_ai.ranged_damage = int(mob_ai.ranged_damage * boss_dmg_m)
     g.em.add_component(eid, mob_ai)
+    # Register in spatial hash
+    from core.spatial import spatial_hash
+    spatial_hash.insert(eid, x, y, surf.get_width(), surf.get_height())
     return eid
 
 
@@ -166,6 +169,7 @@ def create_mob(g: 'Game', x: float, y: float, mob_type: str,
 # ======================================================================
 
 def populate_world(g: 'Game') -> None:
+    from core.spatial import spatial_hash
     rng = random.Random(g.seed + 12345)
     harvested = g.harvested_resources
     for _ in range(TREE_COUNT):
@@ -176,13 +180,15 @@ def populate_world(g: 'Game') -> None:
         tile = g.world.get_tile(x, y)
         if tile in (TILE_GRASS, TILE_FOREST):
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            px = x * TILE_SIZE + 8
+            py = y * TILE_SIZE - 16
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
             col = Collider(24, 32, True)
             col.grid_pos = (x, y)
             g.em.add_component(eid, col)
+            spatial_hash.insert(eid, px, py, 24, 32)
     for _ in range(FOREST_TREE_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
@@ -190,13 +196,15 @@ def populate_world(g: 'Game') -> None:
             continue
         if g.world.get_tile(x, y) == TILE_FOREST:
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            px = x * TILE_SIZE + 8
+            py = y * TILE_SIZE - 16
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
             col = Collider(24, 32, True)
             col.grid_pos = (x, y)
             g.em.add_component(eid, col)
+            spatial_hash.insert(eid, px, py, 24, 32)
     for _ in range(ROCK_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
@@ -205,13 +213,15 @@ def populate_world(g: 'Game') -> None:
         if g.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
                                        TILE_STONE_FLOOR, TILE_FOREST):
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 4, y * TILE_SIZE + 6))
+            px = x * TILE_SIZE + 4
+            py = y * TILE_SIZE + 6
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('rock'), layer=1))
             col = Collider(26, 18, True)
             col.grid_pos = (x, y)
             g.em.add_component(eid, col)
+            spatial_hash.insert(eid, px, py, 26, 18)
     for mob_type, biome, count in INITIAL_MOB_SPAWNS:
         for _ in range(count):
             x = rng.randint(5, WORLD_WIDTH - 5)
@@ -392,6 +402,8 @@ def on_mob_killed(g: 'Game', eid: int) -> None:
         g.caves.boss_alive[g.in_cave] = False
         g._notify("Cave boss defeated! Loot added to inventory!", 3.0)
 
+    from core.spatial import spatial_hash
+    spatial_hash.remove(eid)
     g.em.destroy_entity(eid)
 
 
@@ -491,11 +503,13 @@ def create_cave_resource(g: 'Game', x: float, y: float,
     g.em.add_component(eid, Transform(x, y))
     surf = g.textures.get(texture_key)
     g.em.add_component(eid, Renderable(surf, layer=1))
-    g.em.add_component(eid, Collider(
-        surf.get_width(), surf.get_height(), True))
+    sw, sh = surf.get_width(), surf.get_height()
+    g.em.add_component(eid, Collider(sw, sh, True))
     g.em.add_component(eid, Health(30))
     pl = Placeable(texture_key, drop_item=drop_item)
     g.em.add_component(eid, pl)
+    from core.spatial import spatial_hash
+    spatial_hash.insert(eid, x, y, sw, sh)
     return eid
 
 
@@ -543,6 +557,8 @@ def create_cave_chest(g: 'Game', x: float, y: float,
             slot_idx += 1
     g.em.add_component(eid, stor)
     g.em.add_component(eid, Placeable('chest'))
+    from core.spatial import spatial_hash
+    spatial_hash.insert(eid, x, y, 28, 24)
     return eid
 
 
@@ -696,8 +712,10 @@ def restore_cave_snapshot(g: 'Game', cave_index: int,
 
 
 def destroy_non_player_entities(g: 'Game') -> None:
+    from core.spatial import spatial_hash
     for eid in list(g.em._entities):
         if eid != g.player_id:
+            spatial_hash.remove(eid)
             g.em.destroy_entity(eid)
 
 
@@ -708,6 +726,7 @@ def respawn_resources(g: 'Game') -> None:
     available again, then uses a seed-based placement to add resources at
     positions that are not already occupied by other entities.
     """
+    from core.spatial import spatial_hash
     g.harvested_resources.clear()
     rng = random.Random(g.seed + 12345 + g.daynight.day_number)
     occupied = set()
@@ -723,11 +742,13 @@ def respawn_resources(g: 'Game') -> None:
         tile = g.world.get_tile(x, y)
         if tile in (TILE_GRASS, TILE_FOREST):
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            px = x * TILE_SIZE + 8
+            py = y * TILE_SIZE - 16
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
             g.em.add_component(eid, Collider(24, 32, True))
+            spatial_hash.insert(eid, px, py, 24, 32)
             occupied.add((x, y))
     for _ in range(FOREST_TREE_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
@@ -736,11 +757,13 @@ def respawn_resources(g: 'Game') -> None:
             continue
         if g.world.get_tile(x, y) == TILE_FOREST:
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 8, y * TILE_SIZE - 16))
+            px = x * TILE_SIZE + 8
+            py = y * TILE_SIZE - 16
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
             g.em.add_component(eid, Collider(24, 32, True))
+            spatial_hash.insert(eid, px, py, 24, 32)
             occupied.add((x, y))
     for _ in range(ROCK_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
@@ -750,9 +773,11 @@ def respawn_resources(g: 'Game') -> None:
         if g.world.get_tile(x, y) in (TILE_GRASS, TILE_DIRT,
                                        TILE_STONE_FLOOR, TILE_FOREST):
             eid = g.em.create_entity()
-            g.em.add_component(eid, Transform(
-                x * TILE_SIZE + 4, y * TILE_SIZE + 6))
+            px = x * TILE_SIZE + 4
+            py = y * TILE_SIZE + 6
+            g.em.add_component(eid, Transform(px, py))
             g.em.add_component(eid, Renderable(
                 g.textures.get('rock'), layer=1))
             g.em.add_component(eid, Collider(26, 18, True))
+            spatial_hash.insert(eid, px, py, 26, 18)
             occupied.add((x, y))

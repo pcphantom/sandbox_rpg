@@ -92,6 +92,7 @@ def get_attack_range(g: 'Game') -> float:
 # ======================================================================
 
 def attack(g: 'Game') -> None:
+    from core.spatial import spatial_hash
     pt: Transform = g.em.get_component(g.player_id, Transform)
     px, py = pt.x + 10, pt.y + 14
     rng = get_attack_range(g)
@@ -105,8 +106,15 @@ def attack(g: 'Game') -> None:
     ench = inv.get_equipped_enchant()
     if not ench and eq:
         ench = eq.enchantments.get('weapon')
-    for eid in g.em.get_entities_with(Transform, Health, AI):
+    candidates = spatial_hash.query_radius(px, py, rng)
+    for eid in candidates:
+        if not g.em.has_component(eid, AI):
+            continue
+        if not g.em.has_component(eid, Health):
+            continue
         t: Transform = g.em.get_component(eid, Transform)
+        if not t:
+            continue
         dist = math.hypot(t.x - px, t.y - py)
         if dist < rng:
             h: Health = g.em.get_component(eid, Health)
@@ -153,13 +161,22 @@ def _apply_enchant_on_hit(g: 'Game', target_eid: int, target_t: Transform,
                          5, PARTICLE_COLOR_ICE, 40, 0.3)
     elif etype == 'lightning':
         from enchantments.effects import get_enchant_arc_radius, get_enchant_arc_damage_frac
+        from core.spatial import spatial_hash
         arc_radius = get_enchant_arc_radius(ench)
         arc_frac = get_enchant_arc_damage_frac(ench)
         arc_dmg = max(1, int(base_dmg * arc_frac))
-        for oeid in g.em.get_entities_with(Transform, Health, AI):
+        candidates = spatial_hash.query_radius(
+            target_t.x, target_t.y, arc_radius)
+        for oeid in candidates:
             if oeid == target_eid:
                 continue
+            if not g.em.has_component(oeid, AI):
+                continue
+            if not g.em.has_component(oeid, Health):
+                continue
             ot: Transform = g.em.get_component(oeid, Transform)
+            if not ot:
+                continue
             if math.hypot(ot.x - target_t.x, ot.y - target_t.y) < arc_radius:
                 oh: Health = g.em.get_component(oeid, Health)
                 oh.damage(arc_dmg)
@@ -238,9 +255,17 @@ def ranged_attack(g: 'Game') -> None:
     dx = -1.0 if pr.flip_x else 1.0
     dy = 0.0
 
+    from core.spatial import spatial_hash
     best_eid, best_dist = None, rdata['range']
-    for eid in g.em.get_entities_with(Transform, Health, AI):
+    candidates = spatial_hash.query_radius(pt.x, pt.y, rdata['range'])
+    for eid in candidates:
+        if not g.em.has_component(eid, AI):
+            continue
+        if not g.em.has_component(eid, Health):
+            continue
         mt = g.em.get_component(eid, Transform)
+        if not mt:
+            continue
         d = math.hypot(mt.x - pt.x, mt.y - pt.y)
         if d < best_dist:
             best_dist = d
@@ -279,9 +304,17 @@ def ranged_attack(g: 'Game') -> None:
 def on_proj_hit(g: 'Game', target_eid: int, damage: int,
                 proj_t: Transform, proj: Optional[Projectile] = None) -> None:
     if proj and proj.is_bomb:
+        from core.spatial import spatial_hash
         radius = proj.bomb_radius
-        for mid in g.em.get_entities_with(Transform, Health, AI):
+        candidates = spatial_hash.query_radius(proj_t.x, proj_t.y, radius)
+        for mid in candidates:
+            if not g.em.has_component(mid, AI):
+                continue
+            if not g.em.has_component(mid, Health):
+                continue
             mt: Transform = g.em.get_component(mid, Transform)
+            if not mt:
+                continue
             d = math.hypot(mt.x - proj_t.x, mt.y - proj_t.y)
             if d < radius:
                 mh: Health = g.em.get_component(mid, Health)
@@ -377,10 +410,18 @@ def _find_nearest_enemy(g: 'Game', world_x: float, world_y: float,
 
     Returns the Transform of the nearest enemy, or None.
     """
+    from core.spatial import spatial_hash
     best_dist = radius
     best_t = None
-    for eid in g.em.get_entities_with(Transform, Health, AI):
+    candidates = spatial_hash.query_radius(world_x, world_y, radius)
+    for eid in candidates:
+        if not g.em.has_component(eid, AI):
+            continue
+        if not g.em.has_component(eid, Health):
+            continue
         mt = g.em.get_component(eid, Transform)
+        if not mt:
+            continue
         d = math.hypot(mt.x - world_x, mt.y - world_y)
         if d < best_dist:
             best_dist = d
@@ -613,7 +654,11 @@ def _get_equipment_enchant_dr(eq: Optional[Equipment]) -> int:
 
 def _is_near_light(g: 'Game', x: float, y: float) -> bool:
     """Return True if position (x, y) is near a light source."""
-    for eid in g.em.get_entities_with(Transform, LightSource):
+    from core.spatial import spatial_hash
+    candidates = spatial_hash.query_radius(x, y, LIGHT_SAFETY_RADIUS)
+    for eid in candidates:
+        if not g.em.has_component(eid, LightSource):
+            continue
         t = g.em.get_component(eid, Transform)
         if math.hypot(t.x - x, t.y - y) < LIGHT_SAFETY_RADIUS:
             return True
@@ -656,8 +701,14 @@ def check_contact_damage(g: 'Game', pt: Transform) -> None:
     enchant_dr = _get_equipment_enchant_dr(eq)
     total_dr = calc_total_dr(eq, prot_val, enchant_dr)
     night_mult = _get_night_damage_multiplier(g, pt.x, pt.y)
-    for eid in g.em.get_entities_with(Transform, AI):
+    from core.spatial import spatial_hash
+    candidates = spatial_hash.query_radius(pt.x, pt.y, CONTACT_DAMAGE_RADIUS)
+    for eid in candidates:
+        if not g.em.has_component(eid, AI):
+            continue
         t: Transform = g.em.get_component(eid, Transform)
+        if not t:
+            continue
         ai_c: AI = g.em.get_component(eid, AI)
         dist = math.hypot(t.x - pt.x, t.y - pt.y)
         if dist < CONTACT_DAMAGE_RADIUS:
@@ -712,6 +763,8 @@ def check_enemy_projectile_damage(g: 'Game', pt: Transform) -> None:
                     (pt.x, pt.y - 30, 'YOU DIED', RED, 2.5))
             break
     for pid in to_remove:
+        from core.spatial import spatial_hash
+        spatial_hash.remove(pid)
         g.em.destroy_entity(pid)
 
 
@@ -727,7 +780,11 @@ def campfire_heal(g: 'Game', dt: float, pt: Transform) -> None:
     ph: Health = g.em.get_component(g.player_id, Health)
     if ph.current >= ph.maximum:
         return
-    for eid in g.em.get_entities_with(Transform, Placeable):
+    from core.spatial import spatial_hash
+    candidates = spatial_hash.query_radius(pt.x, pt.y, CAMPFIRE_HEAL_RADIUS)
+    for eid in candidates:
+        if not g.em.has_component(eid, Placeable):
+            continue
         pl: Placeable = g.em.get_component(eid, Placeable)
         if pl.item_type == 'campfire':
             t2: Transform = g.em.get_component(eid, Transform)
@@ -765,7 +822,11 @@ def night_damage(g: 'Game', dt: float, pt: Transform) -> None:
         if ench and ench.get('type') == 'fire':
             near_light = True
     if not near_light:
-        for eid in g.em.get_entities_with(Transform, LightSource):
+        from core.spatial import spatial_hash
+        candidates = spatial_hash.query_radius(pt.x, pt.y, LIGHT_SAFETY_RADIUS)
+        for eid in candidates:
+            if not g.em.has_component(eid, LightSource):
+                continue
             t3: Transform = g.em.get_component(eid, Transform)
             if math.hypot(t3.x - pt.x, t3.y - pt.y) < LIGHT_SAFETY_RADIUS:
                 near_light = True

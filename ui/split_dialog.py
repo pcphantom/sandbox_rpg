@@ -20,7 +20,7 @@ class SplitDialog:
 
     def __init__(self) -> None:
         self.active = False
-        self.source: str = ''         # 'hotbar' or 'slots'
+        self.source: str = ''         # 'hotbar', 'slots', or 'extra_bar'
         self.slot: int = 0
         self.item_id: str = ''
         self.total: int = 0
@@ -28,9 +28,14 @@ class SplitDialog:
         self.typing: str = ''         # keyboard buffer
         self.font = pygame.font.SysFont('consolas', 16)
         self.font_sm = pygame.font.SysFont('consolas', 13)
+        # External storage refs (used for extra_bar splits)
+        self._ext_slots = None
+        self._ext_enchants = None
+        self._ext_rarities = None
 
     def open(self, source: str, slot: int, item_id: str, total: int,
-             mx: int, my: int) -> None:
+             mx: int, my: int, *,
+             ext_slots=None, ext_enchants=None, ext_rarities=None) -> None:
         self.active = True
         self.source = source
         self.slot = slot
@@ -38,6 +43,9 @@ class SplitDialog:
         self.total = total
         self.amount = max(1, total // 2)
         self.typing = ''
+        self._ext_slots = ext_slots
+        self._ext_enchants = ext_enchants
+        self._ext_rarities = ext_rarities
         # Position near the mouse, clamped to screen
         self.x = min(mx, SCREEN_WIDTH - self.WIDTH - 4)
         self.y = min(my, SCREEN_HEIGHT - self.HEIGHT - 4)
@@ -163,17 +171,21 @@ class SplitDialog:
             self.close()
             return
         remain = self.total - self.amount
-        storage = inventory.hotbar if self.source == 'hotbar' else inventory.slots
+        if self.source == 'extra_bar' and self._ext_slots is not None:
+            storage = self._ext_slots
+            ench_dict = self._ext_enchants or {}
+            rar_dict = self._ext_rarities or {}
+        elif self.source == 'hotbar':
+            storage = inventory.hotbar
+            ench_dict = inventory.hotbar_enchantments
+            rar_dict = inventory.hotbar_rarities
+        else:
+            storage = inventory.slots
+            ench_dict = inventory.slot_enchantments
+            rar_dict = inventory.slot_rarities
         if self.slot in storage:
             storage[self.slot] = (self.item_id, remain)
             inventory.held_item = (self.item_id, self.amount)
-            # Transfer enchant + rarity to held portion (source slot keeps its copy)
-            ench_dict = (inventory.hotbar_enchantments
-                         if self.source == 'hotbar'
-                         else inventory.slot_enchantments)
-            rar_dict = (inventory.hotbar_rarities
-                        if self.source == 'hotbar'
-                        else inventory.slot_rarities)
             ench = ench_dict.get(self.slot)
             if ench:
                 inventory.held_enchant = dict(ench)

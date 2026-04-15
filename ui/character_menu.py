@@ -165,14 +165,45 @@ class CharacterMenu:
             f"Harvest luck: +{luck_bonus}%", True, GRAY), (bx, by))
 
         # ---- Bottom: Equipment (full width) ----
+        # IMPORTANT — Equipment name display must show ALL THREE layers:
+        #   1. Rarity prefix + rarity color  (e.g. "Epic" in gold)
+        #      Source: equipment.rarities[attr]
+        #   2. Enhancement level (+N) is already in ITEM_DATA name
+        #      (e.g. ITEM_DATA["iron_sword_3"][0] == "Iron Sword +3")
+        #      Source: core/enhancement.py get_enhancement_level()
+        #   3. Enchantment prefix + color override  (e.g. "Flaming V" in red)
+        #      Source: equipment.enchantments[attr], enchantments/effects.py
+        #
+        # Final result example: "Flaming V Epic Iron Sword +3"
+        #   - color = enchantment color (overrides rarity color when present)
+        #
+        # DO NOT remove any of these three layers.
         ex = px + 20
         ey = py + 260
         surface.blit(self.font.render("Equipment", True, YELLOW), (ex, ey))
         ey += 26
         for attr, label in _EQUIP_SLOTS:
             item_id = getattr(equipment, attr)
+
+            # --- Build display name and color ---
+            # Step 0: Base name from ITEM_DATA (already includes "+N"
+            # enhancement suffix for enhanced items like "Iron Sword +3")
             name = ITEM_DATA[item_id][0] if item_id and item_id in ITEM_DATA else "\u2014"
             name_color = WHITE
+
+            # Step 1: Rarity prefix + rarity color (e.g. "Epic Iron Sword +3")
+            # Must be applied BEFORE enchantment prefix so the final order is
+            # "Enchantment Rarity BaseName +N"
+            if item_id:
+                eq_rar = equipment.rarities.get(attr, 'common')
+                if eq_rar and eq_rar != 'common':
+                    name = f"{eq_rar.title()} {name}"
+                    from data.quality import get_rarity_color
+                    name_color = get_rarity_color(eq_rar)
+
+            # Step 2: Enchantment prefix + color override
+            # (e.g. "Flaming V Epic Iron Sword +3" in enchantment color)
+            # Enchantment color takes priority over rarity color when present.
             eq_ench = equipment.enchantments.get(attr)
             if eq_ench and item_id:
                 from enchantments.effects import (
@@ -181,13 +212,16 @@ class CharacterMenu:
                 prefix = get_enchant_display_prefix(eq_ench)
                 if prefix:
                     name = f"{prefix} {name}"
-                    name_color = ENCHANT_COLORS.get(eq_ench['type'], WHITE)
+                    name_color = ENCHANT_COLORS.get(eq_ench['type'], name_color)
+
+            # --- Render slot label + item name ---
             surface.blit(self.font.render(f"{label}: ", True, GRAY), (ex, ey))
-            # Show ammo count next to equipped ammo name
+            # Ammo shows count after name
             if attr == 'ammo' and item_id and equipment.ammo_count > 0:
                 name = f"{name} x{equipment.ammo_count}"
             surface.blit(self.font.render(name, True, name_color), (ex + 80, ey))
-            # Icon
+
+            # --- Icon + rarity border ---
             if item_id:
                 icon = self.textures.cache.get(f'item_{item_id}')
                 icon_rect = pygame.Rect(ex + 439, ey - 1, 22, 22)
@@ -199,7 +233,8 @@ class CharacterMenu:
                 if eq_rar != 'common':
                     from ui.rarity_display import draw_rarity_border
                     draw_rarity_border(surface, icon_rect, eq_rar)
-            # Equip / Unequip button
+
+            # --- Equip / Unequip button ---
             btn = pygame.Rect(ex + 465, ey, 20, 20)
             hov = btn.collidepoint(mx, my)
             if item_id:
@@ -260,13 +295,19 @@ class CharacterMenu:
                 surface.blit(
                     pygame.transform.scale(icon, (18, 18)),
                     (row_r.x + 4, row_r.y + 3))
-            # Name (with rarity + enchant prefix)
+            # Name display — must show all three layers:
+            #   1. Rarity prefix + color (e.g. "Epic" in gold)
+            #   2. Enhancement +N already in ITEM_DATA name (e.g. "Iron Sword +3")
+            #   3. Enchantment prefix + color override (e.g. "Flaming V" in red)
+            # DO NOT remove any of these three layers.
             name = ITEM_DATA[iid][0] if iid in ITEM_DATA else iid
             name_color = WHITE
+            # Step 1: Rarity
             if rar and rar != 'common':
                 name = f"{rar.title()} {name}"
                 from data.quality import get_rarity_color
                 name_color = get_rarity_color(rar)
+            # Step 2: Enchantment prefix (overrides rarity color)
             if ench:
                 from enchantments.effects import (
                     get_enchant_display_prefix, ENCHANT_COLORS,

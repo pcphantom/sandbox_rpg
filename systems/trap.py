@@ -4,6 +4,7 @@ from typing import Any
 
 from core.ecs import EntityManager
 from core.components import Transform, Health, AI, Placeable
+from core.spatial import spatial_hash
 from game_controller import (
     TRAP_TRIGGER_RADIUS, TRAP_SELF_DAMAGE, TRAP_DAMAGE, TRAP_COOLDOWN,
 )
@@ -30,8 +31,17 @@ class TrapSystem:
             if tid in self._cooldowns:
                 continue
             tt = em.get_component(tid, Transform)
-            for mid in em.get_entities_with(Transform, Health, AI):
+            # Use spatial hash to find nearby mobs instead of full scan
+            candidates = spatial_hash.query_radius(
+                tt.x, tt.y, TRAP_TRIGGER_RADIUS)
+            for mid in candidates:
+                if not em.has_component(mid, AI):
+                    continue
+                if not em.has_component(mid, Health):
+                    continue
                 mt = em.get_component(mid, Transform)
+                if not mt:
+                    continue
                 if math.hypot(mt.x - tt.x, mt.y - tt.y) < TRAP_TRIGGER_RADIUS:
                     mh = em.get_component(mid, Health)
                     mh.damage(TRAP_DAMAGE)

@@ -157,6 +157,9 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     for eid in list(g.em._entities):
         if eid != g.player_id:
             g.em.destroy_entity(eid)
+    # Clear spatial hash for fresh world population
+    from core.spatial import spatial_hash as _sh
+    _sh.clear()
 
     g.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
 
@@ -424,6 +427,13 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
             stor.slot_rarities[int(s_str)] = r
         g.em.add_component(eid, stor)
         g.em.add_component(eid, Building('stone_oven'))
+
+    # Register restored structure in spatial hash
+    from core.spatial import spatial_hash as _sh
+    col = g.em.get_component(eid, Collider) if g.em.has_component(eid, Collider) else None
+    cw = col.width if col else TILE_SIZE
+    ch = col.height if col else TILE_SIZE
+    _sh.insert(eid, struct['x'], struct['y'], cw, ch)
 
 
 # ======================================================================
