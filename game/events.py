@@ -95,6 +95,7 @@ def handle_events(g) -> None:
                     g.placement_rarity = 'common'
                     g.placement_enchant = None
                     g.placement_slot = None
+                    g.placement_bar = None
                 elif g.spell_targeting:
                     g.spell_targeting = False
                     g.spell_item = None
@@ -143,11 +144,12 @@ def handle_events(g) -> None:
             if g.action_bar_mgr.handle_event(event, g):
                 continue
 
-            # Number keys 1-6 → hotbar
+            # Number keys 1-6 → hotbar (deselect all extras)
             inv = g.em.get_component(g.player_id, Inventory)
             for n in range(1, 7):
                 if event.key == getattr(pygame, f'K_{n}'):
                     inv.equipped_slot = n - 1
+                    g.action_bar_mgr.deselect_all_extra()
 
         # Mouse-wheel for hotbar (only when no overlay menus are open)
         if event.type == pygame.MOUSEWHEEL:
@@ -157,11 +159,19 @@ def handle_events(g) -> None:
                     and not g.show_enchant_table and not g.show_stone_oven):
                 inv = g.em.get_component(g.player_id, Inventory)
                 inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+                g.action_bar_mgr.deselect_all_extra()
 
         # Action bar manager mouse events (drag, right-click context menu,
         # close button, extra bar slot clicks)
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                           pygame.MOUSEMOTION):
+            # When inventory is open with a held item, prioritize drops
+            if (g.show_inventory and event.type == pygame.MOUSEBUTTONDOWN
+                    and event.button == 1):
+                inv = g.em.get_component(g.player_id, Inventory)
+                if inv.held_item is not None:
+                    if g.action_bar_mgr.handle_extra_bar_drop(event, inv):
+                        continue
             if g.action_bar_mgr.handle_close_click(event):
                 continue
             if g.action_bar_mgr.handle_event(event, g):
@@ -184,6 +194,7 @@ def handle_events(g) -> None:
                 g.placement_rarity = 'common'
                 g.placement_enchant = None
                 g.placement_slot = None
+                g.placement_bar = None
                 continue
 
         # Spell targeting click
@@ -237,12 +248,9 @@ def handle_events(g) -> None:
             if g.stone_oven_ui.handle_event(event, g):
                 continue
             if event.type == pygame.MOUSEBUTTONDOWN:
-                g.stone_oven_ui.handle_click(g, *event.pos, event.button)
+                if g.stone_oven_ui.handle_click(g, *event.pos, event.button):
+                    continue
         if g.show_inventory:
-            # Allow dropping held items onto extra action bar slots
-            inv = g.em.get_component(g.player_id, Inventory)
-            if g.action_bar_mgr.handle_extra_bar_drop(event, inv):
-                pass  # consumed; still let inventory UI see other events
             g.inventory_ui.handle_event(event)
             if g.inventory_ui.dw.close_requested:
                 g._return_held_item()

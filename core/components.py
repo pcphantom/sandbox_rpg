@@ -65,6 +65,8 @@ class Inventory(Component):
         self.hotbar_rarities: Dict[int, str] = {}
         # Back-reference to Equipment for ammo auto-stacking (set externally)
         self._equipment_ref: Optional['Equipment'] = None
+        # Back-reference to ActionBarManager for extra-bar queries (set externally)
+        self._action_bar_ref: Optional[Any] = None
 
     def add_item(self, item_id: str, count: int = 1) -> int:
         return self.add_item_enchanted(item_id, None, count, 'common')
@@ -103,6 +105,19 @@ class Inventory(Component):
                            iid, slot_ench, slot_rar):
                 self.hotbar[slot] = (iid, c + count)
                 return 0
+        # Try to merge with existing extra action bar stacks
+        if self._action_bar_ref:
+            from core.item_stack import items_match
+            for bar in self._action_bar_ref.extra_bars:
+                for slot, (iid, c) in bar.slots.items():
+                    if iid != item_id:
+                        continue
+                    slot_ench = bar.slot_enchantments.get(slot)
+                    slot_rar = bar.slot_rarities.get(slot, 'common')
+                    if items_match(item_id, enchant, rarity,
+                                   iid, slot_ench, slot_rar):
+                        bar.slots[slot] = (iid, c + count)
+                        return 0
         # No matching hotbar stack — go to main inventory
         return add_to_slots(self.slots, self.slot_enchantments,
                             self.slot_rarities, self.capacity,
@@ -110,12 +125,19 @@ class Inventory(Component):
 
     def remove_item(self, item_id: str, count: int = 1) -> bool:
         from core.item_stack import remove_from_slots
-        # Remove from hotbar first, then main inventory
+        # Remove from hotbar first, then main inventory, then extra bars
         if remove_from_slots(self.hotbar, self.hotbar_enchantments,
                              self.hotbar_rarities, item_id, count):
             return True
-        return remove_from_slots(self.slots, self.slot_enchantments,
-                                 self.slot_rarities, item_id, count)
+        if remove_from_slots(self.slots, self.slot_enchantments,
+                             self.slot_rarities, item_id, count):
+            return True
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                if remove_from_slots(bar.slots, bar.slot_enchantments,
+                                     bar.slot_rarities, item_id, count):
+                    return True
+        return False
 
     def remove_from_hotbar_slot(self, slot: int, count: int = 1) -> bool:
         """Remove *count* of whatever item is in a specific hotbar slot."""
@@ -135,23 +157,56 @@ class Inventory(Component):
     def count(self, item_id: str) -> int:
         total = sum(c for iid, c in self.hotbar.values() if iid == item_id)
         total += sum(c for iid, c in self.slots.values() if iid == item_id)
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                total += sum(c for iid, c in bar.slots.values()
+                             if iid == item_id)
         return total
 
     def has(self, item_id: str, count: int = 1) -> bool:
         return self.count(item_id) >= count
 
     def get_equipped(self) -> Optional[str]:
-        if self.equipped_slot in self.hotbar:
-            return self.hotbar[self.equipped_slot][0]
+        if self.equipped_slot >= 0:
+            if self.equipped_slot in self.hotbar:
+                return self.hotbar[self.equipped_slot][0]
+            return None
+        # Selection is on an extra bar
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                if bar.selected_slot >= 0 and bar.selected_slot in bar.slots:
+                    return bar.slots[bar.selected_slot][0]
         return None
 
     def get_equipped_enchant(self) -> Optional[Dict]:
         """Return the enchantment overlay on the currently equipped hotbar item."""
-        return self.hotbar_enchantments.get(self.equipped_slot)
+        if self.equipped_slot >= 0:
+            return self.hotbar_enchantments.get(self.equipped_slot)
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                if bar.selected_slot >= 0:
+                    return bar.slot_enchantments.get(bar.selected_slot)
+        return None
 
     def get_equipped_rarity(self) -> str:
         """Return the rarity string of the currently equipped hotbar item."""
-        return self.hotbar_rarities.get(self.equipped_slot, 'common')
+        if self.equipped_slot >= 0:
+            return self.hotbar_rarities.get(self.equipped_slot, 'common')
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                if bar.selected_slot >= 0:
+                    return bar.slot_rarities.get(bar.selected_slot, 'common')
+        return 'common'
+
+    def _get_active_bar_slot(self):
+        """Return (extra_bar_or_None, slot_index) for the active selection."""
+        if self.equipped_slot >= 0:
+            return (None, self.equipped_slot)
+        if self._action_bar_ref:
+            for bar in self._action_bar_ref.extra_bars:
+                if bar.selected_slot >= 0:
+                    return (bar, bar.selected_slot)
+        return (None, -1)
 
 
 class LightSource(Component):

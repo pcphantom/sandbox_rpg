@@ -227,7 +227,7 @@ ELITE_TIER_XP_MULT: Dict[int, float] = {
     4: 8.0,   # Red:    8× XP
 }
 # Glow outline expansion in pixels (how much bigger the outline is than the sprite)
-ELITE_GLOW_EXPAND: int = 3
+ELITE_GLOW_EXPAND: int = 2
 # Glow pulse speed (higher = faster pulse)
 ELITE_GLOW_PULSE_SPEED: float = 0.004
 # Glow alpha range (min, max) — controls brightness of the pulsing outline

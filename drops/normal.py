@@ -249,7 +249,7 @@ NORMAL_LOOT: Dict[str, Dict[str, Any]] = {
         'pool': [
             ('cloth',           30, 1, 2),
             ('berry',           20, 1, 3),
-            ('spell_ice_1',     10, 1, 1),
+            ('spell_ice',       10, 1, 1),
             ('health_potion',    8, 1, 1),
         ],
     },
@@ -260,7 +260,7 @@ NORMAL_LOOT: Dict[str, Dict[str, Any]] = {
         'pool': [
             ('iron',                25, 1, 2),
             ('cloth',               20, 1, 2),
-            ('spell_lightning_1',   10, 1, 1),
+            ('spell_lightning',     10, 1, 1),
             ('health_potion',        8, 1, 1),
         ],
     },
@@ -290,8 +290,8 @@ NORMAL_LOOT: Dict[str, Dict[str, Any]] = {
             ('iron',               18, 2, 3),
             ('cloth',              15, 2, 3),
             ('spell_fireball',      6, 1, 1),
-            ('spell_ice_1',         5, 1, 1),
-            ('spell_lightning_1',   5, 1, 1),
+            ('spell_ice',           5, 1, 1),
+            ('spell_lightning',     5, 1, 1),
             ('health_potion',       8, 1, 1),
             ('diamond',             4, 1, 1),
             ('enchant_tome_1',      5, 1, 1),

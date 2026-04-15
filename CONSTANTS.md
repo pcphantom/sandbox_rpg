@@ -2029,7 +2029,7 @@ Each tier has a color and stat multipliers (HP, DMG, XP).
 
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `ELITE_GLOW_EXPAND` | 3 | Outline expansion in px beyond sprite edge |
+| `ELITE_GLOW_EXPAND` | 2 | Outline expansion in px beyond sprite edge |
 | `ELITE_GLOW_PULSE_SPEED` | 0.004 | Pulse animation speed |
 | `ELITE_GLOW_ALPHA_MIN` | 100 | Minimum glow alpha |
 | `ELITE_GLOW_ALPHA_MAX` | 200 | Maximum glow alpha |

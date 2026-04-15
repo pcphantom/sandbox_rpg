@@ -227,6 +227,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     for k in list(eq.rarities):
         eq.rarities[k] = normalize_rarity(eq.rarities.get(k, 'common'))
     inv._equipment_ref = eq
+    inv._action_bar_ref = g.action_bar_mgr
     g.daynight.time = data.get('day_time', 0.3)
     g.daynight.day_number = data.get('day_number', 1)
     is_day_now = TIME_DAY_START <= g.daynight.time < TIME_DAY_END

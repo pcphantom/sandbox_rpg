@@ -328,17 +328,22 @@ class CharacterMenu:
         """Equip the item at dropdown index idx."""
         inv_slot, iid, ench, rar = self._dropdown_items[idx]
         attr = self._dropdown_attr
+        slot_count = 1
         if inv_slot < 0:
             hb_slot = -(inv_slot + 1)
+            slot_count = inventory.hotbar.get(hb_slot, (iid, 1))[1]
             inventory.hotbar.pop(hb_slot, None)
             inventory.hotbar_enchantments.pop(hb_slot, None)
             inventory.hotbar_rarities.pop(hb_slot, 'common')
         else:
+            slot_count = inventory.slots.get(inv_slot, (iid, 1))[1]
             # Remove from exact slot to avoid mismatched enchant transfer
             inventory.slots.pop(inv_slot, None)
             inventory.slot_enchantments.pop(inv_slot, None)
             inventory.slot_rarities.pop(inv_slot, 'common')
         setattr(equipment, attr, iid)
+        if attr == 'ammo':
+            equipment.ammo_count = slot_count
         if ench:
             equipment.enchantments[attr] = ench
         equipment.rarities[attr] = rar

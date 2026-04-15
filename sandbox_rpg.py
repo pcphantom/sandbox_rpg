@@ -179,6 +179,7 @@ class Game:
         self.placement_rarity: str = 'common'
         self.placement_enchant: Optional[dict] = None
         self.placement_slot: Optional[int] = None
+        self.placement_bar = None  # ExtraActionBar reference or None for primary
 
         # Spell targeting mode
         self.spell_targeting = False
@@ -205,6 +206,7 @@ class Game:
 
         from ui.action_bar import ActionBarManager
         self.action_bar_mgr = ActionBarManager()
+        inv_comp._action_bar_ref = self.action_bar_mgr
 
         self.health_bar = ProgressBar(
             pygame.Rect(20, 16, 200, 18), 100, HUD_HP_BAR_FG, HUD_HP_BAR_BG)
@@ -611,6 +613,7 @@ class Game:
         self.placement_rarity = 'common'
         self.placement_enchant = None
         self.placement_slot = None
+        self.placement_bar = None
         self.spell_targeting = False
         self.spell_item = None
         self.show_inventory = False

@@ -348,6 +348,18 @@ class StoneOvenUI:
                         inv.add_item(iid, cnt)
                         del stor.slots[slot_idx]
                         g._notify(f"Took {cnt} {ITEM_DATA[iid][0] if iid in ITEM_DATA else iid}")
+                    elif inv.held_item:
+                        # Drop held item (from inventory drag) into oven slot
+                        held_id, held_cnt = inv.held_item
+                        if is_valid_oven_item(held_id):
+                            stor.slots[slot_idx] = (held_id, held_cnt)
+                            name = ITEM_DATA[held_id][0] if held_id in ITEM_DATA else held_id
+                            g._notify(f"Added {held_cnt} {name}")
+                            inv.held_item = None
+                            inv.held_enchant = None
+                            inv.held_rarity = 'common'
+                        else:
+                            g._notify("You don't want to burn that.")
                     else:
                         # Put selected hotbar item in
                         eq_id = inv.get_equipped()

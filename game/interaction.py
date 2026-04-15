@@ -57,26 +57,32 @@ def interact(g: 'Game') -> None:
     px, py = pt.x + 10, pt.y + 14
 
     # Storage interaction (Chest / Enchantment Table / Stone Oven)
+    # Find the nearest storage entity within range
+    nearest_storage: Optional[int] = None
+    nearest_storage_dist = INTERACT_RANGE
     for eid in g.em.get_entities_with(Transform, Storage):
         ct = g.em.get_component(eid, Transform)
-        if math.hypot(ct.x - px, ct.y - py) < INTERACT_RANGE:
-            bld = (g.em.get_component(eid, Building)
-                   if g.em.has_component(eid, Building) else None)
-            if bld and bld.building_type == 'stone_oven':
-                g.show_stone_oven = True
-                g.active_stone_oven = eid
-                g.show_inventory = True  # Open inventory alongside stone oven
-            elif bld and bld.building_type == 'enchantment_table':
-                g.show_enchant_table = True
-                g.active_enchant_table = eid
-                g.show_inventory = True  # Open inventory alongside enchantment table
-            else:
-                g.show_chest = True
-                g.active_chest = eid
-                g.chest_ui.chest_scroll = 0
-                if g.in_cave >= 0:
-                    g.caves.chest_looted[g.in_cave] = True
-            return
+        d = math.hypot(ct.x - px, ct.y - py)
+        if d < nearest_storage_dist:
+            nearest_storage = eid
+            nearest_storage_dist = d
+    if nearest_storage is not None:
+        bld = (g.em.get_component(nearest_storage, Building)
+               if g.em.has_component(nearest_storage, Building) else None)
+        if bld and bld.building_type == 'stone_oven':
+            g.show_stone_oven = True
+            g.active_stone_oven = nearest_storage
+            g.show_inventory = True  # Open inventory alongside stone oven
+        elif bld and bld.building_type == 'enchantment_table':
+            g.show_enchant_table = True
+            g.active_enchant_table = nearest_storage
+        else:
+            g.show_chest = True
+            g.active_chest = nearest_storage
+            g.chest_ui.chest_scroll = 0
+            if g.in_cave >= 0:
+                g.caves.chest_looted[g.in_cave] = True
+        return
 
     # Harvest
     nearest: Optional[int] = None
@@ -286,10 +292,12 @@ def use_equipped_item(g: 'Game') -> None:
         g.placement_mode = True
         g.placement_item = eq_id
         g.placement_rotation = 0
-        g.placement_slot = inv.equipped_slot
+        active_bar, active_slot = inv._get_active_bar_slot()
+        g.placement_slot = active_slot
+        g.placement_bar = active_bar
         from core.item_stack import normalize_rarity
-        g.placement_rarity = normalize_rarity(inv.hotbar_rarities.get(inv.equipped_slot, 'common'))
-        g.placement_enchant = inv.hotbar_enchantments.get(inv.equipped_slot)
+        g.placement_rarity = normalize_rarity(inv.get_equipped_rarity())
+        g.placement_enchant = inv.get_equipped_enchant()
         hint = f"Click to place {data[0]}."
         if eq_id == 'bed':
             hint += " R to rotate."
@@ -454,6 +462,7 @@ def placement_confirm(g: 'Game') -> None:
                 g.placement_rarity = 'common'
                 g.placement_enchant = None
                 g.placement_slot = None
+                g.placement_bar = None
                 g._notify("No more items to place!")
                 return
             inv_check.add_item(existing_placeable.item_type, 1)
@@ -487,6 +496,7 @@ def placement_confirm(g: 'Game') -> None:
                 g.placement_rarity = 'common'
                 g.placement_enchant = None
                 g.placement_slot = None
+                g.placement_bar = None
             return
         else:
             g._notify("Can't place here!")
@@ -503,11 +513,19 @@ def placement_confirm(g: 'Game') -> None:
         g.placement_rarity = 'common'
         g.placement_enchant = None
         g.placement_slot = None
+        g.placement_bar = None
         g._notify("No more items to place!")
         return
-    # Remove from the specific hotbar slot that initiated placement
+    # Remove from the specific slot that initiated placement
     pslot = getattr(g, 'placement_slot', None)
-    if pslot is not None and pslot in inv.hotbar:
+    pbar = getattr(g, 'placement_bar', None)
+    if pslot is not None and pbar is not None:
+        # Initiated from an extra action bar
+        if pslot in pbar.slots and pbar.slots[pslot][0] == g.placement_item:
+            pbar.remove_from_slot(pslot, 1)
+        else:
+            inv.remove_item(g.placement_item, 1)
+    elif pslot is not None and pslot in inv.hotbar:
         iid_in_slot = inv.hotbar[pslot][0]
         if iid_in_slot == g.placement_item:
             inv.remove_from_hotbar_slot(pslot, 1)
@@ -536,6 +554,7 @@ def placement_confirm(g: 'Game') -> None:
         g.placement_rarity = 'common'
         g.placement_enchant = None
         g.placement_slot = None
+        g.placement_bar = None
 
 
 def place_item(g: 'Game', item_id: str,

@@ -56,6 +56,21 @@ class ExtraActionBar:
         tw = HOTBAR_SLOTS * ss + (HOTBAR_SLOTS - 1) * gap
         return pygame.Rect(self.x - 8, self.y - 6, tw + 16, ss + 12)
 
+    def remove_from_slot(self, slot: int, count: int = 1) -> bool:
+        """Remove *count* of the item in *slot*.  Returns True on success."""
+        if slot not in self.slots:
+            return False
+        iid, c = self.slots[slot]
+        if c > count:
+            self.slots[slot] = (iid, c - count)
+            return True
+        elif c == count:
+            del self.slots[slot]
+            self.slot_enchantments.pop(slot, None)
+            self.slot_rarities.pop(slot, 'common')
+            return True
+        return False
+
 
 class ActionBarManager:
     """Manages the primary hotbar position (draggable) and extra action bars."""
@@ -103,6 +118,11 @@ class ActionBarManager:
         tw = HOTBAR_SLOTS * ss + (HOTBAR_SLOTS - 1) * gap
         return pygame.Rect(self.primary_x - 8, self.primary_y - 6,
                            tw + 16, ss + 12)
+
+    def deselect_all_extra(self) -> None:
+        """Clear selected_slot on every extra bar."""
+        for bar in self.extra_bars:
+            bar.selected_slot = -1
 
     # ------------------------------------------------------------------
     # Event handling
@@ -197,16 +217,37 @@ class ActionBarManager:
             if first_extra.has_hotkeys:
                 for i, key in enumerate(SECONDARY_HOTKEYS):
                     if event.key == key:
+                        # Deselect primary and all other extras
+                        from core.components import Inventory
+                        inv = g.em.get_component(g.player_id, Inventory)
+                        inv.equipped_slot = -1
+                        self.deselect_all_extra()
                         first_extra.selected_slot = i
                         return True
 
-        # Left-click on extra bar slot to select it
+        # Left-click on a bar slot to select it
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
+            # Primary hotbar slot click
+            ss = HOTBAR_SLOT_SIZE
+            gap = HOTBAR_SLOT_GAP
+            for i in range(HOTBAR_SLOTS):
+                x = self.primary_x + i * (ss + gap)
+                if pygame.Rect(x, self.primary_y, ss, ss).collidepoint(mx, my):
+                    from core.components import Inventory
+                    inv = g.em.get_component(g.player_id, Inventory)
+                    inv.equipped_slot = i
+                    self.deselect_all_extra()
+                    return True
+            # Extra bar slot click
             for bar in self.extra_bars:
                 for i in range(HOTBAR_SLOTS):
                     sr = self._extra_slot_rect(bar, i)
                     if sr.collidepoint(mx, my):
+                        from core.components import Inventory
+                        inv = g.em.get_component(g.player_id, Inventory)
+                        inv.equipped_slot = -1
+                        self.deselect_all_extra()
                         bar.selected_slot = i
                         return True
 
