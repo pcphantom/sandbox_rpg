@@ -20,6 +20,7 @@ from data import ITEM_DATA, get_item_color
 from ui.elements import UIElement, Tooltip
 from ui.split_dialog import SplitDialog
 from ui.drop_confirm import DropConfirmDialog
+from ui.inventory_sort import sort_inventory_slots
 from ui.rarity_display import pick_up_rarity, place_rarity, swap_rarity
 from ui.draggable import DraggableWindow
 
@@ -259,7 +260,6 @@ class InventoryGrid(UIElement):
                 self.page = (self.page + 1) % INVENTORY_PAGES
                 return True
             if sort_r.collidepoint(mx, my):
-                from ui.inventory_sort import sort_inventory_slots
                 sort_inventory_slots(
                     self.inventory.slots,
                     self.inventory.slot_enchantments,
