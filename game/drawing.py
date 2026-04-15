@@ -245,7 +245,7 @@ def _get_light_surface(radius: int,
         pygame.draw.circle(
             ts, (color[0], color[1], color[2], max(1, a)), (r, r), r)
         surf.blit(ts, (radius - r, radius - r),
-                  special_flags=pygame.BLEND_RGBA_SUB)
+                  special_flags=pygame.BLEND_RGBA_ADD)
     _light_surface_cache[key] = surf
     return surf
 

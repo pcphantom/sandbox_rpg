@@ -708,6 +708,8 @@ def restore_cave_snapshot(g: 'Game', cave_index: int,
                 stor.slot_enchantments[int(s_str)] = e
             g.em.add_component(eid, stor)
             g.em.add_component(eid, Placeable('chest'))
+            from core.spatial import spatial_hash
+            spatial_hash.insert(eid, entry['x'], entry['y'], 28, 24)
             g.cave_entities.append(eid)
 
 
