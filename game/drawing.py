@@ -942,6 +942,8 @@ def _draw_cheat_help(g: 'Game') -> None:
         "give <item> [n]    - Give a plain item by id or name",
         "give Regen V Mythic Turret +5  - Give a fully-specified item",
         "autokill on|off    - Kill enemies every 1 second",
+        "timestop           - Freeze the day/night clock",
+        "timestart          - Resume the day/night clock",
         "god                - Toggle invincibility",
         "heal               - Full heal",
         "kill               - Kill all enemies now",

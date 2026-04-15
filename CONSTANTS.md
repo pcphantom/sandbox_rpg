@@ -30,12 +30,12 @@ This document tracks all global constants, key variables, and data structures us
 | `game/menus.py` | Main menu, options menu | 6 functions |
 | `game/persistence.py` | Save/load orchestration (includes cheats_enabled and has_cheated) | 8 functions |
 | `game/save_load.py` | Low-level save file I/O | File operations |
-| `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, autokill, levelup, kill_all_enemies |
+| `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, autokill, timestop, timestart, levelup, kill_all_enemies |
 | **systems/** | ECS systems | |
 | `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
 | `systems/physics.py` | Physics / collision | PhysicsSystem |
 | `systems/render.py` | Render — imports from `game_controller.py` | RenderSystem |
-| `systems/day_night.py` | Day/night cycle | DayNightCycle |
+| `systems/day_night.py` | Day/night cycle | DayNightCycle, set_speed, reset_speed, stop_time, start_time, is_time_stopped |
 | `systems/ai.py` | AI behaviour — imports from `game_controller.py` | AISystem |
 | `systems/projectile.py` | Projectiles — imports from `game_controller.py` | ProjectileSystem |
 | `systems/trap.py` | Traps — imports from `game_controller.py` | TrapSystem |
@@ -89,9 +89,9 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
 | `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager (_return_bar_items, handle_close_click with inv param), ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
 | **character/** | Character customization package | |
-| `character/__init__.py` | Re-exports all character classes/data | CharacterData, CharacterGenerator, compose_character, palettes |
-| `character/layers.py` | Layered sprite rendering — skin, hair, shirt, pants, weapon/shield overlays | compose_character, draw_skin, draw_hair, draw_shirt, draw_pants, draw_weapon_overlay, draw_shield_overlay, SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS, HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES |
-| `character/generator.py` | Character data model + customization screen UI | CharacterData (to_dict/from_dict/build_sprite), CharacterGenerator (_start_game, _is_legacy_migration) |
+| `character/__init__.py` | Re-exports all character classes/data | CharacterData, CharacterGenerator, compose_character, palettes, SHOE_STYLES, SHOE_COLORS, ACCESSORY_STYLES, draw_shoes, draw_accessory |
+| `character/layers.py` | Layered sprite rendering — skin, hair, shirt, pants, shoes, accessories, weapon/shield overlays | compose_character, draw_skin, draw_hair, draw_shirt, draw_pants, draw_shoes, draw_accessory, draw_weapon_overlay, draw_shield_overlay, SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS, HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES, SHOE_STYLES, SHOE_COLORS, ACCESSORY_STYLES |
+| `character/generator.py` | Character data model + customization screen UI | CharacterData (to_dict/from_dict/build_sprite), CharacterGenerator (_get_option_row_rects, _start_game, _is_legacy_migration, _randomize), `_OPTION_LABEL_GAP`, `_OPTION_CONTROL_GAP`, `_OPTION_SWATCH_W`, `_OPTION_VALUE_PADDING_X` |
 | `character/legacy_save_migration.py` | **REMOVABLE** — Detects legacy saves missing character data | check_needs_migration(data) — *Delete once all legacy saves are migrated* |
 
 > ⚠️ **UI LAYOUT PROTECTION**: Panel dimensions and element positions in `pause_menu.py`, `character_menu.py`, and `chest.py` must NEVER be changed without explicit user instruction. Modifying sizes, positions, or rearranging layout sections is strictly prohibited.
@@ -659,6 +659,9 @@ Each period transition shows a banner. The time each appears is the period thres
 |--------|-------|
 | `is_night()` | `t < TIME_NIGHT_END or t >= TIME_NIGHT_START` |
 | `is_sleepable()` | `t < TIME_NIGHT_END or t >= TIME_DAY_END` (allows sleep during Dusk+Night) |
+| `stop_time()` | Sets a runtime freeze override so `update()` no longer advances the clock |
+| `start_time()` | Clears the runtime freeze override so `update()` advances again |
+| `is_time_stopped()` | Returns whether the runtime freeze override is active |
 | `day_changed` | `bool` flag — True the frame day_number increments, False otherwise |
 
 ## Difficulty System (`game_controller.py` → `data/difficulty.py` → `core/constants.py`)
@@ -1926,6 +1929,8 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | `heal` | Yes | Full heal |
 | `kill` | Yes | Kill all enemies |
 | `autokill on|off` | Yes | Kill enemies every 1 second while enabled |
+| `timestop` | Yes | Freeze the day/night clock until restarted or cheats/load reset it |
+| `timestart` | Yes | Resume the day/night clock at normal speed |
 | `levelup [n]` | Yes | Level up n times (default 1) |
 
 ### Save Data Fields
@@ -1946,6 +1951,8 @@ Press **F12** to toggle a text input overlay. Type commands and press Enter to e
 | `Game.autokill_timer` | float | Accumulator for the autokill interval |
 | `Game.show_cheat_help` | bool | Cheat help overlay visible |
 | `Game.command_bar` | CommandBar | F12 command bar instance |
+
+`DayNightCycle.stop_time()` is a runtime-only override used by the `timestop` cheat. It is intentionally cleared by cheat disable and save-load restoration so time-control cheats do not leak into later sessions or loaded game state.
 
 When `Game.command_bar.blocks_game_input()` is true, command text entry has exclusive keyboard focus. Global UI toggles (`I`, `C`, `P`, etc.), action-bar hotkeys, mouse-wheel hotbar cycling, and held-key gameplay actions (`WASD`, `E`, `R`, `Space`) must not react until the command bar closes. `give` accepts item ids or multi-word item names plus optional enchant level, rarity, and `+N` enhancement tokens. Example: `give Regen V Mythic Turret +5 2`. `Tab` autocompletes the item portion while preserving the metadata tokens already typed.
 
@@ -2171,12 +2178,14 @@ These use larger texture surfaces (36×48 for ogres/golems, 48×48 for dragons).
 
 ### Sprite Composition
 The player sprite is a 24×32 SRCALPHA surface composed of layered pixel art:
-1. **Skin** (body shape: head, arms, legs) — `draw_skin(color)`
-2. **Pants/shorts/skirt** — `draw_pants(style, color)`
-3. **Shirt/tunic/vest/tank** — `draw_shirt(style, color)`
-4. **Hair** — `draw_hair(style, color)`
-5. **Weapon overlay** (right hand) — `draw_weapon_overlay(weapon_id)` — optional
-6. **Shield overlay** (left hand) — `draw_shield_overlay(shield_id)` — optional
+1. **Skin** (body shape: head, torso, arms, legs) — `draw_skin(color)`
+2. **Pants/shorts/skirt/short_shorts** — `draw_pants(style, color)`
+3. **Shoes/boots/sandals** — `draw_shoes(style, color)` — optional (barefoot default)
+4. **Shirt/tunic/vest/tank/tube_top/bikini_top** — `draw_shirt(style, color)`
+5. **Accessory** (chest emblem overlay) — `draw_accessory(style)` — optional (none default)
+6. **Hair** — `draw_hair(style, color)`
+7. **Weapon overlay** (right hand) — `draw_weapon_overlay(weapon_id)` — optional
+8. **Shield overlay** (left hand) — `draw_shield_overlay(shield_id)` — optional
 
 `compose_character()` blits all layers in order and returns the final sprite.
 
@@ -2184,12 +2193,15 @@ The player sprite is a 24×32 SRCALPHA surface composed of layered pixel art:
 | Field | Type | Default | Range |
 |-------|------|---------|-------|
 | `skin_color_idx` | int | 0 | 0–5 (SKIN_COLORS) |
-| `hair_style_idx` | int | 0 | 0–5 (HAIR_STYLES: short, long, spiky, bald, ponytail, mohawk) |
+| `hair_style_idx` | int | 0 | 0–9 (HAIR_STYLES: short, long, spiky, bald, ponytail, mohawk, mullet, curly, dreads, afro) |
 | `hair_color_idx` | int | 0 | 0–7 (HAIR_COLORS) |
-| `shirt_style_idx` | int | 0 | 0–2 (SHIRT_STYLES: tunic, vest, tank) |
+| `shirt_style_idx` | int | 0 | 0–4 (SHIRT_STYLES: tunic, vest, tank, tube_top, bikini_top) |
 | `shirt_color_idx` | int | 0 | 0–7 (SHIRT_COLORS) |
-| `pants_style_idx` | int | 0 | 0–5 (PANTS_COLORS) / 0–2 (PANTS_STYLES: pants, shorts, skirt) |
+| `pants_style_idx` | int | 0 | 0–3 (PANTS_STYLES: pants, shorts, skirt, short_shorts) |
 | `pants_color_idx` | int | 0 | 0–5 (PANTS_COLORS) |
+| `shoe_style_idx` | int | 0 | 0–3 (SHOE_STYLES: barefoot, shoes, boots, sandals) |
+| `shoe_color_idx` | int | 0 | 0–5 (SHOE_COLORS) |
+| `accessory_idx` | int | 0 | 0–5 (ACCESSORY_STYLES: none, skull, rainbow, no_sign, star, heart) |
 | `show_equipment` | bool | True | Whether weapon/shield show on sprite |
 
 ### Weapon Overlay Profiles

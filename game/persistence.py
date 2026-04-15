@@ -249,6 +249,7 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     g.dead = False
     g.sleeping = False
     g.sleep_timer = 0.0
+    g.daynight.start_time()
     g.daynight.reset_speed()
     g._last_resource_respawn_day = data.get('last_resource_respawn_day', 1)
     g._last_cave_reset_day = data.get('last_cave_reset_day', 1)

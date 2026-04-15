@@ -13,6 +13,7 @@ class DayNightCycle:
         self.time = TIME_DAY_START
         self.day_length = day_length
         self._speed_mult = TIME_SPEED_NORMAL
+        self._time_stopped = False
         self.day_number: int = 1
         self._was_day: bool = True
         self._was_dawn: bool = False
@@ -26,7 +27,8 @@ class DayNightCycle:
 
     def update(self, dt: float) -> None:
         self.day_changed = False
-        self.time = (self.time + dt * self._speed_mult / self.day_length) % 1.0
+        speed_mult = 0.0 if self._time_stopped else self._speed_mult
+        self.time = (self.time + dt * speed_mult / self.day_length) % 1.0
         is_day_now = TIME_DAY_START <= self.time < TIME_DAY_END
         is_dawn_now = TIME_NIGHT_END <= self.time < TIME_DAY_START
         is_dusk_now = TIME_DAY_END <= self.time < TIME_NIGHT_START
@@ -66,6 +68,15 @@ class DayNightCycle:
 
     def reset_speed(self) -> None:
         self._speed_mult = TIME_SPEED_NORMAL
+
+    def stop_time(self) -> None:
+        self._time_stopped = True
+
+    def start_time(self) -> None:
+        self._time_stopped = False
+
+    def is_time_stopped(self) -> bool:
+        return self._time_stopped
 
     def get_darkness(self) -> float:
         t = self.time

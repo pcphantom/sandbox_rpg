@@ -5,6 +5,7 @@ CharacterGenerator is the full-screen UI for the customization screen.
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Any
+import random
 
 import pygame
 
@@ -20,6 +21,7 @@ from character.layers import (
     compose_character,
     SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
     HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES,
+    SHOE_STYLES, SHOE_COLORS, ACCESSORY_STYLES,
 )
 
 
@@ -38,6 +40,9 @@ class CharacterData:
         self.shirt_color_idx: int = 0
         self.pants_style_idx: int = 0
         self.pants_color_idx: int = 0
+        self.shoe_style_idx: int = 0
+        self.shoe_color_idx: int = 0
+        self.accessory_idx: int = 0
         self.show_equipment: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
@@ -49,6 +54,9 @@ class CharacterData:
             'shirt_color_idx': self.shirt_color_idx,
             'pants_style_idx': self.pants_style_idx,
             'pants_color_idx': self.pants_color_idx,
+            'shoe_style_idx': self.shoe_style_idx,
+            'shoe_color_idx': self.shoe_color_idx,
+            'accessory_idx': self.accessory_idx,
             'show_equipment': self.show_equipment,
         }
 
@@ -60,6 +68,9 @@ class CharacterData:
         self.shirt_color_idx = data.get('shirt_color_idx', 0)
         self.pants_style_idx = data.get('pants_style_idx', 0)
         self.pants_color_idx = data.get('pants_color_idx', 0)
+        self.shoe_style_idx = data.get('shoe_style_idx', 0)
+        self.shoe_color_idx = data.get('shoe_color_idx', 0)
+        self.accessory_idx = data.get('accessory_idx', 0)
         self.show_equipment = data.get('show_equipment', True)
 
     def build_sprite(self, weapon_id: str = '',
@@ -73,6 +84,9 @@ class CharacterData:
             shirt_color=SHIRT_COLORS[self.shirt_color_idx % len(SHIRT_COLORS)],
             pants_style=PANTS_STYLES[self.pants_style_idx % len(PANTS_STYLES)],
             pants_color=PANTS_COLORS[self.pants_color_idx % len(PANTS_COLORS)],
+            shoe_style=SHOE_STYLES[self.shoe_style_idx % len(SHOE_STYLES)],
+            shoe_color=SHOE_COLORS[self.shoe_color_idx % len(SHOE_COLORS)],
+            accessory=ACCESSORY_STYLES[self.accessory_idx % len(ACCESSORY_STYLES)],
             weapon_id=weapon_id,
             shield_id=shield_id,
             show_equipment=self.show_equipment,
@@ -92,6 +106,9 @@ _OPTIONS = [
     ('Shirt Color', 'shirt_color_idx', SHIRT_COLORS),
     ('Pants Style', 'pants_style_idx', PANTS_STYLES),
     ('Pants Color', 'pants_color_idx', PANTS_COLORS),
+    ('Shoe Style',  'shoe_style_idx',  SHOE_STYLES),
+    ('Shoe Color',  'shoe_color_idx',  SHOE_COLORS),
+    ('Accessory',   'accessory_idx',   ACCESSORY_STYLES),
 ]
 
 # Arrow button size
@@ -99,6 +116,10 @@ _ARROW_W = 28
 _ARROW_H = 28
 _ROW_H = 36
 _PREVIEW_SCALE = 4
+_OPTION_LABEL_GAP = 12
+_OPTION_CONTROL_GAP = 12
+_OPTION_SWATCH_W = 60
+_OPTION_VALUE_PADDING_X = 6
 
 
 class CharacterGenerator:
@@ -108,6 +129,21 @@ class CharacterGenerator:
         self._font = pygame.font.SysFont('consolas', 16)
         self._font_sm = pygame.font.SysFont('consolas', 13)
         self._font_lg = pygame.font.SysFont('consolas', 22, bold=True)
+        self._option_label_width = max(
+            self._font.size(f"{label}:")[0] for label, _attr, _palette in _OPTIONS
+        )
+        widest_text_value = max(
+            (
+                self._font.size(value.title())[0]
+                for _label, _attr, palette in _OPTIONS
+                for value in palette
+                if not isinstance(value, tuple)
+            ),
+            default=0,
+        )
+        self._option_value_width = max(_OPTION_SWATCH_W, widest_text_value) + (
+            _OPTION_VALUE_PADDING_X * 2
+        )
         self._preview_weapon: bool = True  # toggle in preview
         # Set to True when opened for a legacy save migration
         self._is_legacy_migration: bool = False
@@ -127,9 +163,9 @@ class CharacterGenerator:
         screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 30))
 
         # Panel background
-        pw, ph = 500, 420
+        pw, ph = 500, 500
         px = SCREEN_WIDTH // 2 - pw // 2
-        py = 70
+        py = 60
         bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg.fill((20, 20, 35, 240))
         screen.blit(bg, (px, py))
@@ -183,6 +219,21 @@ class CharacterGenerator:
         screen.blit(se_txt, (se_btn_r.centerx - se_txt.get_width() // 2,
                              se_btn_r.centery - se_txt.get_height() // 2))
 
+        # Randomize button
+        rand_y = se_y + 46
+        rand_btn_r = pygame.Rect(preview_x - 4, rand_y, preview_w + 8, 26)
+        rand_hov = rand_btn_r.collidepoint(mx, my)
+        pygame.draw.rect(screen,
+                         (60, 60, 90) if rand_hov else (40, 40, 60),
+                         rand_btn_r, border_radius=4)
+        pygame.draw.rect(screen, CYAN if rand_hov else GRAY,
+                         rand_btn_r, 1, border_radius=4)
+        rand_txt = self._font_sm.render("Randomize", True,
+                                        CYAN if rand_hov else WHITE)
+        screen.blit(rand_txt,
+                    (rand_btn_r.centerx - rand_txt.get_width() // 2,
+                     rand_btn_r.centery - rand_txt.get_height() // 2))
+
         # Option rows (left side of panel)
         opt_x = px + 20
         opt_y = py + 30
@@ -210,6 +261,26 @@ class CharacterGenerator:
 
         g._present()
 
+    def _get_option_row_rects(self, x: int, y: int) -> tuple[pygame.Rect,
+                                                               pygame.Rect,
+                                                               pygame.Rect]:
+        """Return fixed row geometry so every option aligns to shared columns."""
+        left_x = x + self._option_label_width + _OPTION_LABEL_GAP
+        left_r = pygame.Rect(left_x, y + 4, _ARROW_W, _ARROW_H)
+        value_r = pygame.Rect(
+            left_r.right + _OPTION_CONTROL_GAP,
+            y + 4,
+            self._option_value_width,
+            _ARROW_H,
+        )
+        right_r = pygame.Rect(
+            value_r.right + _OPTION_CONTROL_GAP,
+            y + 4,
+            _ARROW_W,
+            _ARROW_H,
+        )
+        return left_r, value_r, right_r
+
     def _draw_option_row(self, screen: pygame.Surface, mx: int, my: int,
                          x: int, y: int, label: str, attr: str,
                          palette: list, cd: CharacterData) -> None:
@@ -221,10 +292,10 @@ class CharacterGenerator:
         lt = self._font.render(label + ":", True, GRAY)
         screen.blit(lt, (x, y + 6))
 
-        # Arrows and current value
-        val_x = x + 150
+        # Arrows and current value use a shared fixed layout.
+        left_r, value_r, right_r = self._get_option_row_rects(x, y)
+
         # Left arrow
-        left_r = pygame.Rect(val_x, y + 4, _ARROW_W, _ARROW_H)
         lhov = left_r.collidepoint(mx, my)
         pygame.draw.rect(screen, (60, 60, 90) if lhov else (40, 40, 60),
                          left_r, border_radius=4)
@@ -237,20 +308,24 @@ class CharacterGenerator:
         # Value display
         value = palette[idx % count]
         if isinstance(value, tuple):
-            # Color swatch
-            swatch_r = pygame.Rect(val_x + _ARROW_W + 8, y + 6,
-                                   60, _ARROW_H - 4)
+            swatch_r = pygame.Rect(
+                value_r.centerx - (_OPTION_SWATCH_W // 2),
+                y + 6,
+                _OPTION_SWATCH_W,
+                _ARROW_H - 4,
+            )
             pygame.draw.rect(screen, value, swatch_r, border_radius=3)
             pygame.draw.rect(screen, GRAY, swatch_r, 1, border_radius=3)
-            val_end = val_x + _ARROW_W + 76
         else:
-            # Text label
             vt = self._font.render(value.title(), True, WHITE)
-            screen.blit(vt, (val_x + _ARROW_W + 10, y + 6))
-            val_end = val_x + _ARROW_W + 10 + max(60, vt.get_width() + 4)
+            screen.blit(
+                vt,
+                (
+                    value_r.centerx - vt.get_width() // 2,
+                    value_r.centery - vt.get_height() // 2,
+                ),
+            )
 
-        # Right arrow
-        right_r = pygame.Rect(val_end + 4, y + 4, _ARROW_W, _ARROW_H)
         rhov = right_r.collidepoint(mx, my)
         pygame.draw.rect(screen, (60, 60, 90) if rhov else (40, 40, 60),
                          right_r, border_radius=4)
@@ -287,11 +362,12 @@ class CharacterGenerator:
     def _handle_click(self, g: 'Game', mx: int, my: int) -> None:
         cd = g.char_data
 
-        pw, ph = 500, 420
+        pw, ph = 500, 500
         px = SCREEN_WIDTH // 2 - pw // 2
-        py = 70
+        py = 60
         preview_x = px + pw - 130
         preview_y = py + 30
+        preview_w = 24 * _PREVIEW_SCALE
         preview_h = 32 * _PREVIEW_SCALE
 
         # Equipment preview toggle
@@ -308,26 +384,23 @@ class CharacterGenerator:
             cd.show_equipment = not cd.show_equipment
             return
 
+        # Randomize button
+        rand_y = se_y + 46
+        rand_btn_r = pygame.Rect(preview_x - 4, rand_y, preview_w + 8, 26)
+        if rand_btn_r.collidepoint(mx, my):
+            self._randomize(cd)
+            return
+
         # Option row arrows
         opt_x = px + 20
         opt_y = py + 30
         for _label, attr, palette in _OPTIONS:
             count = len(palette)
-            val_x = opt_x + 150
-            # Left arrow
-            left_r = pygame.Rect(val_x, opt_y + 4, _ARROW_W, _ARROW_H)
+            left_r, _value_r, right_r = self._get_option_row_rects(opt_x, opt_y)
             if left_r.collidepoint(mx, my):
                 cur = getattr(cd, attr)
                 setattr(cd, attr, (cur - 1) % count)
                 return
-            # Right arrow — compute position matching draw code
-            idx = getattr(cd, attr)
-            value = palette[idx % count]
-            if isinstance(value, tuple):
-                val_end = val_x + _ARROW_W + 76
-            else:
-                val_end = val_x + _ARROW_W + 10 + 64
-            right_r = pygame.Rect(val_end + 4, opt_y + 4, _ARROW_W, _ARROW_H)
             if right_r.collidepoint(mx, my):
                 cur = getattr(cd, attr)
                 setattr(cd, attr, (cur + 1) % count)
@@ -359,3 +432,16 @@ class CharacterGenerator:
             g.paused = True
             self._is_legacy_migration = False
         g.music_manager.start(g.daynight.is_night())
+
+    def _randomize(self, cd: 'CharacterData') -> None:
+        """Randomize all character customization choices."""
+        cd.skin_color_idx = random.randint(0, len(SKIN_COLORS) - 1)
+        cd.hair_style_idx = random.randint(0, len(HAIR_STYLES) - 1)
+        cd.hair_color_idx = random.randint(0, len(HAIR_COLORS) - 1)
+        cd.shirt_style_idx = random.randint(0, len(SHIRT_STYLES) - 1)
+        cd.shirt_color_idx = random.randint(0, len(SHIRT_COLORS) - 1)
+        cd.pants_style_idx = random.randint(0, len(PANTS_STYLES) - 1)
+        cd.pants_color_idx = random.randint(0, len(PANTS_COLORS) - 1)
+        cd.shoe_style_idx = random.randint(0, len(SHOE_STYLES) - 1)
+        cd.shoe_color_idx = random.randint(0, len(SHOE_COLORS) - 1)
+        cd.accessory_idx = random.randint(0, len(ACCESSORY_STYLES) - 1)

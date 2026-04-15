@@ -70,6 +70,12 @@ def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     if cmd == "autokill":
         return _cmd_autokill(g, parts[1:])
 
+    if cmd == "timestop":
+        return _cmd_timestop(g, parts[1:])
+
+    if cmd == "timestart":
+        return _cmd_timestart(g, parts[1:])
+
     if cmd == "levelup":
         return _cmd_levelup(g, parts[1] if len(parts) > 1 else "1")
 
@@ -85,7 +91,7 @@ def _help_text(g: 'Game') -> str:
         return "enable cheats | disable cheats | help"
     return ("disable cheats | set <stat> <val> | give [enchant lvl] [rarity] "
             "<item> [+n] [count] | god | heal | kill | autokill on|off | "
-            "levelup [n] | help")
+            "timestop | timestart | levelup [n] | help")
 
 
 def _disable_cheats(g: 'Game') -> None:
@@ -93,6 +99,8 @@ def _disable_cheats(g: 'Game') -> None:
     g.god_mode = False
     g.autokill_enabled = False
     g.autokill_timer = 0.0
+    g.daynight.start_time()
+    g.daynight.reset_speed()
     g.show_cheat_help = False
 
 
@@ -500,6 +508,25 @@ def _cmd_autokill(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     g.autokill_timer = 0.0
     state = 'ON' if g.autokill_enabled else 'OFF'
     return True, f"Autokill {state} (1.0s interval)"
+
+
+def _cmd_timestop(g: 'Game', args: List[str]) -> Tuple[bool, str]:
+    if args:
+        return False, "Usage: timestop"
+    if g.daynight.is_time_stopped():
+        return True, "Time is already stopped."
+    g.daynight.stop_time()
+    return True, "Time stopped."
+
+
+def _cmd_timestart(g: 'Game', args: List[str]) -> Tuple[bool, str]:
+    if args:
+        return False, "Usage: timestart"
+    if not g.daynight.is_time_stopped():
+        return True, "Time is already running."
+    g.daynight.start_time()
+    g.daynight.reset_speed()
+    return True, "Time restarted."
 
 
 # ── levelup [amount] ─────────────────────────────────────────────────
