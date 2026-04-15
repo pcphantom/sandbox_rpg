@@ -14,7 +14,8 @@ This document tracks all global constants, key variables, and data structures us
 | `core/constants.py` | Re-exports from `game_controller.py` + data modules | ~240 re-exported constants |
 | `core/components.py` | ECS component definitions | 15 component types |
 | `core/item_stack.py` | Centralised item identity, stacking, transfer, sort | normalize_rarity, items_match, add_to_slots, remove_from_slots, sort_slots, transfer_slot, transfer_all |
-| `core/ecs.py` | EntityManager | Core ECS |
+| `core/ecs.py` | EntityManager | Core ECS, _query_cache for per-frame dedup |
+| `core/spatial.py` | SpatialHash grid-based spatial index | spatial_hash singleton, SPATIAL_CELL_SIZE=128 |
 | `core/utils.py` | Math/geometry helpers | clamp, lerp, hash_noise, fbm_noise |
 | `core/camera.py` | Camera | Viewport tracking |
 | `core/settings.py` | Display/audio settings | load_settings, save_settings |
@@ -2203,3 +2204,27 @@ Each weapon_id is matched (first match wins) to a (weapon_type, handle_color, he
 - Only ESC closes all windows simultaneously
 - Stone oven and enchantment table auto-open inventory alongside themselves
 - Chest does NOT auto-open inventory (chest UI has its own built-in inventory panel)
+
+### Performance Infrastructure
+
+#### Spatial Hash (`core/spatial.py`)
+- `SPATIAL_CELL_SIZE = 128` — Grid cell size in pixels (4 tiles), controls broadphase granularity
+- `spatial_hash` — Module-level singleton instance used by all systems
+- API: `insert(eid, x, y, w, h)`, `remove(eid)`, `update(eid, x, y, w, h)`, `query_radius(cx, cy, r)`, `query_rect(x, y, w, h)`, `clear()`
+- All entity lifecycle events (create, destroy, move, load) must maintain spatial hash
+- Systems use `query_radius()` / `query_rect()` instead of `get_entities_with()` for proximity checks
+
+#### ECS Query Cache (`core/ecs.py`)
+- `EntityManager._query_cache: dict[tuple[Type,...], list[int]]` — Per-frame cache of `get_entities_with` results
+- Auto-invalidated on `create_entity`, `destroy_entity`, `add_component`, `remove_component`
+- `clear_query_cache()` called at top of each update tick in `game/update.py`
+
+#### Elite Outline Cache (`game/drawing.py`)
+- `_elite_outline_cache: dict[(id(sprite), flip_x, tier), Surface]` — Cached mask→silhouette→8-dir stamp surfaces
+- Cache key: `(id(rend.surface), rend.flip_x, ai_c.elite_tier)`
+- Pulsing via `set_alpha()` — no per-frame surface regeneration
+
+#### Light Surface Cache (`game/drawing.py`)
+- `_light_surface_cache: dict[(radius, r, g, b), Surface]` — Cached concentric-ring light punch surfaces
+- Cache key: `(radius, color[0], color[1], color[2])`
+- Eliminates ~11 Surface allocations per light per frame during night
