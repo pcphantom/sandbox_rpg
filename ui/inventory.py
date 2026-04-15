@@ -12,11 +12,14 @@ from core.constants import (WHITE, GRAY, CYAN, INVENTORY_SLOTS_PER_PAGE,
                             UI_SLOT_BG_NORMAL, UI_TEXT_HIGHLIGHT,
                             UI_SLOT_BORDER_NORMAL, HOTBAR_SLOT_NUMBER_COLOR,
                             UI_SLOT_SEPARATOR, UI_NAV_HOVER, UI_NAV_NORMAL,
-                            UI_TEXT_MUTED, UI_ENCHANT_FALLBACK)
+                            UI_TEXT_MUTED, UI_ENCHANT_FALLBACK,
+                            UI_CHEST_SORT_HOVER, UI_CHEST_SORT_NORMAL,
+                            UI_CHEST_SORT_BORDER)
 from core.components import Inventory
 from data import ITEM_DATA, get_item_color
 from ui.elements import UIElement, Tooltip
 from ui.split_dialog import SplitDialog
+from ui.drop_confirm import DropConfirmDialog
 from ui.rarity_display import pick_up_rarity, place_rarity, swap_rarity
 from ui.draggable import DraggableWindow
 
@@ -34,6 +37,7 @@ class InventoryGrid(UIElement):
         self.font = pygame.font.SysFont('consolas', 14)
         self.title_font = pygame.font.SysFont('consolas', 20, bold=True)
         self.split_dialog = SplitDialog()
+        self.drop_confirm = DropConfirmDialog()
         # Draggable window — positioned on right side for stone oven pairing
         self.dw = DraggableWindow(
             rect.width, rect.height, title="Inventory",
@@ -116,11 +120,13 @@ class InventoryGrid(UIElement):
                 sl_rar = self.inventory.slot_rarities.get(slot_idx, 'common')
                 self._draw_item(surface, sr, item_id, count, mx, my, tooltip, sl_ench, sl_rar)
 
-        # -- Page navigation arrows --
+        # -- Page navigation arrows + Sort button --
         nav_y = (self.rect.y + 38 + hotbar_h
                  + self.rows * (self.slot_size + 6) + 4)
         prev_r = pygame.Rect(self.rect.x + 12, nav_y, 60, 28)
         next_r = pygame.Rect(self.rect.right - 72, nav_y, 60, 28)
+        # Sort button centred between prev and next
+        sort_r = pygame.Rect(self.rect.x + 12 + 60 + 10, nav_y, 55, 28)
         for r, label in [(prev_r, "< Prev"), (next_r, "Next >")]:
             hov = r.collidepoint(mx, my)
             pygame.draw.rect(surface, UI_NAV_HOVER if hov else UI_NAV_NORMAL,
@@ -129,6 +135,16 @@ class InventoryGrid(UIElement):
             lt = self.font.render(label, True, WHITE)
             surface.blit(lt, (r.centerx - lt.get_width() // 2,
                               r.centery - lt.get_height() // 2))
+        # Sort button
+        sort_hov = sort_r.collidepoint(mx, my)
+        pygame.draw.rect(surface,
+                         UI_CHEST_SORT_HOVER if sort_hov else UI_CHEST_SORT_NORMAL,
+                         sort_r, border_radius=4)
+        pygame.draw.rect(surface, UI_CHEST_SORT_BORDER, sort_r, 1,
+                         border_radius=4)
+        sort_txt = self.font.render("Sort", True, WHITE)
+        surface.blit(sort_txt, (sort_r.centerx - sort_txt.get_width() // 2,
+                                sort_r.centery - sort_txt.get_height() // 2))
 
         # -- Draw held item on cursor --
         if self.inventory.held_item:
@@ -145,6 +161,9 @@ class InventoryGrid(UIElement):
 
         # -- Split dialog overlay --
         self.split_dialog.draw(surface)
+
+        # -- Drop confirm dialog overlay --
+        self.drop_confirm.draw(surface)
 
         # -- Draggable window chrome (title bar, close button, resize) --
         self.dw.draw_chrome(surface)
@@ -200,6 +219,9 @@ class InventoryGrid(UIElement):
         if self.dw.handle_event(event):
             # close_requested is checked by the caller (events.py)
             return True
+        # Drop confirm dialog takes priority when active
+        if self.drop_confirm.active:
+            return self.drop_confirm.handle_event(event, self.inventory)
         # Split dialog takes priority
         if self.split_dialog.active:
             return self.split_dialog.handle_event(event, self.inventory)
@@ -223,18 +245,39 @@ class InventoryGrid(UIElement):
                     self._click_inv_slot(slot_idx)
                     return True
 
-            # Page buttons
+            # Page buttons + Sort button
             hotbar_h = self.slot_size + 14
             nav_y = (self.rect.y + 38 + hotbar_h
                      + self.rows * (self.slot_size + 6) + 4)
             prev_r = pygame.Rect(self.rect.x + 12, nav_y, 60, 28)
             next_r = pygame.Rect(self.rect.right - 72, nav_y, 60, 28)
+            sort_r = pygame.Rect(self.rect.x + 12 + 60 + 10, nav_y, 55, 28)
             if prev_r.collidepoint(mx, my):
                 self.page = (self.page - 1) % INVENTORY_PAGES
                 return True
             if next_r.collidepoint(mx, my):
                 self.page = (self.page + 1) % INVENTORY_PAGES
                 return True
+            if sort_r.collidepoint(mx, my):
+                from ui.inventory_sort import sort_inventory_slots
+                sort_inventory_slots(
+                    self.inventory.slots,
+                    self.inventory.slot_enchantments,
+                    self.inventory.slot_rarities)
+                self.page = 0
+                return True
+
+            # Click outside panel while holding an item → drop confirm
+            if self.inventory.held_item:
+                # Include DW title bar area in panel check
+                full_panel = self.dw.title_bar_rect.union(self.rect)
+                if not full_panel.collidepoint(mx, my):
+                    item_id, count = self.inventory.held_item
+                    self.drop_confirm.open(
+                        item_id, count,
+                        self.inventory.held_enchant,
+                        self.inventory.held_rarity)
+                    return True
 
         # Right-click: split stack or drop held item
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
