@@ -172,6 +172,11 @@ class TextureGenerator:
         effects.generate_projectile_ice(self)
         effects.generate_projectile_bomb(self)
         items.generate_item_hammer(self)
+        # Pickaxes
+        items.generate_item_pickaxe(self)
+        items.generate_item_iron_pickaxe(self)
+        items.generate_item_titanium_pickaxe(self)
+        items.generate_item_diamond_pickaxe(self)
         # Enchantment system
         effects.generate_enchant_tomes(self)
         effects.generate_transfer_tomes(self)

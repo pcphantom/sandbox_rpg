@@ -43,6 +43,7 @@ from data import (
     ITEM_DATA, ITEM_CATEGORIES, RECIPES,
     RANGED_DATA, AMMO_BONUS_DAMAGE,
     SPELL_DATA, SPELL_RECHARGE, BOMB_DATA,
+    HARVEST_TYPE,
 )
 
 
@@ -68,15 +69,14 @@ def interact(g: 'Game') -> None:
             elif bld and bld.building_type == 'enchantment_table':
                 g.show_enchant_table = True
                 g.active_enchant_table = eid
+                g.show_inventory = True  # Open inventory alongside enchantment table
             else:
                 g.show_chest = True
                 g.active_chest = eid
                 g.chest_ui.chest_scroll = 0
+                g.show_inventory = True  # Open inventory alongside chest
                 if g.in_cave >= 0:
                     g.caves.chest_looted[g.in_cave] = True
-            g.show_inventory = False
-            g.show_crafting = False
-            g.show_character = False
             return
 
     # Harvest
@@ -103,15 +103,40 @@ def interact(g: 'Game') -> None:
     if nearest is not None:
         r = g.em.get_component(nearest, Renderable)
         eq: Equipment = g.em.get_component(g.player_id, Equipment)
-        eq_item = eq.weapon if eq and eq.weapon else inv.get_equipped()
-        bonus = (ITEM_DATA[eq_item][3]
-                 if eq_item and eq_item in ITEM_DATA else 0)
         ps: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
         luck_bonus = (1 if random.random() < ps.luck * LUCK_HARVEST_CHANCE
                       else 0)
         pl_check = (g.em.get_component(nearest, Placeable)
                     if g.em.has_component(nearest, Placeable) else None)
-        if pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item:
+        is_cave_res = (pl_check and hasattr(pl_check, 'drop_item')
+                       and pl_check.drop_item)
+
+        # Determine resource type being gathered
+        if not is_cave_res and r.surface == g.textures.get('tree'):
+            resource_type = 'wood'
+        else:
+            resource_type = 'stone'
+
+        # Get bonus from equipped weapon
+        eq_bonus = 0
+        if eq and eq.weapon and eq.weapon in ITEM_DATA:
+            eq_ht = HARVEST_TYPE.get(eq.weapon, 'all')
+            if eq_ht == resource_type or eq_ht == 'all':
+                eq_bonus = ITEM_DATA[eq.weapon][3]
+
+        # Get bonus from active hotbar item
+        hb_bonus = 0
+        hotbar_item = inv.get_equipped()
+        eq_weapon = eq.weapon if eq else None
+        if (hotbar_item and hotbar_item in ITEM_DATA
+                and hotbar_item != eq_weapon):
+            hb_ht = HARVEST_TYPE.get(hotbar_item, 'all')
+            if hb_ht == resource_type or hb_ht == 'all':
+                hb_bonus = ITEM_DATA[hotbar_item][3]
+
+        bonus = max(eq_bonus, hb_bonus)
+
+        if is_cave_res:
             drop_id = pl_check.drop_item
             drop_count = random.randint(1, 3) + bonus + luck_bonus
             inv.add_item(drop_id, drop_count)
@@ -132,11 +157,17 @@ def interact(g: 'Game') -> None:
             th = g.em.get_component(nearest, Transform)
             g.particles.emit(th.x + 14, th.y + 10, 8, GRAY, 40, 0.3)
         # Track harvested overworld resource positions (skip cave resources)
-        if g.in_cave < 0 and not (pl_check and hasattr(pl_check, 'drop_item') and pl_check.drop_item):
-            th_h = g.em.get_component(nearest, Transform)
-            gx = int(th_h.x // TILE_SIZE)
-            gy = int(th_h.y // TILE_SIZE)
-            g.harvested_resources.add((gx, gy))
+        if g.in_cave < 0 and not is_cave_res:
+            col_h = g.em.get_component(nearest, Collider)
+            gpos = getattr(col_h, 'grid_pos', None) if col_h else None
+            if gpos:
+                g.harvested_resources.add(gpos)
+            else:
+                # Fallback for entities without grid_pos tag
+                th_h = g.em.get_component(nearest, Transform)
+                gx = int(th_h.x // TILE_SIZE)
+                gy = int(th_h.y // TILE_SIZE)
+                g.harvested_resources.add((gx, gy))
         g.em.destroy_entity(nearest)
 
 
@@ -173,7 +204,7 @@ def use_equipped_item(g: 'Game') -> None:
             remaining = g.spell_cooldowns[eq_id]
             g._notify(f"{sdata['name']} on cooldown ({remaining:.1f}s)")
             return
-        # Self-buff spells (protection, regen, strength) — apply immediately
+        # Self-buff spells (protection, regen, strength, levitate) — apply immediately
         if sdata.get('type') == 'self_buff':
             effect = sdata['effect']
             if effect in g.active_buffs:
@@ -187,6 +218,27 @@ def use_equipped_item(g: 'Game') -> None:
             color = sdata.get('color', CYAN)
             g._notify(f"Applied {sdata['name']} ({sdata['duration']:.0f}s)")
             g.particles.emit(pt.x + 10, pt.y + 14, 10, color, 60, 0.5)
+            return
+        # Teleport-to-bed spells (Return)
+        if sdata.get('type') == 'teleport_bed':
+            bed_pos = None
+            for eid_check in g.em.get_entities_with(Transform, Placeable):
+                pl_check = g.em.get_component(eid_check, Placeable)
+                if pl_check.item_type == 'bed':
+                    bed_t = g.em.get_component(eid_check, Transform)
+                    bed_pos = (bed_t.x, bed_t.y)
+                    break
+            if bed_pos is None:
+                g._notify("No bed found!")
+                return
+            pt.x = bed_pos[0]
+            pt.y = bed_pos[1] - TILE_SIZE
+            g.camera.follow(pt.x, pt.y)
+            g.camera.snap()
+            g.spell_cooldowns[eq_id] = sdata.get('cooldown', 600.0)
+            color = sdata.get('color', CYAN)
+            g._notify(f"Returned to bed!")
+            g.particles.emit(pt.x + 10, pt.y + 14, 15, color, 80, 0.6)
             return
         # Self-heal spells — cast immediately
         if sdata.get('type') == 'self':

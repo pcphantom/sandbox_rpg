@@ -163,7 +163,9 @@ def populate_world(g: 'Game') -> None:
                 x * TILE_SIZE + 8, y * TILE_SIZE - 16))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
-            g.em.add_component(eid, Collider(24, 32, True))
+            col = Collider(24, 32, True)
+            col.grid_pos = (x, y)
+            g.em.add_component(eid, col)
     for _ in range(FOREST_TREE_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
@@ -175,7 +177,9 @@ def populate_world(g: 'Game') -> None:
                 x * TILE_SIZE + 8, y * TILE_SIZE - 16))
             g.em.add_component(eid, Renderable(
                 g.textures.get('tree'), layer=2))
-            g.em.add_component(eid, Collider(24, 32, True))
+            col = Collider(24, 32, True)
+            col.grid_pos = (x, y)
+            g.em.add_component(eid, col)
     for _ in range(ROCK_COUNT):
         x = rng.randint(5, WORLD_WIDTH - 5)
         y = rng.randint(5, WORLD_HEIGHT - 5)
@@ -188,7 +192,9 @@ def populate_world(g: 'Game') -> None:
                 x * TILE_SIZE + 4, y * TILE_SIZE + 6))
             g.em.add_component(eid, Renderable(
                 g.textures.get('rock'), layer=1))
-            g.em.add_component(eid, Collider(26, 18, True))
+            col = Collider(26, 18, True)
+            col.grid_pos = (x, y)
+            g.em.add_component(eid, col)
     for mob_type, biome, count in INITIAL_MOB_SPAWNS:
         for _ in range(count):
             x = rng.randint(5, WORLD_WIDTH - 5)

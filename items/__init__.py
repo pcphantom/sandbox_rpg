@@ -38,6 +38,7 @@ ITEM_CATEGORIES: Dict[str, str] = {}
 CAN_ENCHANT: Dict[str, bool] = {}
 CAN_ENHANCE: Dict[str, bool] = {}
 HAS_RARITY: Dict[str, bool] = {}
+HARVEST_TYPE: Dict[str, str] = {}
 
 for _item in _ALL_BASE_ITEMS:
     _id = _item['id']
@@ -50,6 +51,7 @@ for _item in _ALL_BASE_ITEMS:
     CAN_ENCHANT[_id] = _item['can_enchant']
     CAN_ENHANCE[_id] = _item['can_enhance']
     HAS_RARITY[_id] = _item['has_rarity']
+    HARVEST_TYPE[_id] = _item.get('harvest_type', 'all')
 
 # ── Generate enhanced variants from base items with can_enhance=True ─
 
@@ -77,6 +79,7 @@ for _base_id in _BASE_IDS:
             CAN_ENCHANT[_enhanced_id] = CAN_ENCHANT[_base_id]
             CAN_ENHANCE[_enhanced_id] = True
             HAS_RARITY[_enhanced_id] = HAS_RARITY[_base_id]
+            HARVEST_TYPE[_enhanced_id] = HARVEST_TYPE.get(_base_id, 'all')
 
 # Categories whose items must NOT stack — each occupies its own slot.
 NON_STACKABLE_CATEGORIES: set = {

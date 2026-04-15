@@ -12,6 +12,8 @@ from spells.ice import ICE_SPELLS
 from spells.protection import PROTECTION_SPELLS
 from spells.regen import REGEN_SPELLS
 from spells.strength import STRENGTH_SPELLS
+from spells.levitate import LEVITATE_SPELLS
+from spells.return_spell import RETURN_SPELLS
 from game_controller import SPELL_RECHARGE                           # noqa: F401
 
 # -- All spells (offensive, heal, and buff) ------------------------------------
@@ -23,9 +25,12 @@ SPELL_DATA.update(ICE_SPELLS)
 SPELL_DATA.update(PROTECTION_SPELLS)
 SPELL_DATA.update(REGEN_SPELLS)
 SPELL_DATA.update(STRENGTH_SPELLS)
+SPELL_DATA.update(LEVITATE_SPELLS)
+SPELL_DATA.update(RETURN_SPELLS)
 
 __all__ = [
     'SPELL_DATA', 'SPELL_RECHARGE',
     'FIREBALL_SPELLS', 'HEAL_SPELLS', 'LIGHTNING_SPELLS', 'ICE_SPELLS',
     'PROTECTION_SPELLS', 'REGEN_SPELLS', 'STRENGTH_SPELLS',
+    'LEVITATE_SPELLS', 'RETURN_SPELLS',
 ]

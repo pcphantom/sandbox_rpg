@@ -10,6 +10,8 @@ from core.constants import (
     DMG_NUMBER_FLOAT_SPEED, HUD_REFRESH_INTERVAL,
     MOB_RESPAWN_INTERVAL, MOB_MAX_COUNT, MOB_RESPAWN_BATCH,
     DIFFICULTY_MULTIPLIERS,
+    TILE_SIZE, TILE_SAND, TILE_WATER, TILE_DIRT,
+    TERRAIN_SPEED_SAND, TERRAIN_SPEED_WATER, TERRAIN_SPEED_DIRT,
 )
 from data import RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS
 from core.components import (
@@ -34,6 +36,17 @@ def update(g, dt: float) -> None:
     # Movement (AGI speed bonus with cap)
     agi_bonus = min(AGI_SPEED_BONUS_CAP, ps.agility * AGI_SPEED_BONUS)
     base_speed = PLAYER_BASE_SPEED * (1.0 + agi_bonus)
+    # Terrain speed modifier (negated by levitate buff)
+    if 'levitate' not in g.active_buffs:
+        tile_x = int(pt.x // TILE_SIZE)
+        tile_y = int(pt.y // TILE_SIZE)
+        tile = g.world.get_tile(tile_x, tile_y)
+        if tile == TILE_SAND:
+            base_speed *= TERRAIN_SPEED_SAND
+        elif tile == TILE_WATER:
+            base_speed *= TERRAIN_SPEED_WATER
+        elif tile == TILE_DIRT:
+            base_speed *= TERRAIN_SPEED_DIRT
     if keys[pygame.K_w]:
         pv.vy -= base_speed * dt * MOVEMENT_ACCEL_MULT
     if keys[pygame.K_s]:

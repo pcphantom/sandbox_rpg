@@ -361,8 +361,8 @@ def draw_hotbar(g: 'Game') -> None:
     ss = HOTBAR_SLOT_SIZE
     gap = HOTBAR_SLOT_GAP
     tw = slots * ss + (slots - 1) * gap
-    bx = SCREEN_WIDTH // 2 - tw // 2
-    by = SCREEN_HEIGHT - ss - 14
+    bx = g.action_bar_mgr.primary_x
+    by = g.action_bar_mgr.primary_y
     mx, my = pygame.mouse.get_pos()
 
     bg = pygame.Surface((tw + 16, ss + 12), pygame.SRCALPHA)
@@ -458,7 +458,11 @@ def draw_hotbar(g: 'Game') -> None:
                 name = f"{prefix} {name}"
                 name_color = EC3.get(eq_ench['type'], name_color)
         nt = g.font.render(name, True, name_color)
-        g.screen.blit(nt, (SCREEN_WIDTH // 2 - nt.get_width() // 2, by - 22))
+        name_cx = bx + tw // 2
+        g.screen.blit(nt, (name_cx - nt.get_width() // 2, by - 22))
+
+    # Draw extra action bars
+    g.action_bar_mgr.draw_extra_bars(g.screen, g)
 
 
 # ======================================================================

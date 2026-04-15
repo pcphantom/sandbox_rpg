@@ -42,7 +42,7 @@ This document tracks all global constants, key variables, and data structures us
 | **core/** | Core ECS, components, constants, enhancement | |
 | `core/enhancement.py` | Enhancement scaling — imports control vars from `game_controller.py` | WEAPON_BASES, RANGED_BASES, ARMOR_BASES, TURRET_ENHANCE_DAMAGE, TURRET_ENHANCE_HP, TURRET_ENHANCE_DR, ARMOR_VALUES, PROTECTION_DR_BONUS. ENHANCEMENT_COLORS import REMOVED (commented out in game_controller.py). |
 | **data/** | Centralised game data/tuning | |
-| `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES |
+| `data/items.py` | Item re-exports from items/ | ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, HARVEST_TYPE, NON_STACKABLE_CATEGORIES |
 | `data/crafting.py` | Crafting recipes | RECIPES |
 | `data/combat.py` | Combat data — re-exports from `game_controller.py` | RANGED_DATA, AMMO_BONUS_DAMAGE, BOMB_DATA (ARMOR_VALUES re-exported from core.enhancement) |
 | `data/mobs.py` | Mob definitions — boss glow colors from `game_controller.py` | MOB_DATA, WAVE_MOB_TIERS, WAVE_RANGED_MOBS, WAVE_BOSS_MOBS |
@@ -52,7 +52,7 @@ This document tracks all global constants, key variables, and data structures us
 | `data/difficulty.py` | Difficulty profiles — re-exports from `game_controller.py` + helpers | DIFFICULTY_PROFILES, DIFFICULTY_MULTIPLIERS, get_profile |
 | `data/quality.py` | Item quality/rarity — re-exports from `game_controller.py` + helpers | RARITY_TIERS, RARITY_COLORS, RARITY_MULTIPLIERS, RARITY_ELIGIBLE_CATEGORIES, QUALITY_COLORS, get_item_quality, get_item_color |
 | **items/** | Modular item definitions with control flags | |
-| `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, NON_STACKABLE_CATEGORIES from category modules | |
+| `items/__init__.py` | Item aggregator — builds ITEM_DATA, ITEM_CATEGORIES, CAN_ENCHANT, CAN_ENHANCE, HAS_RARITY, HARVEST_TYPE, NON_STACKABLE_CATEGORIES from category modules | |
 | `items/materials.py` | Material items (wood, stone, iron, etc.) | ITEMS list |
 | `items/consumables.py` | Consumable items (berry, pie, bandage, etc.) | ITEMS list |
 | `items/weapons.py` | Melee weapons (axe, sword, iron_sword, etc.) | ITEMS list |
@@ -61,7 +61,7 @@ This document tracks all global constants, key variables, and data structures us
 | `items/armor.py` | Armor and shields | ITEMS list |
 | `items/placeables.py` | Placeables (turret, wall, chest, etc.) | ITEMS list |
 | `items/spells.py` | Spell books (all tiers) | ITEMS list |
-| `items/tools.py` | Tools (hammer) | ITEMS list |
+| `items/tools.py` | Tools (hammer, pickaxes) | ITEMS list |
 | `items/tomes.py` | Enchantment and transfer tomes | ITEMS list |
 | `items/throwables.py` | Throwables (bomb) | ITEMS list |
 | **world/** | World generation | |
@@ -83,6 +83,12 @@ This document tracks all global constants, key variables, and data structures us
 | `ui/minimap.py` | Minimap | Minimap drawing |
 | `ui/command_bar.py` | F12 run command bar | CommandBar — text input overlay for running game commands |
 | `ui/rarity_display.py` | Rarity UI & slot helpers | draw_rarity_border (ONLY border), insert_rarity_tooltip, pick_up_rarity, place_rarity, swap_rarity. draw_enhancement_border is COMMENTED OUT. |
+| `ui/action_bar.py` | Action bar system — draggable hotbar + extra bars | ActionBarManager, ExtraActionBar, SECONDARY_HOTKEYS, SECONDARY_KEY_LABELS |
+| **character/** | Character customization package | |
+| `character/__init__.py` | Re-exports all character classes/data | CharacterData, CharacterGenerator, compose_character, palettes |
+| `character/layers.py` | Layered sprite rendering — skin, hair, shirt, pants, weapon/shield overlays | compose_character, draw_skin, draw_hair, draw_shirt, draw_pants, draw_weapon_overlay, draw_shield_overlay, SKIN_COLORS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS, HAIR_STYLES, SHIRT_STYLES, PANTS_STYLES |
+| `character/generator.py` | Character data model + customization screen UI | CharacterData (to_dict/from_dict/build_sprite), CharacterGenerator (_start_game, _is_legacy_migration) |
+| `character/legacy_save_migration.py` | **REMOVABLE** — Detects legacy saves missing character data | check_needs_migration(data) — *Delete once all legacy saves are migrated* |
 
 > ⚠️ **UI LAYOUT PROTECTION**: Panel dimensions and element positions in `pause_menu.py`, `character_menu.py`, and `chest.py` must NEVER be changed without explicit user instruction. Modifying sizes, positions, or rearranging layout sections is strictly prohibited.
 | **enchantments/** | Enchantment system | |
@@ -92,7 +98,7 @@ This document tracks all global constants, key variables, and data structures us
 | **systems/** | Centralized game systems | |
 | `systems/rarity.py` | Rarity stat application & drop rolling | apply_rarity, roll_rarity |
 | `systems/damage_calc.py` | Damage/DR formulas | calc_melee_damage, calc_ranged_damage, calc_damage_reduction |
-| **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE |
+| **spells/** | Spell effect modules | SPELL_DATA, SPELL_RECHARGE, FIREBALL_SPELLS, HEAL_SPELLS, LIGHTNING_SPELLS, ICE_SPELLS, PROTECTION_SPELLS, REGEN_SPELLS, STRENGTH_SPELLS, LEVITATE_SPELLS, RETURN_SPELLS |
 | **rendering/** | Rendering utilities | |
 | `rendering/particles.py` | Particle effects | ParticleSystem |
 | `textures.py` | Texture generation (root) | TextureGenerator |
@@ -126,7 +132,7 @@ Three per-item boolean flags centralize eligibility checks. All consumer modules
 | enchant_tome / transfer_tome | False | False | False |
 | throwable | False | False | False |
 
-*`can_enhance=True` for: iron_sword, iron_axe, mace, titanium_axe, diamond_axe, iron_armor, iron_shield, turret
+*`can_enhance=True` for: iron_sword, iron_axe, mace, titanium_axe, diamond_axe, iron_pickaxe, titanium_pickaxe, diamond_pickaxe, iron_armor, iron_shield, turret
 
 ### Enhanced Item Flag Inheritance
 
@@ -993,17 +999,26 @@ Format: `(name, description, damage, harvest_bonus, heal, placeable)`
 | spell_ice_5 | Ice V Tome |
 
 ### Melee Weapons
-| ID | Name | Damage | Harvest Bonus |
-|----|------|--------|---------------|
-| axe | Stone Axe | 12 | +2 |
-| sword | Wood Sword | 20 | 0 |
-| iron_sword | Iron Sword | 30 | 0 |
-| spear | Spear | 18 | 0 |
-| iron_axe | Iron Axe | 22 | +4 |
-| mace | Iron Mace | 26 | 0 |
-| bone_club | Bone Club | 14 | 0 |
-| titanium_axe | Titanium Axe | 33 | +6 |
-| diamond_axe | Diamond Axe | 44 | +8 |
+| ID | Name | Damage | Harvest Bonus | Harvest Type |
+|----|------|--------|---------------|--------------|
+| axe | Stone Axe | 12 | +2 | wood |
+| sword | Wood Sword | 20 | 0 | all |
+| iron_sword | Iron Sword | 30 | 0 | all |
+| spear | Spear | 18 | 0 | all |
+| iron_axe | Iron Axe | 22 | +4 | wood |
+| mace | Iron Mace | 26 | 0 | all |
+| bone_club | Bone Club | 14 | 0 | all |
+| titanium_axe | Titanium Axe | 33 | +6 | wood |
+| diamond_axe | Diamond Axe | 44 | +8 | wood |
+
+### Tools
+| ID | Name | Damage | Harvest Bonus | Harvest Type |
+|----|------|--------|---------------|--------------|
+| hammer | Hammer | 5 | 0 | all |
+| pickaxe | Stone Pickaxe | 8 | +2 | stone |
+| iron_pickaxe | Iron Pickaxe | 15 | +4 | stone |
+| titanium_pickaxe | Titanium Pickaxe | 23 | +6 | stone |
+| diamond_pickaxe | Diamond Pickaxe | 30 | +8 | stone |
 
 ### Enhanced Weapons (+1 to +5, generated from `core/enhancement.py`)
 
@@ -1016,8 +1031,11 @@ Control variable: `OFFENSE_BONUS_PER_LEVEL = 2` (+2 damage per enhancement level
 | mace (26) | 28 | 30 | 32 | 34 | 36 |
 | titanium_axe (33) | 35 | 37 | 39 | 41 | 43 |
 | diamond_axe (44) | 46 | 48 | 50 | 52 | 54 |
+| iron_pickaxe (15) | 17 | 19 | 21 | 23 | 25 |
+| titanium_pickaxe (23) | 25 | 27 | 29 | 31 | 33 |
+| diamond_pickaxe (30) | 32 | 34 | 36 | 38 | 40 |
 
-IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`, `titanium_axe_1`..`titanium_axe_5`, `diamond_axe_1`..`diamond_axe_5`
+IDs: `iron_sword_1`..`iron_sword_5`, `iron_axe_1`..`iron_axe_5`, `mace_1`..`mace_5`, `titanium_axe_1`..`titanium_axe_5`, `diamond_axe_1`..`diamond_axe_5`, `iron_pickaxe_1`..`iron_pickaxe_5`, `titanium_pickaxe_1`..`titanium_pickaxe_5`, `diamond_pickaxe_1`..`diamond_pickaxe_5`
 
 ### Ranged Weapons
 | ID | Name | Damage | Range | Ammo | Speed | Cooldown |
@@ -1146,6 +1164,27 @@ IDs: `iron_armor_1`..`iron_armor_5`, `iron_shield_1`..`iron_shield_5`
 | spell_strength_3 | strength | 3 | 60.0s | +10 DMG | 5.0 |
 | spell_strength_4 | strength | 4 | 60.0s | +15 DMG | 5.0 |
 | spell_strength_5 | strength | 5 | 60.0s | +20 DMG | 5.0 |
+| spell_levitate_1 | levitate | 1 | 30.0s | on/off | 5.0 |
+| spell_levitate_2 | levitate | 2 | 45.0s | on/off | 5.0 |
+| spell_levitate_3 | levitate | 3 | 60.0s | on/off | 5.0 |
+| spell_levitate_4 | levitate | 4 | 75.0s | on/off | 5.0 |
+| spell_levitate_5 | levitate | 5 | 90.0s | on/off | 5.0 |
+
+### Teleport Spells
+| ID | Type | Cooldown | Effect |
+|----|------|----------|--------|
+| spell_return_1 | teleport_bed | 600.0 | Teleport to bed |
+| spell_return_2 | teleport_bed | 480.0 | Teleport to bed |
+| spell_return_3 | teleport_bed | 360.0 | Teleport to bed |
+| spell_return_4 | teleport_bed | 240.0 | Teleport to bed |
+| spell_return_5 | teleport_bed | 120.0 | Teleport to bed |
+
+### Terrain Speed Modifiers
+| Constant | Value | Tile |
+|----------|-------|------|
+| TERRAIN_SPEED_SAND | 0.7 | TILE_SAND |
+| TERRAIN_SPEED_WATER | 0.5 | TILE_WATER |
+| TERRAIN_SPEED_DIRT | 0.9 | TILE_DIRT |
 
 ## Bomb Data (`items_data.py: BOMB_DATA`)
 
@@ -1308,6 +1347,9 @@ All item identity, stacking, sorting, and transfer logic lives here. Every conta
 | Iron Mace | iron×5, wood×1 |
 | Spear | stick×4, stone×2 |
 | Bone Club | bone×3, stick×1 |
+| Stone Pickaxe | wood×3, stone×3 |
+| Iron Pickaxe | iron×3, wood×2 |
+| Titanium Pickaxe | titanium_ingot×5, wood×2 |
 
 ### Ranged Weapons
 | Result | Cost |
@@ -1695,7 +1737,7 @@ Control variable: `PROTECTION_DR_PER_LEVEL = 2` (+2 DR per enchant level, stacks
 
 > **Note**: The old `_ENHANCEABLE_BASES` set in recipes.py has been replaced by the `CAN_ENHANCE` flag dict from the `items/` package.
 
-`iron_sword`, `iron_axe`, `mace`, `titanium_axe`, `diamond_axe`, `iron_armor`, `iron_shield`, `turret`
+`iron_sword`, `iron_axe`, `mace`, `titanium_axe`, `diamond_axe`, `iron_pickaxe`, `titanium_pickaxe`, `diamond_pickaxe`, `iron_armor`, `iron_shield`, `turret`
 
 ### Combine Recipes (`enchantments/recipes.py: try_combine()`)
 
@@ -2027,3 +2069,72 @@ Enemies with `'large': True` in MOB_DATA:
 - `dragon_red`, `dragon_green`, `dragon_black`, `dragon_white`, `shadow_dragon`
 
 These use larger texture surfaces (36×48 for ogres/golems, 48×48 for dragons).
+
+---
+
+## Character Customization System (`character/` package)
+
+### Sprite Composition
+The player sprite is a 24×32 SRCALPHA surface composed of layered pixel art:
+1. **Skin** (body shape: head, arms, legs) — `draw_skin(color)`
+2. **Pants/shorts/skirt** — `draw_pants(style, color)`
+3. **Shirt/tunic/vest/tank** — `draw_shirt(style, color)`
+4. **Hair** — `draw_hair(style, color)`
+5. **Weapon overlay** (right hand) — `draw_weapon_overlay(weapon_id)` — optional
+6. **Shield overlay** (left hand) — `draw_shield_overlay(shield_id)` — optional
+
+`compose_character()` blits all layers in order and returns the final sprite.
+
+### CharacterData (serializable state)
+| Field | Type | Default | Range |
+|-------|------|---------|-------|
+| `skin_color_idx` | int | 0 | 0–5 (SKIN_COLORS) |
+| `hair_style_idx` | int | 0 | 0–5 (HAIR_STYLES: short, long, spiky, bald, ponytail, mohawk) |
+| `hair_color_idx` | int | 0 | 0–7 (HAIR_COLORS) |
+| `shirt_style_idx` | int | 0 | 0–2 (SHIRT_STYLES: tunic, vest, tank) |
+| `shirt_color_idx` | int | 0 | 0–7 (SHIRT_COLORS) |
+| `pants_style_idx` | int | 0 | 0–5 (PANTS_COLORS) / 0–2 (PANTS_STYLES: pants, shorts, skirt) |
+| `pants_color_idx` | int | 0 | 0–5 (PANTS_COLORS) |
+| `show_equipment` | bool | True | Whether weapon/shield show on sprite |
+
+### Weapon Overlay Profiles
+Each weapon_id is matched (first match wins) to a (weapon_type, handle_color, head_color) tuple:
+| Match Key | Type | Handle Color | Head Color |
+|-----------|------|-------------|------------|
+| `iron_sword` | sword | (80,60,30) | (200,210,230) |
+| `sword` | sword | (100,70,35) | (180,180,200) |
+| `diamond_pickaxe` | pickaxe | (120,80,40) | (140,200,255) |
+| `titanium_pickaxe` | pickaxe | (120,80,40) | (160,170,200) |
+| `iron_pickaxe` | pickaxe | (120,80,40) | (170,170,190) |
+| `pickaxe` | pickaxe | (120,80,40) | (160,160,170) |
+| `diamond_axe` | axe | (120,80,40) | (140,200,255) |
+| `titanium_axe` | axe | (120,80,40) | (160,170,200) |
+| `iron_axe` | axe | (120,80,40) | (170,170,190) |
+| `axe` | axe | (120,80,40) | (180,180,200) |
+| `mace` | mace | (120,80,40) | (160,160,175) |
+| `spear` | spear | (120,80,40) | (180,190,210) |
+| `bone_club` | club | (200,195,180) | (230,225,210) |
+
+### Shield Overlay Profiles
+| Match Key | Fill Color | Border Color | Emblem Color |
+|-----------|-----------|-------------|-------------|
+| `iron_shield` | (160,160,180) | (120,120,135) | (200,205,220) |
+| `wood_shield` | (130,91,30) | (80,60,40) | (180,180,200) |
+
+### Game Integration
+- `Game.char_data` — CharacterData instance, persisted in saves as `'character'` key
+- `Game.char_gen_ui` — CharacterGenerator instance
+- `Game.in_char_gen` — True when character creation screen is active
+- `Game._rebuild_player_sprite()` — Rebuilds player texture from char_data + current equipment; called after equip/unequip changes and on save load
+- `CharacterMenu.equipment_changed` — Flag set True on equip/unequip, checked in game/events.py to trigger sprite rebuild
+
+### Legacy Save Migration (`character/legacy_save_migration.py`)
+- **REMOVABLE MODULE** — exists only to handle saves created before character gen was added
+- `check_needs_migration(data)` → True if save dict lacks `'character'` key
+- When True, game routes player to character generator before resuming
+- References: `game/menus.py` (load game handler), `character/generator.py` (`_is_legacy_migration` flag)
+
+### UI Window System
+- Opening one window (I/C/P) does NOT close other windows
+- Only ESC closes all windows simultaneously
+- Stone oven, chest, and enchantment table all auto-open inventory alongside themselves

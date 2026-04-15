@@ -54,6 +54,10 @@ class CharacterMenu:
         self._dropdown_max_visible: int = 6
         self._dropdown_row_h: int = 24
         self.dw = DraggableWindow(540, 460, title="Character")
+        # Set True whenever equipment changes so Game can rebuild sprite
+        self.equipment_changed: bool = False
+        # Set to a message string when unequip fails (e.g. inventory full)
+        self.unequip_failed: str = ''
 
     def draw(self, surface: pygame.Surface,
              stats: PlayerStats, equipment: Equipment,
@@ -339,6 +343,7 @@ class CharacterMenu:
             equipment.enchantments[attr] = ench
         equipment.rarities[attr] = rar
         self._dropdown_open = False
+        self.equipment_changed = True
 
     def handle_event(self, event: pygame.event.Event,
                      stats: PlayerStats, equipment: Equipment,
@@ -398,10 +403,35 @@ class CharacterMenu:
                 item_id = getattr(equipment, attr)
                 if item_id:
                     # Unequip - return to inventory (transfer enchant + rarity back)
-                    ench = equipment.enchantments.pop(attr, None)
-                    rar = equipment.rarities.pop(attr, 'common')
-                    inventory.add_item_enchanted(item_id, ench, 1, rar)
-                    setattr(equipment, attr, None)
+                    ench = equipment.enchantments.get(attr)
+                    rar = equipment.rarities.get(attr, 'common')
+                    count = 1
+                    if attr == 'ammo':
+                        count = max(1, equipment.ammo_count)
+                        # Clear ammo slot BEFORE adding to inventory so the
+                        # auto-stack-to-equipped-ammo path is not triggered.
+                        equipment.ammo = None
+                        equipment.ammo_count = 0
+                    overflow = inventory.add_item_enchanted(
+                        item_id, ench, count, rar)
+                    if overflow > 0:
+                        # Inventory full — undo: restore equipment, put back overflow
+                        if attr == 'ammo':
+                            equipment.ammo = item_id
+                            equipment.ammo_count = overflow
+                            # Items that DID fit are already in inventory; adjust
+                            # so the player keeps what fit and equip keeps overflow.
+                        else:
+                            # Non-ammo: overflow means the 1 item didn't fit at all
+                            setattr(equipment, attr, item_id)
+                        self.unequip_failed = "Inventory full!"
+                    else:
+                        # Successfully unequipped
+                        equipment.enchantments.pop(attr, None)
+                        equipment.rarities.pop(attr, None)
+                        if attr != 'ammo':
+                            setattr(equipment, attr, None)
+                        self.equipment_changed = True
                 else:
                     # Equip — open dropdown to let player choose
                     self._open_dropdown(attr, inventory,

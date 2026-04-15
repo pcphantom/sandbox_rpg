@@ -145,6 +145,9 @@ def build_enhanced_weapon_items() -> Dict[str, Tuple[str, str, int, int, int, bo
         'mace':         'Iron Mace',
         'titanium_axe': 'Titanium Axe',
         'diamond_axe':  'Diamond Axe',
+        'iron_pickaxe':     'Iron Pickaxe',
+        'titanium_pickaxe': 'Titanium Pickaxe',
+        'diamond_pickaxe':  'Diamond Pickaxe',
     }
     # Description tiers
     tier_labels = {1: 'Enhanced', 2: 'Enhanced', 3: 'Fine', 4: 'Superior', 5: 'Masterwork'}

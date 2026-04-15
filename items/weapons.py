@@ -4,10 +4,11 @@ ITEMS = [
     {
         'id': 'axe',
         'name': 'Stone Axe',
-        'desc': '+2 harvest yield. Decent weapon.',
+        'desc': '+2 wood harvest yield. Decent weapon.',
         'category': 'weapon',
         'damage': 12, 'harvest_bonus': 2, 'heal': 0, 'placeable': False,
         'can_enchant': True, 'can_enhance': False, 'has_rarity': True,
+        'harvest_type': 'wood',
     },
     {
         'id': 'sword',
@@ -36,10 +37,11 @@ ITEMS = [
     {
         'id': 'iron_axe',
         'name': 'Iron Axe',
-        'desc': '+4 harvest yield. Strong weapon.',
+        'desc': '+4 wood harvest yield. Strong weapon.',
         'category': 'weapon',
         'damage': 22, 'harvest_bonus': 4, 'heal': 0, 'placeable': False,
         'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+        'harvest_type': 'wood',
     },
     {
         'id': 'mace',
@@ -60,17 +62,19 @@ ITEMS = [
     {
         'id': 'titanium_axe',
         'name': 'Titanium Axe',
-        'desc': '+6 harvest yield. Superior weapon.',
+        'desc': '+6 wood harvest yield. Superior weapon.',
         'category': 'weapon',
         'damage': 33, 'harvest_bonus': 6, 'heal': 0, 'placeable': False,
         'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+        'harvest_type': 'wood',
     },
     {
         'id': 'diamond_axe',
         'name': 'Diamond Axe',
-        'desc': '+8 harvest yield. Legendary weapon.',
+        'desc': '+8 wood harvest yield. Legendary weapon.',
         'category': 'weapon',
         'damage': 44, 'harvest_bonus': 8, 'heal': 0, 'placeable': False,
         'can_enchant': True, 'can_enhance': True, 'has_rarity': True,
+        'harvest_type': 'wood',
     },
 ]

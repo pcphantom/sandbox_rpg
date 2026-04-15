@@ -119,38 +119,12 @@ def handle_events(g) -> None:
                 if g.show_inventory:
                     g._return_held_item()
                 g.show_inventory = not g.show_inventory
-                g.show_crafting = False
-                g.show_character = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_c:
-                g._return_held_item()
                 g.show_crafting = not g.show_crafting
-                g.show_inventory = False
-                g.show_character = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_p:
-                g._return_held_item()
                 g.show_character = not g.show_character
-                g.show_inventory = False
-                g.show_crafting = False
-                g.show_chest = False
-                g.active_chest = None
-                g.show_enchant_table = False
-                g.active_enchant_table = None
-                g.show_stone_oven = False
-                g.active_stone_oven = None
                 continue
             if event.key == pygame.K_f:
                 g._use_equipped_item()
@@ -160,6 +134,13 @@ def handle_events(g) -> None:
                 continue
             if event.key == pygame.K_F9:
                 g._quick_load()
+                continue
+
+            # Action bar manager events (close button, drag, context menu,
+            # extra bar slot clicks, secondary bar hotkeys)
+            if g.action_bar_mgr.handle_close_click(event):
+                continue
+            if g.action_bar_mgr.handle_event(event, g):
                 continue
 
             # Number keys 1-6 → hotbar
@@ -176,6 +157,15 @@ def handle_events(g) -> None:
                     and not g.show_enchant_table and not g.show_stone_oven):
                 inv = g.em.get_component(g.player_id, Inventory)
                 inv.equipped_slot = (inv.equipped_slot - event.y) % 6
+
+        # Action bar manager mouse events (drag, right-click context menu,
+        # close button, extra bar slot clicks)
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
+                          pygame.MOUSEMOTION):
+            if g.action_bar_mgr.handle_close_click(event):
+                continue
+            if g.action_bar_mgr.handle_event(event, g):
+                continue
 
         # Placement mode rotation
         if g.placement_mode and event.type == pygame.KEYDOWN:
@@ -249,6 +239,10 @@ def handle_events(g) -> None:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 g.stone_oven_ui.handle_click(g, *event.pos, event.button)
         if g.show_inventory:
+            # Allow dropping held items onto extra action bar slots
+            inv = g.em.get_component(g.player_id, Inventory)
+            if g.action_bar_mgr.handle_extra_bar_drop(event, inv):
+                pass  # consumed; still let inventory UI see other events
             g.inventory_ui.handle_event(event)
             if g.inventory_ui.dw.close_requested:
                 g._return_held_item()
@@ -268,6 +262,12 @@ def handle_events(g) -> None:
                 g.em.get_component(g.player_id, Equipment),
                 g.em.get_component(g.player_id, Inventory),
             )
+            if g.character_menu.equipment_changed:
+                g.character_menu.equipment_changed = False
+                g._rebuild_player_sprite()
+            if g.character_menu.unequip_failed:
+                g._notify(g.character_menu.unequip_failed)
+                g.character_menu.unequip_failed = ''
             if g.character_menu.dw.close_requested:
                 g._return_held_item()
                 g.show_character = False
