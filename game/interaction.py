@@ -33,6 +33,21 @@ from core.constants import (
 from game_controller import (
     BEACON_LIGHT_RADIUS, BEACON_VISUAL_LIGHT_RADIUS, BEACON_HP,
     STONE_OVEN_HP, STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
+    MSG_INTERACT_MINED, MSG_INTERACT_SPELL_COOLDOWN,
+    MSG_INTERACT_BUFF_ALREADY, MSG_INTERACT_BUFF_APPLIED,
+    MSG_INTERACT_NO_BED, MSG_INTERACT_RETURNED_BED,
+    MSG_INTERACT_TARGET_SPELL, MSG_INTERACT_TARGET_BOMB,
+    MSG_INTERACT_FULL_HEALTH, MSG_INTERACT_USED_HEAL,
+    MSG_INTERACT_PLACE_HINT, MSG_INTERACT_PLACE_HINT_BED_ROTATE,
+    MSG_INTERACT_PLACE_HINT_CANCEL,
+    MSG_INTERACT_PLACE_CAVE_BLOCKED, MSG_INTERACT_PLACE_BLOCKED,
+    MSG_INTERACT_PLACE_SAME_WALL, MSG_INTERACT_PLACE_NO_ITEMS,
+    MSG_INTERACT_PLACE_REPLACED, MSG_INTERACT_PLACE_SUCCESS,
+    MSG_INTERACT_REPAIR_NO_TARGET, MSG_INTERACT_REPAIR_CANNOT,
+    MSG_INTERACT_REPAIR_NEED_MAT, MSG_INTERACT_REPAIR_SUCCESS,
+    MSG_INTERACT_CRAFT_NO_MATS, MSG_INTERACT_CRAFT_SUCCESS,
+    MSG_INTERACT_SLEEP_DAY_ONLY, MSG_INTERACT_SLEEPING,
+    MSG_INTERACT_NO_BED_NEARBY,
 )
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
@@ -151,7 +166,7 @@ def interact(g: 'Game') -> None:
             g.particles.emit(th.x + 10, th.y + 8, 8, color, 40, 0.3)
             name = (ITEM_DATA[drop_id][0] if drop_id in ITEM_DATA
                     else drop_id)
-            g._notify(f"Mined {drop_count} {name}!")
+            g._notify(MSG_INTERACT_MINED.format(count=drop_count, name=name))
         elif r.surface == g.textures.get('tree'):
             inv.add_item('wood', random.randint(2, 4) + bonus + luck_bonus)
             inv.add_item('stick', 1)
@@ -210,7 +225,7 @@ def use_equipped_item(g: 'Game') -> None:
         sdata = SPELL_DATA[eq_id]
         if eq_id in g.spell_cooldowns:
             remaining = g.spell_cooldowns[eq_id]
-            g._notify(f"{sdata['name']} on cooldown ({remaining:.1f}s)")
+            g._notify(MSG_INTERACT_SPELL_COOLDOWN.format(name=sdata['name'], remaining=remaining))
             return
         # Self-buff spells (protection, regen, strength, levitate) — apply immediately
         if sdata.get('type') == 'self_buff':
@@ -218,7 +233,7 @@ def use_equipped_item(g: 'Game') -> None:
             if effect in g.active_buffs:
                 cur_level = g.active_buffs[effect][0]
                 if sdata['level'] <= cur_level:
-                    g._notify(f"Already have {effect.title()} {cur_level}!")
+                    g._notify(MSG_INTERACT_BUFF_ALREADY.format(effect=effect.title(), level=cur_level))
                     return
             # Apply level scaling to buff value (protection DR, regen HP/s,
             # strength bonus dmg).  Levitate has no value to scale.
@@ -232,7 +247,7 @@ def use_equipped_item(g: 'Game') -> None:
                 sdata['level'], scaled_value, sdata['duration'])
             g.spell_cooldowns[eq_id] = sdata.get('cooldown', 5.0)
             color = sdata.get('color', CYAN)
-            g._notify(f"Applied {sdata['name']} ({sdata['duration']:.0f}s)")
+            g._notify(MSG_INTERACT_BUFF_APPLIED.format(name=sdata['name'], duration=sdata['duration']))
             g.particles.emit(pt.x + 10, pt.y + 14, 10, color, 60, 0.5)
             return
         # Teleport-to-bed spells (Return)
@@ -245,7 +260,7 @@ def use_equipped_item(g: 'Game') -> None:
                     bed_pos = (bed_t.x, bed_t.y)
                     break
             if bed_pos is None:
-                g._notify("No bed found!")
+                g._notify(MSG_INTERACT_NO_BED)
                 return
             pt.x = bed_pos[0]
             pt.y = bed_pos[1] - TILE_SIZE
@@ -253,7 +268,7 @@ def use_equipped_item(g: 'Game') -> None:
             g.camera.snap()
             g.spell_cooldowns[eq_id] = sdata.get('cooldown', 600.0)
             color = sdata.get('color', CYAN)
-            g._notify(f"Returned to bed!")
+            g._notify(MSG_INTERACT_RETURNED_BED)
             g.particles.emit(pt.x + 10, pt.y + 14, 15, color, 80, 0.6)
             return
         # Self-heal spells — cast immediately
@@ -265,14 +280,14 @@ def use_equipped_item(g: 'Game') -> None:
         # Projectile spells — enter targeting mode
         g.spell_targeting = True
         g.spell_item = eq_id
-        g._notify("Click target to cast spell. ESC/Right-click to cancel.")
+        g._notify(MSG_INTERACT_TARGET_SPELL)
         return
 
     # Bomb
     if cat == 'throwable' and eq_id in BOMB_DATA:
         g.spell_targeting = True
         g.spell_item = eq_id
-        g._notify("Click target to throw. ESC/Right-click to cancel.")
+        g._notify(MSG_INTERACT_TARGET_BOMB)
         return
 
     # Hammer repair
@@ -283,14 +298,14 @@ def use_equipped_item(g: 'Game') -> None:
     if heal > 0:
         ph: Health = g.em.get_component(g.player_id, Health)
         if ph.current >= ph.maximum:
-            g._notify("Already at full health!")
+            g._notify(MSG_INTERACT_FULL_HEALTH)
             return
         ph.heal(heal)
         inv.remove_item(eq_id, 1)
         g.health_bar.set_value(ph.current)
         g.dmg_numbers.append((pt.x, pt.y - 20, f'+{heal}', GREEN, 0.8))
         g.particles.emit(pt.x + 10, pt.y + 14, 8, GREEN, 40, 0.4)
-        g._notify(f"Used {data[0]} (+{heal} HP)")
+        g._notify(MSG_INTERACT_USED_HEAL.format(name=data[0], heal=heal))
     elif placeable:
         g.placement_mode = True
         g.placement_item = eq_id
@@ -301,10 +316,10 @@ def use_equipped_item(g: 'Game') -> None:
         from core.item_stack import normalize_rarity
         g.placement_rarity = normalize_rarity(inv.get_equipped_rarity())
         g.placement_enchant = inv.get_equipped_enchant()
-        hint = f"Click to place {data[0]}."
+        hint = MSG_INTERACT_PLACE_HINT.format(name=data[0])
         if eq_id == 'bed':
-            hint += " R to rotate."
-        hint += " ESC/Right-click to cancel."
+            hint += MSG_INTERACT_PLACE_HINT_BED_ROTATE
+        hint += MSG_INTERACT_PLACE_HINT_CANCEL
         g._notify(hint)
 
 
@@ -342,14 +357,14 @@ def _try_repair(g: 'Game', inv: Inventory, pt: Transform) -> None:
             nearest_dist = d
 
     if nearest is None:
-        g._notify("No damaged structure nearby!")
+        g._notify(MSG_INTERACT_REPAIR_NO_TARGET)
         return
 
     h: Health = g.em.get_component(nearest, Health)
     pl: Placeable = g.em.get_component(nearest, Placeable)
     recipe_cost = _get_recipe_cost(pl.item_type)
     if not recipe_cost:
-        g._notify("Cannot repair this structure!")
+        g._notify(MSG_INTERACT_REPAIR_CANNOT)
         return
 
     damage_frac = (h.maximum - h.current) / h.maximum
@@ -363,7 +378,7 @@ def _try_repair(g: 'Game', inv: Inventory, pt: Transform) -> None:
     for mat, needed in repair_cost.items():
         if not inv.has(mat, needed):
             mat_name = ITEM_DATA[mat][0] if mat in ITEM_DATA else mat
-            g._notify(f"Need {needed} {mat_name} to repair!")
+            g._notify(MSG_INTERACT_REPAIR_NEED_MAT.format(needed=needed, mat_name=mat_name))
             return
 
     # Consume resources and repair
@@ -379,7 +394,7 @@ def _try_repair(g: 'Game', inv: Inventory, pt: Transform) -> None:
                                        turr.enchant)['label']
     cost_str = ", ".join(
         f"{n} {ITEM_DATA.get(m, (m,))[0]}" for m, n in repair_cost.items())
-    g._notify(f"Repaired {name}! (Used {cost_str})")
+    g._notify(MSG_INTERACT_REPAIR_SUCCESS.format(name=name, cost_str=cost_str))
 
 
 # ======================================================================
@@ -430,7 +445,7 @@ def placement_confirm(g: 'Game') -> None:
         return
     # Block placement inside caves
     if g.in_cave >= 0:
-        g._notify("Can't place items in caves!")
+        g._notify(MSG_INTERACT_PLACE_CAVE_BLOCKED)
         return
     mx, my = pygame.mouse.get_pos()
     world_x = mx + g.camera.x
@@ -440,7 +455,7 @@ def placement_confirm(g: 'Game') -> None:
     tiles = get_placement_tiles(g, tx, ty)
     for ttx, tty in tiles:
         if g.world.is_solid(ttx, tty):
-            g._notify("Can't place here!")
+            g._notify(MSG_INTERACT_PLACE_BLOCKED)
             return
 
     existing_bid = find_building_at_tiles(g, tiles)
@@ -450,7 +465,7 @@ def placement_confirm(g: 'Game') -> None:
                 and existing_placeable
                 and existing_placeable.item_type in _WALL_ITEM_IDS):
             if existing_placeable.item_type == g.placement_item:
-                g._notify("Same wall type already here!")
+                g._notify(MSG_INTERACT_PLACE_SAME_WALL)
                 return
             inv_check: Inventory = g.em.get_component(
                 g.player_id, Inventory)
@@ -461,7 +476,7 @@ def placement_confirm(g: 'Game') -> None:
                 g.placement_enchant = None
                 g.placement_slot = None
                 g.placement_bar = None
-                g._notify("No more items to place!")
+                g._notify(MSG_INTERACT_PLACE_NO_ITEMS)
                 return
             inv_check.add_item(existing_placeable.item_type, 1)
             old_name = ITEM_DATA[existing_placeable.item_type][0]
@@ -484,7 +499,7 @@ def placement_confirm(g: 'Game') -> None:
                 getattr(g, 'placement_rarity', 'common'),
                 getattr(g, 'placement_enchant', None),
             )['label']
-            g._notify(f"Replaced {old_name} with {new_name}")
+            g._notify(MSG_INTERACT_PLACE_REPLACED.format(old_name=old_name, new_name=new_name))
             if not inv_check.has(g.placement_item):
                 g.placement_mode = False
                 g.placement_item = None
@@ -494,7 +509,7 @@ def placement_confirm(g: 'Game') -> None:
                 g.placement_bar = None
             return
         else:
-            g._notify("Can't place here!")
+            g._notify(MSG_INTERACT_PLACE_BLOCKED)
             return
 
     min_tx = min(t[0] for t in tiles)
@@ -509,7 +524,7 @@ def placement_confirm(g: 'Game') -> None:
         g.placement_enchant = None
         g.placement_slot = None
         g.placement_bar = None
-        g._notify("No more items to place!")
+        g._notify(MSG_INTERACT_PLACE_NO_ITEMS)
         return
     # Remove from the specific slot that initiated placement
     pslot = getattr(g, 'placement_slot', None)
@@ -537,7 +552,7 @@ def placement_confirm(g: 'Game') -> None:
         getattr(g, 'placement_rarity', 'common'),
         getattr(g, 'placement_enchant', None),
     )['label']
-    g._notify(f"Placed {placed_name}")
+    g._notify(MSG_INTERACT_PLACE_SUCCESS.format(name=placed_name))
     if not inv.has(g.placement_item):
         g.placement_mode = False
         g.placement_item = None
@@ -681,13 +696,13 @@ def craft(g: 'Game', recipe: Dict[str, Any]) -> None:
     inv: Inventory = g.em.get_component(g.player_id, Inventory)
     for item, cost in recipe['cost'].items():
         if not inv.has(item, cost):
-            g._notify("Not enough materials!")
+            g._notify(MSG_INTERACT_CRAFT_NO_MATS)
             return
     for item, cost in recipe['cost'].items():
         inv.remove_item(item, cost)
     count = recipe.get('count', 1)
     inv.add_item(recipe['gives'], count)
-    g._notify(f"Crafted {recipe['name']}!")
+    g._notify(MSG_INTERACT_CRAFT_SUCCESS.format(name=recipe['name']))
     pt: Transform = g.em.get_component(g.player_id, Transform)
     g.particles.emit(pt.x + 10, pt.y + 14, 10, CYAN, 50, 0.4)
 
@@ -698,7 +713,7 @@ def craft(g: 'Game', recipe: Dict[str, Any]) -> None:
 
 def try_sleep(g: 'Game') -> None:
     if not g.daynight.is_sleepable():
-        g._notify("You can only sleep at night!")
+        g._notify(MSG_INTERACT_SLEEP_DAY_ONLY)
         return
     pt: Transform = g.em.get_component(g.player_id, Transform)
     for eid in g.em.get_entities_with(Transform, Placeable):
@@ -709,6 +724,6 @@ def try_sleep(g: 'Game') -> None:
                 g.sleeping = True
                 g.sleep_timer = SLEEP_DURATION
                 g.daynight.set_speed(NIGHT_SLEEP_SPEED_MULT)
-                g._notify("Sleeping...")
+                g._notify(MSG_INTERACT_SLEEPING)
                 return
-    g._notify("No bed nearby!")
+    g._notify(MSG_INTERACT_NO_BED_NEARBY)

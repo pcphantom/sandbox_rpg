@@ -13,6 +13,7 @@ from core.constants import (SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, CYAN, GREEN,
                             UI_UNEQUIP_NORMAL, UI_EQUIP_HOVER, UI_EQUIP_NORMAL,
                             UI_BORDER_DIALOG, UI_DROPDOWN_HOVER,
                             UI_DROPDOWN_NORMAL)
+from game_controller import MSG_EQUIP_INVENTORY_FULL
 from core.components import Inventory, Health, PlayerStats, Equipment
 from core.item_presentation import build_item_presentation
 from data import ITEM_DATA, ITEM_CATEGORIES
@@ -430,7 +431,7 @@ class CharacterMenu:
                         else:
                             # Non-ammo: overflow means the 1 item didn't fit at all
                             setattr(equipment, attr, item_id)
-                        self.unequip_failed = "Inventory full!"
+                        self.unequip_failed = MSG_EQUIP_INVENTORY_FULL
                     else:
                         # Successfully unequipped
                         equipment.enchantments.pop(attr, None)

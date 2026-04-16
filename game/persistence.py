@@ -25,6 +25,10 @@ from core.constants import (
 from game_controller import (
     BEACON_HP, BEACON_VISUAL_LIGHT_RADIUS,
     STONE_OVEN_HP, STONE_OVEN_SLOTS,
+    MSG_PERSIST_QUICK_SAVED, MSG_PERSIST_SAVE_FAILED,
+    MSG_PERSIST_NO_QUICK_SAVE, MSG_PERSIST_QUICK_LOADED,
+    MSG_PERSIST_SAVED_SLOT, MSG_PERSIST_SLOT_EMPTY,
+    MSG_PERSIST_LOADED_SLOT, MSG_PERSIST_DELETED_SLOT,
 )
 from core.components import (
     Transform, Velocity, Renderable, Collider, Health, Inventory,
@@ -448,38 +452,38 @@ def restore_structure(g: 'Game', struct: Dict[str, Any]) -> None:
 def quick_save(g: 'Game') -> None:
     g._return_held_item()
     if save_load.save_game(QUICK_SAVE_SLOT, build_save_data(g)):
-        g._notify("Quick Saved!")
+        g._notify(MSG_PERSIST_QUICK_SAVED)
     else:
-        g._notify("Save failed!")
+        g._notify(MSG_PERSIST_SAVE_FAILED)
 
 
 def quick_load(g: 'Game') -> None:
     data = save_load.load_game(QUICK_SAVE_SLOT)
     if not data:
-        g._notify("No quick save found!")
+        g._notify(MSG_PERSIST_NO_QUICK_SAVE)
         return
     apply_save_data(g, data)
-    g._notify("Quick Loaded!")
+    g._notify(MSG_PERSIST_QUICK_LOADED)
 
 
 def save_to_slot(g: 'Game', slot: int) -> None:
     g._return_held_item()
     if save_load.save_game(slot, build_save_data(g)):
-        g._notify(f"Saved to slot {slot}!")
+        g._notify(MSG_PERSIST_SAVED_SLOT.format(slot=slot))
     else:
-        g._notify("Save failed!")
+        g._notify(MSG_PERSIST_SAVE_FAILED)
 
 
 def load_from_slot(g: 'Game', slot: int) -> None:
     data = save_load.load_game(slot)
     if not data:
-        g._notify(f"Slot {slot} is empty!")
+        g._notify(MSG_PERSIST_SLOT_EMPTY.format(slot=slot))
         return
     apply_save_data(g, data)
     g.paused = False
-    g._notify(f"Loaded slot {slot}!")
+    g._notify(MSG_PERSIST_LOADED_SLOT.format(slot=slot))
 
 
 def delete_slot(g: 'Game', slot: int) -> None:
     save_load.delete_save(slot)
-    g._notify(f"Deleted slot {slot}.")
+    g._notify(MSG_PERSIST_DELETED_SLOT.format(slot=slot))

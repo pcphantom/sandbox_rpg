@@ -13,6 +13,10 @@ from core.constants import (
     TILE_SIZE, TILE_SAND, TILE_WATER, TILE_DIRT, TILE_STONE_WALL,
     TERRAIN_SPEED_SAND, TERRAIN_SPEED_WATER, TERRAIN_SPEED_DIRT,
 )
+from game_controller import (
+    MSG_UPDATE_DEFEND, MSG_UPDATE_DEFEND_DURATION,
+    MSG_UPDATE_WAKE_UP, MSG_UPDATE_BUFF_EXPIRED,
+)
 from data import RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS
 from core.components import (
     Transform, Velocity, Renderable, Health, Inventory, Collider,
@@ -147,7 +151,7 @@ def update(g, dt: float) -> None:
                 include_ranged=wave_req.get('ranged', False),
                 include_boss=wave_req.get('boss', False))
             if g.wave_system.wave_spawned <= wave_req['count']:
-                g._notify("Defend yourself!", 2.5)
+                g._notify(MSG_UPDATE_DEFEND, MSG_UPDATE_DEFEND_DURATION)
 
     # Sleeping (bed mechanic) — only speeds night while on bed
     if g.sleeping:
@@ -155,7 +159,7 @@ def update(g, dt: float) -> None:
         if g.sleep_timer <= 0 or not g.daynight.is_night():
             g.sleeping = False
             g.daynight.reset_speed()
-            g._notify("You wake up refreshed.")
+            g._notify(MSG_UPDATE_WAKE_UP)
 
     # Cooldowns
     g.interact_cd = max(0, g.interact_cd - dt)
@@ -185,7 +189,7 @@ def update(g, dt: float) -> None:
             g.active_buffs[effect] = (level, value, remaining)
     for effect in expired_buffs:
         del g.active_buffs[effect]
-        g._notify(f"{effect.title()} buff expired.")
+        g._notify(MSG_UPDATE_BUFF_EXPIRED.format(effect=effect.title()))
     # Regen buff: heal 'value' HP per second
     if 'regen' in g.active_buffs:
         _, regen_val, _ = g.active_buffs['regen']

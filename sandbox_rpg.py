@@ -17,6 +17,10 @@ from core.constants import (
     NOTIFICATION_DURATION, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
     HUD_HP_BAR_FG, HUD_HP_BAR_BG, HUD_XP_BAR_FG, HUD_XP_BAR_BG,
 )
+from game_controller import (
+    MSG_GAME_RESPAWN, MSG_GAME_ENTERED_CAVE,
+    MSG_GAME_RETURNED_SURFACE, MSG_GAME_NEW_GAME,
+)
 from core.utils import clamp
 from core.ecs import EntityManager
 from core.components import (
@@ -405,7 +409,7 @@ class Game:
         else:
             self._populate_cave(cave_index)
         self.cave_teleport_cd = 1.5
-        self._notify(f"Entered cave {cave_index + 1}...")
+        self._notify(MSG_GAME_ENTERED_CAVE.format(index=cave_index + 1))
 
     def _exit_cave(self) -> None:
         """Teleport player back to overworld."""
@@ -436,7 +440,7 @@ class Game:
         game_entities.restore_structures(self, self.overworld_structures)
         self.overworld_structures = []
         self.cave_teleport_cd = 1.5
-        self._notify("Returned to the surface.")
+        self._notify(MSG_GAME_RETURNED_SURFACE)
 
     def _populate_cave(self, cave_index: int) -> None:
         game_entities.populate_cave(self, cave_index)
@@ -646,7 +650,7 @@ class Game:
         self.xp_bar.max_value = ps.xp_to_next
         self.xp_bar.set_value(ps.xp)
         self.music_manager.start(self.daynight.is_night())
-        self._notify("New game started.")
+        self._notify(MSG_GAME_NEW_GAME)
 
     def _interact(self) -> None:
         game_interaction.interact(self)
@@ -718,7 +722,7 @@ class Game:
                 inv.slot_rarities.pop(slot, 'common')
         self.camera.follow(pt.x, pt.y)
         self.camera.snap()
-        self._notify("Respawned! You lost some items.")
+        self._notify(MSG_GAME_RESPAWN)
 
     # ======================================================================
     # BED / SLEEP

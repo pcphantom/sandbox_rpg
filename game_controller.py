@@ -1027,6 +1027,157 @@ PLACEABLE_HP_BAR_H: int = 3
 
 
 # ######################################################################
+# ######################################################################
+# ##                                                                  ##
+# ##               CENTRALIZED GAME MESSAGES SECTION                  ##
+# ##                                                                  ##
+# ##  *** WARNING TO ALL AI AGENTS ***                                ##
+# ##  DO NOT change, alter, rename, remove, reword, or modify ANY    ##
+# ##  message in this section unless the user has EXPLICITLY and      ##
+# ##  SPECIFICALLY instructed you to do so.                           ##
+# ##                                                                  ##
+# ##  These messages are the SINGLE SOURCE OF TRUTH for every         ##
+# ##  pop-up notification, flash banner, and overlay text that        ##
+# ##  appears on the player's screen during gameplay.                 ##
+# ##                                                                  ##
+# ##  If you need to add a NEW message, add it here first, then       ##
+# ##  import it where needed.  NEVER put a raw string literal         ##
+# ##  directly into a g._notify() call.                               ##
+# ##                                                                  ##
+# ##  Each message constant follows the naming convention:            ##
+# ##      MSG_<CATEGORY>_<DESCRIPTION>                                ##
+# ##  Each custom duration follows:                                   ##
+# ##      MSG_<CATEGORY>_<DESCRIPTION>_DURATION                       ##
+# ##  Messages that use the default NOTIFICATION_DURATION (2.5s)      ##
+# ##  do NOT need a separate _DURATION constant.                      ##
+# ##                                                                  ##
+# ##  Template messages use {placeholders} for runtime values and     ##
+# ##  are formatted with .format() at the call site.                  ##
+# ##                                                                  ##
+# ######################################################################
+# ######################################################################
+
+# ======================================================================
+# COMBAT MESSAGES
+# ======================================================================
+MSG_COMBAT_NO_RANGED: str = "No ranged weapon equipped!"
+MSG_COMBAT_NO_AMMO: str = "No ammo!"
+MSG_COMBAT_SPELL_COOLDOWN: str = "{name} on cooldown ({remaining:.1f}s)"
+MSG_COMBAT_FULL_HEALTH: str = "Already at full health!"
+MSG_COMBAT_CAST_SPELL: str = "Cast {name}!"
+MSG_COMBAT_BOMB_THROWN: str = "Bomb thrown!"
+
+# ======================================================================
+# INTERACTION MESSAGES — Resources / Harvesting
+# ======================================================================
+MSG_INTERACT_MINED: str = "Mined {count} {name}!"
+
+# ======================================================================
+# INTERACTION MESSAGES — Spells / Buffs (from Use Equipped Item)
+# ======================================================================
+MSG_INTERACT_SPELL_COOLDOWN: str = "{name} on cooldown ({remaining:.1f}s)"
+MSG_INTERACT_BUFF_ALREADY: str = "Already have {effect} {level}!"
+MSG_INTERACT_BUFF_APPLIED: str = "Applied {name} ({duration:.0f}s)"
+MSG_INTERACT_NO_BED: str = "No bed found!"
+MSG_INTERACT_RETURNED_BED: str = "Returned to bed!"
+MSG_INTERACT_TARGET_SPELL: str = "Click target to cast spell. ESC/Right-click to cancel."
+MSG_INTERACT_TARGET_BOMB: str = "Click target to throw. ESC/Right-click to cancel."
+
+# ======================================================================
+# INTERACTION MESSAGES — Consumables
+# ======================================================================
+MSG_INTERACT_FULL_HEALTH: str = "Already at full health!"
+MSG_INTERACT_USED_HEAL: str = "Used {name} (+{heal} HP)"
+
+# ======================================================================
+# INTERACTION MESSAGES — Placement
+# ======================================================================
+MSG_INTERACT_PLACE_HINT: str = "Click to place {name}."
+MSG_INTERACT_PLACE_HINT_BED_ROTATE: str = " R to rotate."
+MSG_INTERACT_PLACE_HINT_CANCEL: str = " ESC/Right-click to cancel."
+MSG_INTERACT_PLACE_CAVE_BLOCKED: str = "Can't place items in caves!"
+MSG_INTERACT_PLACE_BLOCKED: str = "Can't place here!"
+MSG_INTERACT_PLACE_SAME_WALL: str = "Same wall type already here!"
+MSG_INTERACT_PLACE_NO_ITEMS: str = "No more items to place!"
+MSG_INTERACT_PLACE_REPLACED: str = "Replaced {old_name} with {new_name}"
+MSG_INTERACT_PLACE_SUCCESS: str = "Placed {name}"
+
+# ======================================================================
+# INTERACTION MESSAGES — Repair
+# ======================================================================
+MSG_INTERACT_REPAIR_NO_TARGET: str = "No damaged structure nearby!"
+MSG_INTERACT_REPAIR_CANNOT: str = "Cannot repair this structure!"
+MSG_INTERACT_REPAIR_NEED_MAT: str = "Need {needed} {mat_name} to repair!"
+MSG_INTERACT_REPAIR_SUCCESS: str = "Repaired {name}! (Used {cost_str})"
+
+# ======================================================================
+# INTERACTION MESSAGES — Crafting
+# ======================================================================
+MSG_INTERACT_CRAFT_NO_MATS: str = "Not enough materials!"
+MSG_INTERACT_CRAFT_SUCCESS: str = "Crafted {name}!"
+
+# ======================================================================
+# INTERACTION MESSAGES — Bed / Sleep
+# ======================================================================
+MSG_INTERACT_SLEEP_DAY_ONLY: str = "You can only sleep at night!"
+MSG_INTERACT_SLEEPING: str = "Sleeping..."
+MSG_INTERACT_NO_BED_NEARBY: str = "No bed nearby!"
+
+# ======================================================================
+# ENTITY / PROGRESSION MESSAGES
+# ======================================================================
+MSG_ENTITY_CAVE_BOSS_DEFEATED: str = "Cave boss defeated! Loot added to inventory!"
+MSG_ENTITY_CAVE_BOSS_DEFEATED_DURATION: float = 3.0
+MSG_ENTITY_LEVEL_UP: str = "Level Up! Level {level}  (+3 stat points)"
+
+# ======================================================================
+# PERSISTENCE / SAVE-LOAD MESSAGES
+# ======================================================================
+MSG_PERSIST_QUICK_SAVED: str = "Quick Saved!"
+MSG_PERSIST_SAVE_FAILED: str = "Save failed!"
+MSG_PERSIST_NO_QUICK_SAVE: str = "No quick save found!"
+MSG_PERSIST_QUICK_LOADED: str = "Quick Loaded!"
+MSG_PERSIST_SAVED_SLOT: str = "Saved to slot {slot}!"
+MSG_PERSIST_SLOT_EMPTY: str = "Slot {slot} is empty!"
+MSG_PERSIST_LOADED_SLOT: str = "Loaded slot {slot}!"
+MSG_PERSIST_DELETED_SLOT: str = "Deleted slot {slot}."
+
+# ======================================================================
+# UPDATE / GAME LOOP MESSAGES
+# ======================================================================
+MSG_UPDATE_DEFEND: str = "Defend yourself!"
+MSG_UPDATE_DEFEND_DURATION: float = 2.5
+MSG_UPDATE_WAKE_UP: str = "You wake up refreshed."
+MSG_UPDATE_BUFF_EXPIRED: str = "{effect} buff expired."
+
+# ======================================================================
+# EQUIPMENT MESSAGES
+# ======================================================================
+MSG_EQUIP_INVENTORY_FULL: str = "Inventory full!"
+
+# ======================================================================
+# STONE OVEN MESSAGES
+# ======================================================================
+MSG_OVEN_TOOK_ITEM: str = "Took {count} {name}"
+MSG_OVEN_ADDED_ITEM: str = "Added {count} {name}"
+MSG_OVEN_REJECT: str = "You don't want to burn that."
+
+# ======================================================================
+# MAIN GAME MESSAGES
+# ======================================================================
+MSG_GAME_RESPAWN: str = "Respawned! You lost some items."
+MSG_GAME_ENTERED_CAVE: str = "Entered cave {index}..."
+MSG_GAME_RETURNED_SURFACE: str = "Returned to the surface."
+MSG_GAME_NEW_GAME: str = "New game started."
+
+# ######################################################################
+# ##  END OF CENTRALIZED GAME MESSAGES SECTION                        ##
+# ##  Remember: DO NOT modify any message above without explicit      ##
+# ##  user instruction.                                               ##
+# ######################################################################
+
+
+# ######################################################################
 #                        AI / MOB BEHAVIOR CONTROLS
 # ######################################################################
 AI_PROBE_STEP_MULT: float = 0.75

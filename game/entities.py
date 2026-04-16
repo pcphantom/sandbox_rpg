@@ -53,6 +53,8 @@ from game_controller import (
     ELITE_START_DAY, ELITE_MAX_CHANCE, ELITE_CHANCE_PER_DAY,
     ELITE_MIN_WAVE_TIER, ELITE_WAVE_BASE_CHANCE,
     ELITE_TIER_HP_MULT, ELITE_TIER_DMG_MULT, ELITE_TIER_XP_MULT,
+    MSG_ENTITY_CAVE_BOSS_DEFEATED, MSG_ENTITY_CAVE_BOSS_DEFEATED_DURATION,
+    MSG_ENTITY_LEVEL_UP,
 )
 
 
@@ -412,7 +414,7 @@ def on_mob_killed(g: 'Game', eid: int) -> None:
 
     if g.in_cave >= 0 and mob_ai.is_boss:
         g.caves.boss_alive[g.in_cave] = False
-        g._notify("Cave boss defeated! Loot added to inventory!", 3.0)
+        g._notify(MSG_ENTITY_CAVE_BOSS_DEFEATED, MSG_ENTITY_CAVE_BOSS_DEFEATED_DURATION)
 
     from core.spatial import spatial_hash
     spatial_hash.remove(eid)
@@ -432,7 +434,7 @@ def check_level_up(g: 'Game', xp: int) -> None:
             (pt.x, pt.y - 30, f'LEVEL {ps.level}!', CYAN, 2.0))
         g.particles.emit(pt.x + 10, pt.y + 14, 25, YELLOW, 100, 0.8)
         g.particles.emit(pt.x + 10, pt.y + 14, 25, CYAN, 80, 0.6)
-        g._notify(f"Level Up! Level {ps.level}  (+3 stat points)")
+        g._notify(MSG_ENTITY_LEVEL_UP.format(level=ps.level))
 
 
 # ======================================================================

@@ -25,6 +25,10 @@ from core.constants import (
     PLAYER_TORCH_LIGHT_RADIUS,
     PARTICLE_COLOR_FIRE, PARTICLE_COLOR_ICE, PARTICLE_COLOR_LIGHTNING_ARC,
 )
+from game_controller import (
+    MSG_COMBAT_NO_RANGED, MSG_COMBAT_NO_AMMO, MSG_COMBAT_SPELL_COOLDOWN,
+    MSG_COMBAT_FULL_HEALTH, MSG_COMBAT_CAST_SPELL, MSG_COMBAT_BOMB_THROWN,
+)
 from data.day_night import (
     NIGHT_DAMAGE_BASE, NIGHT_DAMAGE_INCREASE, NIGHT_DAMAGE_INCREASE_FREQ,
     NIGHT_DAMAGE_INTERVAL, LIGHT_SAFETY_RADIUS,
@@ -196,7 +200,7 @@ def ranged_attack(g: 'Game') -> None:
     inv: Inventory = g.em.get_component(g.player_id, Inventory)
     ps: PlayerStats = g.em.get_component(g.player_id, PlayerStats)
     if not eq or not eq.ranged:
-        g._notify("No ranged weapon equipped!")
+        g._notify(MSG_COMBAT_NO_RANGED)
         return
     rdata = RANGED_DATA.get(eq.ranged)
     if not rdata:
@@ -227,7 +231,7 @@ def ranged_attack(g: 'Game') -> None:
                 inv.remove_item(a, 1)
                 break
     if not ammo_id:
-        g._notify("No ammo!")
+        g._notify(MSG_COMBAT_NO_AMMO)
         return
 
     bonus = AMMO_BONUS_DAMAGE.get(ammo_id, 0)
@@ -453,7 +457,7 @@ def spell_cast_at_mouse(g: 'Game') -> None:
         return
     if g.spell_item in g.spell_cooldowns:
         remaining = g.spell_cooldowns[g.spell_item]
-        g._notify(f"{sdata['name']} on cooldown ({remaining:.1f}s)")
+        g._notify(MSG_COMBAT_SPELL_COOLDOWN.format(name=sdata['name'], remaining=remaining))
         return
 
     pt: Transform = g.em.get_component(g.player_id, Transform)
@@ -466,7 +470,7 @@ def spell_cast_at_mouse(g: 'Game') -> None:
             heal_amt = max(1, int(heal_amt * level_mult))
             ph: Health = g.em.get_component(g.player_id, Health)
             if ph.current >= ph.maximum:
-                g._notify("Already at full health!")
+                g._notify(MSG_COMBAT_FULL_HEALTH)
                 g.spell_targeting = False
                 g.spell_item = None
                 return
@@ -475,7 +479,7 @@ def spell_cast_at_mouse(g: 'Game') -> None:
             g.dmg_numbers.append(
                 (pt.x, pt.y - 20, f'+{heal_amt}', GREEN, 0.8))
         g.particles.emit(pt.x + 10, pt.y + 14, 12, sdata['color'], 60, 0.4)
-        g._notify(f"Cast {sdata['name']}!")
+        g._notify(MSG_COMBAT_CAST_SPELL.format(name=sdata['name']))
         g.spell_cooldowns[g.spell_item] = sdata.get('cooldown', SPELL_RECHARGE)
         g.spell_targeting = False
         g.spell_item = None
@@ -528,7 +532,7 @@ def spell_cast_at_mouse(g: 'Game') -> None:
     proj.spell_id = g.spell_item
     g.em.add_component(pid, proj)
     g.particles.emit(pt.x + 10, pt.y + 14, 8, sdata['color'], 60, 0.3)
-    g._notify(f"Cast {sdata['name']}!")
+    g._notify(MSG_COMBAT_CAST_SPELL.format(name=sdata['name']))
     g.spell_cooldowns[g.spell_item] = sdata.get('cooldown', SPELL_RECHARGE)
     g.spell_targeting = False
     g.spell_item = None
@@ -562,7 +566,7 @@ def throw_bomb(g: 'Game', bdata: dict) -> None:
     proj.bomb_radius = bdata['radius']
     g.em.add_component(pid, proj)
     g.particles.emit(pt.x + 10, pt.y + 14, 6, bdata['color'], 50, 0.3)
-    g._notify("Bomb thrown!")
+    g._notify(MSG_COMBAT_BOMB_THROWN)
     if g.spell_item:
         inv.remove_item(g.spell_item, 1)
     g.spell_targeting = False

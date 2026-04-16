@@ -27,6 +27,7 @@ from game_controller import (
     SMELTING_RECIPES, OVEN_COOKING_RECIPES, OVEN_FUEL,
     OVEN_VALID_CATEGORIES,
     STONE_OVEN_SLOTS, STONE_OVEN_LIGHT_RADIUS,
+    MSG_OVEN_TOOK_ITEM, MSG_OVEN_ADDED_ITEM, MSG_OVEN_REJECT,
 )
 from ui.draggable import DraggableWindow
 
@@ -347,19 +348,19 @@ class StoneOvenUI:
                         iid, cnt = item
                         inv.add_item(iid, cnt)
                         del stor.slots[slot_idx]
-                        g._notify(f"Took {cnt} {ITEM_DATA[iid][0] if iid in ITEM_DATA else iid}")
+                        g._notify(MSG_OVEN_TOOK_ITEM.format(count=cnt, name=ITEM_DATA[iid][0] if iid in ITEM_DATA else iid))
                     elif inv.held_item:
                         # Drop held item (from inventory drag) into oven slot
                         held_id, held_cnt = inv.held_item
                         if is_valid_oven_item(held_id):
                             stor.slots[slot_idx] = (held_id, held_cnt)
                             name = ITEM_DATA[held_id][0] if held_id in ITEM_DATA else held_id
-                            g._notify(f"Added {held_cnt} {name}")
+                            g._notify(MSG_OVEN_ADDED_ITEM.format(count=held_cnt, name=name))
                             inv.held_item = None
                             inv.held_enchant = None
                             inv.held_rarity = 'common'
                         else:
-                            g._notify("You don't want to burn that.")
+                            g._notify(MSG_OVEN_REJECT)
                     else:
                         # Put selected hotbar item in
                         eq_id = inv.get_equipped()
@@ -371,9 +372,9 @@ class StoneOvenUI:
                                     inv.remove_item(eq_id, total)
                                     stor.slots[slot_idx] = (eq_id, total)
                                     name = ITEM_DATA[eq_id][0] if eq_id in ITEM_DATA else eq_id
-                                    g._notify(f"Added {total} {name}")
+                                    g._notify(MSG_OVEN_ADDED_ITEM.format(count=total, name=name))
                             else:
-                                g._notify("You don't want to burn that.")
+                                g._notify(MSG_OVEN_REJECT)
                     return True
         return False
 
