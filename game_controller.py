@@ -1058,9 +1058,9 @@ PLACEABLE_HP_BAR_H: int = 3
 # ##  1. To change the words the player sees, edit only the text       ##
 # ##     inside the quotes on the right side of the = sign.            ##
 # ##  2. To change how long a popup stays on screen, edit the          ##
-# ##     matching *_DURATION value in seconds.                         ##
+# ##     matching *_DURATION value in seconds. ##
 # ##  3. If a message has NO per-message *_DURATION constant, it uses  ##
-# ##     NOTIFICATION_DURATION above. Changing that changes every      ##
+# ##     NOTIFICATION_DURATION above. Changing that changes every ##
 # ##     notification that does not have its own custom duration.      ##
 # ##  4. If a message contains placeholders like {name}, {slot},       ##
 # ##     {level}, or {count}, keep those placeholder names in the      ##
