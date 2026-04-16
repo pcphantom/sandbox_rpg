@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Tuple, Optional, List
 if TYPE_CHECKING:
     from sandbox_rpg import Game
 
+import game_controller as gc
+
 
 def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     """Parse and execute a command string.
@@ -22,10 +24,10 @@ def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     try:
         parts = shlex.split(raw.strip())
     except ValueError as exc:
-        return False, f"Invalid command syntax: {exc}"
+        return False, gc.MSG_CHEAT_INVALID_COMMAND_SYNTAX.format(error=exc)
 
     if not parts:
-        return False, "No command entered."
+        return False, gc.MSG_CHEAT_NO_COMMAND_ENTERED
 
     cmd = parts[0].lower()
     normalized_raw = ' '.join(part.lower() for part in parts)
@@ -34,18 +36,18 @@ def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     if normalized_raw == "enable cheats":
         g.cheats_enabled = True
         g.has_cheated = True
-        return True, "Cheats enabled! Press the button below the minimap."
+        return True, gc.MSG_CHEAT_ENABLED
 
     if normalized_raw in ("disable cheats", "cheats disabled", "cheats off"):
         _disable_cheats(g)
-        return True, "Cheats disabled."
+        return True, gc.MSG_CHEAT_DISABLED
 
     if cmd == "help":
         return True, _help_text(g)
 
     # -- Cheat-gated commands below --
     if not g.cheats_enabled:
-        return False, "Cheats are not enabled. Type: enable cheats"
+        return False, gc.MSG_CHEAT_NOT_ENABLED
 
     if cmd == "set" and len(parts) >= 3:
         return _cmd_set(g, parts[1].lower(), parts[2:])
@@ -56,13 +58,13 @@ def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     if cmd == "god":
         g.god_mode = not g.god_mode
         state = "ON" if g.god_mode else "OFF"
-        return True, f"God mode {state}"
+        return True, gc.MSG_CHEAT_GOD_MODE.format(state=state)
 
     if cmd == "heal":
         from core.components import Health
         ph = g.em.get_component(g.player_id, Health)
         ph.current = ph.maximum
-        return True, f"Healed to {ph.maximum} HP"
+        return True, gc.MSG_CHEAT_HEALED_TO_HP.format(hp=ph.maximum)
 
     if cmd == "kill":
         return _cmd_kill(g)
@@ -82,16 +84,14 @@ def execute_command(g: 'Game', raw: str) -> Tuple[bool, str]:
     if cmd == "clear":
         return True, ""
 
-    return False, f"Unknown command: {cmd}. Type help for a list."
+    return False, gc.MSG_CHEAT_UNKNOWN_COMMAND.format(cmd=cmd)
 
 
 def _help_text(g: 'Game') -> str:
     """Return a short help string."""
     if not g.cheats_enabled:
-        return "enable cheats | disable cheats | help"
-    return ("disable cheats | set <stat> <val> | give [enchant lvl] [rarity] "
-            "<item> [+n] [count] | god | heal | kill | autokill on|off | "
-            "timestop | timestart | levelup [n] | help")
+        return gc.MSG_CHEAT_HELP_DISABLED
+    return gc.MSG_CHEAT_HELP_ENABLED
 
 
 def _disable_cheats(g: 'Game') -> None:
@@ -200,7 +200,7 @@ def _parse_give_spec(args: List[str]) -> tuple[Optional[dict], Optional[str]]:
 
     item_query, count = _split_give_args(args)
     if not item_query:
-        return None, "Missing item. Usage: give <item id/name> [count]"
+        return None, gc.MSG_CHEAT_GIVE_MISSING_ITEM
 
     tokens = item_query.split()
     consumed: set[int] = set()
@@ -214,7 +214,7 @@ def _parse_give_spec(args: List[str]) -> tuple[Optional[dict], Optional[str]]:
         enchant_level = parse_level_token(tokens[token_index + 1])
         if enchant_type and enchant_level is not None:
             if enchant is not None:
-                return None, "Only one enchant can be specified."
+                return None, gc.MSG_CHEAT_GIVE_ONE_ENCHANT_ONLY
             enchant = {'type': enchant_type, 'level': enchant_level}
             consumed.update({token_index, token_index + 1})
             token_index += 2
@@ -228,7 +228,7 @@ def _parse_give_spec(args: List[str]) -> tuple[Optional[dict], Optional[str]]:
         if resolved_rarity is None:
             continue
         if rarity != 'common':
-            return None, "Only one rarity can be specified."
+            return None, gc.MSG_CHEAT_GIVE_ONE_RARITY_ONLY
         rarity = resolved_rarity
         consumed.add(token_index)
 
@@ -237,9 +237,10 @@ def _parse_give_spec(args: List[str]) -> tuple[Optional[dict], Optional[str]]:
             continue
         resolved_level = parse_level_token(token)
         if resolved_level is None:
-            return None, f"Invalid enhancement token: {token}"
+            return None, gc.MSG_CHEAT_GIVE_INVALID_ENHANCEMENT_TOKEN.format(
+                token=token)
         if enhancement_level is not None:
-            return None, "Only one enhancement can be specified."
+            return None, gc.MSG_CHEAT_GIVE_ONE_ENHANCEMENT_ONLY
         enhancement_level = resolved_level
         consumed.add(token_index)
 
@@ -247,7 +248,7 @@ def _parse_give_spec(args: List[str]) -> tuple[Optional[dict], Optional[str]]:
                     if token_index not in consumed]
     item_tokens = [tokens[token_index] for token_index in item_indices]
     if not item_tokens:
-        return None, "Missing item name after metadata specifiers."
+        return None, gc.MSG_CHEAT_GIVE_MISSING_ITEM_AFTER_METADATA
 
     return {
         'count': count,
@@ -270,27 +271,35 @@ def _resolve_give_spec(spec: dict) -> tuple[Optional[dict], Optional[str]]:
     item_query = ' '.join(spec['item_tokens']).strip()
     matches = _find_item_matches(item_query)
     if not matches:
-        return None, f"Unknown item: {item_query}"
+        return None, gc.MSG_CHEAT_GIVE_UNKNOWN_ITEM.format(item_query=item_query)
     if len(matches) > 1:
-        return None, (f"Ambiguous item: {item_query}. Matches: "
-                      f"{_format_match_list(matches)}")
+        return None, gc.MSG_CHEAT_GIVE_AMBIGUOUS_ITEM.format(
+            item_query=item_query,
+            matches=_format_match_list(matches),
+        )
 
     item_id = matches[0]
     enhancement_level = spec['enhancement_level']
     if enhancement_level is not None:
         enhanced_item_id = set_item_enhancement_level(item_id, enhancement_level)
         if not enhanced_item_id:
-            return None, f"{ITEM_DATA[item_id][0]} cannot be enhanced to +{enhancement_level}."
+            return None, gc.MSG_CHEAT_GIVE_CANNOT_ENHANCE.format(
+                name=ITEM_DATA[item_id][0],
+                level=enhancement_level,
+            )
         item_id = enhanced_item_id
 
     rarity = spec['rarity']
     if rarity != 'common' and not HAS_RARITY.get(item_id, False):
-        return None, f"{ITEM_DATA[item_id][0]} does not support rarity rolls."
+        return None, gc.MSG_CHEAT_GIVE_NO_RARITY_SUPPORT.format(
+            name=ITEM_DATA[item_id][0])
 
     enchant = spec['enchant']
     if enchant and not can_apply_enchant_to_item(item_id, enchant['type']):
-        return None, (f"{ITEM_DATA[item_id][0]} cannot receive a "
-                      f"{enchant['type']} enchant.")
+        return None, gc.MSG_CHEAT_GIVE_CANNOT_ENCHANT.format(
+            name=ITEM_DATA[item_id][0],
+            enchant_type=enchant['type'],
+        )
 
     return {
         'item_id': item_id,
@@ -362,7 +371,7 @@ def autocomplete_command(g: 'Game', raw: str,
 
     remainder = stripped[4:].lstrip()
     if not remainder or raw.endswith(' '):
-        return raw, 'Tab: autocomplete give item ids or names'
+        return raw, gc.MSG_CHEAT_AUTOCOMPLETE_HINT
 
     spec, error = _parse_give_spec(remainder.split())
     if spec is None:
@@ -376,10 +385,12 @@ def autocomplete_command(g: 'Game', raw: str,
     if len(matches) == 1:
         item_id = matches[0]
         completed = _build_autocomplete_text(spec, item_id)
-        hint = f"Give: {ITEM_DATA[item_id][0]}"
+        hint = gc.MSG_CHEAT_AUTOCOMPLETE_GIVE_PREVIEW.format(
+            name=ITEM_DATA[item_id][0])
         return (completed if apply else raw), hint
 
-    return raw, f"Matches: {_format_match_list(matches)}"
+    return raw, gc.MSG_CHEAT_AUTOCOMPLETE_MATCHES.format(
+        matches=_format_match_list(matches))
 
 
 # ── set <stat> <value> ───────────────────────────────────────────────
@@ -393,58 +404,59 @@ def _cmd_set(g: 'Game', stat: str, args: list) -> Tuple[bool, str]:
     try:
         val = int(args[0])
     except (ValueError, IndexError):
-        return False, "Invalid or missing value."
+        return False, gc.MSG_CHEAT_SET_INVALID_VALUE
 
     if stat == "health" or stat == "hp":
         ph.current = max(1, min(val, ph.maximum))
         g.health_bar.set_value(ph.current)
-        return True, f"HP set to {ph.current}"
+        return True, gc.MSG_CHEAT_SET_HP.format(value=ph.current)
 
     if stat == "maxhp" or stat == "max_hp":
         ph.maximum = max(1, val)
         ph.current = min(ph.current, ph.maximum)
         g.health_bar.max_value = ph.maximum
         g.health_bar.set_value(ph.current)
-        return True, f"Max HP set to {ph.maximum}"
+        return True, gc.MSG_CHEAT_SET_MAX_HP.format(value=ph.maximum)
 
     if stat == "level":
         ps.level = max(1, val)
-        return True, f"Level set to {ps.level}"
+        return True, gc.MSG_CHEAT_SET_LEVEL.format(value=ps.level)
 
     if stat == "xp":
         ps.xp = max(0, val)
         g.xp_bar.set_value(ps.xp)
-        return True, f"XP set to {ps.xp}"
+        return True, gc.MSG_CHEAT_SET_XP.format(value=ps.xp)
 
     if stat == "stat_points" or stat == "points":
         ps.stat_points = max(0, val)
-        return True, f"Stat points set to {ps.stat_points}"
+        return True, gc.MSG_CHEAT_SET_STAT_POINTS.format(
+            value=ps.stat_points)
 
     if stat == "strength" or stat == "str":
         ps.strength = max(1, val)
-        return True, f"Strength set to {ps.strength}"
+        return True, gc.MSG_CHEAT_SET_STRENGTH.format(value=ps.strength)
 
     if stat == "agility" or stat == "agi":
         ps.agility = max(1, val)
-        return True, f"Agility set to {ps.agility}"
+        return True, gc.MSG_CHEAT_SET_AGILITY.format(value=ps.agility)
 
     if stat == "vitality" or stat == "vit":
         ps.vitality = max(1, val)
-        return True, f"Vitality set to {ps.vitality}"
+        return True, gc.MSG_CHEAT_SET_VITALITY.format(value=ps.vitality)
 
     if stat == "luck":
         ps.luck = max(1, val)
-        return True, f"Luck set to {ps.luck}"
+        return True, gc.MSG_CHEAT_SET_LUCK.format(value=ps.luck)
 
     if stat == "kills":
         ps.kills = max(0, val)
-        return True, f"Kills set to {ps.kills}"
+        return True, gc.MSG_CHEAT_SET_KILLS.format(value=ps.kills)
 
     if stat == "day":
         g.daynight.day_number = max(1, val)
-        return True, f"Day set to {g.daynight.day_number}"
+        return True, gc.MSG_CHEAT_SET_DAY.format(value=g.daynight.day_number)
 
-    return False, f"Unknown stat: {stat}"
+    return False, gc.MSG_CHEAT_UNKNOWN_STAT.format(stat=stat)
 
 
 # ── give <item_id> [count] ───────────────────────────────────────────
@@ -455,10 +467,10 @@ def _cmd_give(g: 'Game', args: List[str]) -> Tuple[bool, str]:
 
     parsed_spec, error = _parse_give_spec(args)
     if parsed_spec is None:
-        return False, error or "Invalid item spec."
+        return False, error or gc.MSG_CHEAT_GIVE_INVALID_ITEM_SPEC
     resolved_spec, error = _resolve_give_spec(parsed_spec)
     if resolved_spec is None:
-        return False, error or "Invalid item spec."
+        return False, error or gc.MSG_CHEAT_GIVE_INVALID_ITEM_SPEC
 
     inv = g.em.get_component(g.player_id, Inventory)
     overflow = inv.add_item_enchanted(
@@ -469,7 +481,7 @@ def _cmd_give(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     )
     placed_count = resolved_spec['count'] - overflow
     if placed_count <= 0:
-        return False, "Inventory is full."
+        return False, gc.MSG_CHEAT_GIVE_INVENTORY_FULL
 
     presentation = build_item_presentation(
         resolved_spec['item_id'],
@@ -482,16 +494,22 @@ def _cmd_give(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     if resolved_spec['rarity'] != 'common':
         rarity_suffix = f" ({resolved_spec['rarity'].title()})"
     if overflow > 0:
-        return True, (f"Gave {presentation['label']}{rarity_suffix}. "
-                      f"{overflow} could not fit.")
-    return True, f"Gave {presentation['label']}{rarity_suffix}"
+        return True, gc.MSG_CHEAT_GIVE_SUCCESS_PARTIAL.format(
+            label=presentation['label'],
+            rarity_suffix=rarity_suffix,
+            overflow=overflow,
+        )
+    return True, gc.MSG_CHEAT_GIVE_SUCCESS.format(
+        label=presentation['label'],
+        rarity_suffix=rarity_suffix,
+    )
 
 
 # ── kill (all enemies) ───────────────────────────────────────────────
 
 def _cmd_kill(g: 'Game') -> Tuple[bool, str]:
     killed = kill_all_enemies(g)
-    return True, f"Killed {killed} enemies"
+    return True, gc.MSG_CHEAT_KILLED_ENEMIES.format(count=killed)
 
 
 def _cmd_autokill(g: 'Game', args: List[str]) -> Tuple[bool, str]:
@@ -503,30 +521,30 @@ def _cmd_autokill(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     elif not state_arg:
         g.autokill_enabled = not g.autokill_enabled
     else:
-        return False, "Usage: autokill on|off"
+        return False, gc.MSG_CHEAT_AUTOKILL_USAGE
 
     g.autokill_timer = 0.0
     state = 'ON' if g.autokill_enabled else 'OFF'
-    return True, f"Autokill {state} (1.0s interval)"
+    return True, gc.MSG_CHEAT_AUTOKILL_STATE.format(state=state)
 
 
 def _cmd_timestop(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     if args:
-        return False, "Usage: timestop"
+        return False, gc.MSG_CHEAT_TIMESTOP_USAGE
     if g.daynight.is_time_stopped():
-        return True, "Time is already stopped."
+        return True, gc.MSG_CHEAT_TIME_ALREADY_STOPPED
     g.daynight.stop_time()
-    return True, "Time stopped."
+    return True, gc.MSG_CHEAT_TIME_STOPPED
 
 
 def _cmd_timestart(g: 'Game', args: List[str]) -> Tuple[bool, str]:
     if args:
-        return False, "Usage: timestart"
+        return False, gc.MSG_CHEAT_TIMESTART_USAGE
     if not g.daynight.is_time_stopped():
-        return True, "Time is already running."
+        return True, gc.MSG_CHEAT_TIME_ALREADY_RUNNING
     g.daynight.start_time()
     g.daynight.reset_speed()
-    return True, "Time restarted."
+    return True, gc.MSG_CHEAT_TIME_RESTARTED
 
 
 # ── levelup [amount] ─────────────────────────────────────────────────
@@ -541,4 +559,8 @@ def _cmd_levelup(g: 'Game', amount_str: str) -> Tuple[bool, str]:
     for _ in range(amount):
         ps.level += 1
         ps.stat_points += 3
-    return True, f"Leveled up {amount}x → Lv.{ps.level} (+{amount * 3} stat points)"
+    return True, gc.MSG_CHEAT_LEVELUP_RESULT.format(
+        amount=amount,
+        level=ps.level,
+        stat_points=amount * 3,
+    )

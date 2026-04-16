@@ -896,6 +896,14 @@ Fire enchant on equipped weapon (hotbar or equipment slot) counts as a light sou
 
 All notification messages are defined as `MSG_*` constants in `game_controller.py`. No raw message strings should ever appear in `g._notify()` calls.
 
+### How to edit them
+
+- Change the quoted text on the right side of a `MSG_*` constant to change what appears in game.
+- Change the matching `*_DURATION` value to change how many real seconds that popup remains visible.
+- If a message does **not** have its own `*_DURATION`, it uses `NOTIFICATION_DURATION`.
+- Command-bar result messages use `CMD_BAR_RESULT_DURATION`.
+- Keep placeholder names like `{name}`, `{slot}`, `{level}`, `{count}`, `{matches}` intact or the runtime values will stop appearing.
+
 ### Time-of-Day Flash Banners (already centralized)
 
 | Constant | Value | Duration | Trigger |
@@ -1032,6 +1040,41 @@ All notification messages are defined as `MSG_*` constants in `game_controller.p
 | `MSG_GAME_ENTERED_CAVE` | `"Entered cave {index}..."` | `sandbox_rpg.py` |
 | `MSG_GAME_RETURNED_SURFACE` | `"Returned to the surface."` | `sandbox_rpg.py` |
 | `MSG_GAME_NEW_GAME` | `"New game started."` | `sandbox_rpg.py` |
+
+### Command Bar / Cheat Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `CMD_BAR_RESULT_DURATION` | `3.0` | `ui/command_bar.py` |
+| `MSG_CMD_BAR_TITLE` | `"Run Command (F12)"` | `ui/command_bar.py` |
+| `MSG_CMD_BAR_PLACEHOLDER` | `"Type a command and press Enter..."` | `ui/command_bar.py` |
+| `MSG_CMD_BAR_DEFAULT_HINT` | `Type "help" for a list of commands` | `ui/command_bar.py` |
+| `MSG_CHEAT_INVALID_COMMAND_SYNTAX` | `"Invalid command syntax: {error}"` | `game/cheats.py` |
+| `MSG_CHEAT_NO_COMMAND_ENTERED` | `"No command entered."` | `game/cheats.py` |
+| `MSG_CHEAT_ENABLED` | `"Cheats enabled! Press the button below the minimap."` | `game/cheats.py` |
+| `MSG_CHEAT_DISABLED` | `"Cheats disabled."` | `game/cheats.py` |
+| `MSG_CHEAT_NOT_ENABLED` | `"Cheats are not enabled. Type: enable cheats"` | `game/cheats.py` |
+| `MSG_CHEAT_UNKNOWN_COMMAND` | `"Unknown command: {cmd}. Type help for a list."` | `game/cheats.py` |
+| `MSG_CHEAT_HELP_DISABLED` | `"enable cheats \| disable cheats \| help"` | `game/cheats.py` |
+| `MSG_CHEAT_HELP_ENABLED` | `"disable cheats \| set <stat> <val> ... \| help"` | `game/cheats.py` |
+| `MSG_CHEAT_GOD_MODE` | `"God mode {state}"` | `game/cheats.py` |
+| `MSG_CHEAT_HEALED_TO_HP` | `"Healed to {hp} HP"` | `game/cheats.py` |
+| `MSG_CHEAT_SET_*` | Multiple stat-set result templates | `game/cheats.py` |
+| `MSG_CHEAT_UNKNOWN_STAT` | `"Unknown stat: {stat}"` | `game/cheats.py` |
+| `MSG_CHEAT_GIVE_*` | Give-command parse/validation/result templates | `game/cheats.py` |
+| `MSG_CHEAT_AUTOCOMPLETE_HINT` | `"Tab: autocomplete give item ids or names"` | `game/cheats.py` |
+| `MSG_CHEAT_AUTOCOMPLETE_GIVE_PREVIEW` | `"Give: {name}"` | `game/cheats.py` |
+| `MSG_CHEAT_AUTOCOMPLETE_MATCHES` | `"Matches: {matches}"` | `game/cheats.py` |
+| `MSG_CHEAT_KILLED_ENEMIES` | `"Killed {count} enemies"` | `game/cheats.py` |
+| `MSG_CHEAT_AUTOKILL_USAGE` | `"Usage: autokill on\|off"` | `game/cheats.py` |
+| `MSG_CHEAT_AUTOKILL_STATE` | `"Autokill {state} (1.0s interval)"` | `game/cheats.py` |
+| `MSG_CHEAT_TIMESTOP_USAGE` | `"Usage: timestop"` | `game/cheats.py` |
+| `MSG_CHEAT_TIME_ALREADY_STOPPED` | `"Time is already stopped."` | `game/cheats.py` |
+| `MSG_CHEAT_TIME_STOPPED` | `"Time stopped."` | `game/cheats.py` |
+| `MSG_CHEAT_TIMESTART_USAGE` | `"Usage: timestart"` | `game/cheats.py` |
+| `MSG_CHEAT_TIME_ALREADY_RUNNING` | `"Time is already running."` | `game/cheats.py` |
+| `MSG_CHEAT_TIME_RESTARTED` | `"Time restarted."` | `game/cheats.py` |
+| `MSG_CHEAT_LEVELUP_RESULT` | `"Leveled up {amount}x → Lv.{level} (+{stat_points} stat points)"` | `game/cheats.py` |
 
 ## Initial Mob Population (`data/day_events.py`, re-exported via `constants.py`)
 

@@ -14,6 +14,8 @@ from game_controller import (
     CMD_BAR_TEXT, CMD_BAR_PLACEHOLDER, CMD_BAR_CLOSE_HOVER,
     CMD_BAR_CLOSE_NORMAL, CMD_BAR_RESULT_OK, CMD_BAR_RESULT_ERR,
     WHITE, GRAY,
+    CMD_BAR_RESULT_DURATION, MSG_CMD_BAR_TITLE, MSG_CMD_BAR_PLACEHOLDER,
+    MSG_CMD_BAR_DEFAULT_HINT,
 )
 
 BAR_WIDTH = 500
@@ -58,7 +60,7 @@ class CommandBar:
     def _set_result(self, msg: str, ok: bool = True) -> None:
         self.result_msg = msg
         self.result_ok = ok
-        self.result_timer = 3.0
+        self.result_timer = CMD_BAR_RESULT_DURATION
 
     def _refresh_autocomplete_hint(
             self,
@@ -141,7 +143,7 @@ class CommandBar:
                          (px, py, BAR_WIDTH, BAR_HEIGHT), 2, border_radius=6)
 
         # Title
-        title = self.font.render("Run Command (F12)", True, WHITE)
+        title = self.font.render(MSG_CMD_BAR_TITLE, True, WHITE)
         surface.blit(title, (px + 12, py + 8))
 
         # Close button
@@ -164,7 +166,7 @@ class CommandBar:
         if self.text:
             it = self.font.render(self.text, True, CMD_BAR_TEXT)
         else:
-            it = self.font.render("Type a command and press Enter...",
+            it = self.font.render(MSG_CMD_BAR_PLACEHOLDER,
                                   True, CMD_BAR_PLACEHOLDER)
         surface.blit(it, (px + 14, input_y + 4))
 
@@ -183,6 +185,6 @@ class CommandBar:
             surface.blit(rt, (px + 12, py + 66))
 
         # Hint
-        hint_text = self.autocomplete_hint or 'Type "help" for a list of commands'
+        hint_text = self.autocomplete_hint or MSG_CMD_BAR_DEFAULT_HINT
         hint = self.font_sm.render(hint_text, True, GRAY)
         surface.blit(hint, (px + 12, py + BAR_HEIGHT - 20))

@@ -1054,6 +1054,19 @@ PLACEABLE_HP_BAR_H: int = 3
 # ##  Template messages use {placeholders} for runtime values and     ##
 # ##  are formatted with .format() at the call site.                  ##
 # ##                                                                  ##
+# ##  EXACTLY HOW TO EDIT THESE VALUES:                                ##
+# ##  1. To change the words the player sees, edit only the text       ##
+# ##     inside the quotes on the right side of the = sign.            ##
+# ##  2. To change how long a popup stays on screen, edit the          ##
+# ##     matching *_DURATION value in seconds.                         ##
+# ##  3. If a message has NO per-message *_DURATION constant, it uses  ##
+# ##     NOTIFICATION_DURATION above. Changing that changes every      ##
+# ##     notification that does not have its own custom duration.      ##
+# ##  4. If a message contains placeholders like {name}, {slot},       ##
+# ##     {level}, or {count}, keep those placeholder names in the      ##
+# ##     string or the live runtime values will stop appearing.        ##
+# ##  5. Command-bar result messages use CMD_BAR_RESULT_DURATION.      ##
+# ##                                                                  ##
 # ######################################################################
 # ######################################################################
 
@@ -1169,6 +1182,73 @@ MSG_GAME_RESPAWN: str = "Respawned! You lost some items."
 MSG_GAME_ENTERED_CAVE: str = "Entered cave {index}..."
 MSG_GAME_RETURNED_SURFACE: str = "Returned to the surface."
 MSG_GAME_NEW_GAME: str = "New game started."
+
+# ======================================================================
+# COMMAND BAR / CHEAT RESULT MESSAGES
+# ======================================================================
+# These are displayed inside the on-screen F12 command bar.
+# Change CMD_BAR_RESULT_DURATION to control how long the result line stays
+# visible after pressing Enter on a command.
+CMD_BAR_RESULT_DURATION: float = 3.0
+MSG_CMD_BAR_TITLE: str = "Run Command (F12)"
+MSG_CMD_BAR_PLACEHOLDER: str = "Type a command and press Enter..."
+MSG_CMD_BAR_DEFAULT_HINT: str = 'Type "help" for a list of commands'
+
+MSG_CHEAT_INVALID_COMMAND_SYNTAX: str = "Invalid command syntax: {error}"
+MSG_CHEAT_NO_COMMAND_ENTERED: str = "No command entered."
+MSG_CHEAT_ENABLED: str = "Cheats enabled! Press the button below the minimap."
+MSG_CHEAT_DISABLED: str = "Cheats disabled."
+MSG_CHEAT_NOT_ENABLED: str = "Cheats are not enabled. Type: enable cheats"
+MSG_CHEAT_UNKNOWN_COMMAND: str = "Unknown command: {cmd}. Type help for a list."
+MSG_CHEAT_HELP_DISABLED: str = "enable cheats | disable cheats | help"
+MSG_CHEAT_HELP_ENABLED: str = (
+    "disable cheats | set <stat> <val> | give [enchant lvl] [rarity] "
+    "<item> [+n] [count] | god | heal | kill | autokill on|off | "
+    "timestop | timestart | levelup [n] | help"
+)
+MSG_CHEAT_GOD_MODE: str = "God mode {state}"
+MSG_CHEAT_HEALED_TO_HP: str = "Healed to {hp} HP"
+MSG_CHEAT_SET_INVALID_VALUE: str = "Invalid or missing value."
+MSG_CHEAT_SET_HP: str = "HP set to {value}"
+MSG_CHEAT_SET_MAX_HP: str = "Max HP set to {value}"
+MSG_CHEAT_SET_LEVEL: str = "Level set to {value}"
+MSG_CHEAT_SET_XP: str = "XP set to {value}"
+MSG_CHEAT_SET_STAT_POINTS: str = "Stat points set to {value}"
+MSG_CHEAT_SET_STRENGTH: str = "Strength set to {value}"
+MSG_CHEAT_SET_AGILITY: str = "Agility set to {value}"
+MSG_CHEAT_SET_VITALITY: str = "Vitality set to {value}"
+MSG_CHEAT_SET_LUCK: str = "Luck set to {value}"
+MSG_CHEAT_SET_KILLS: str = "Kills set to {value}"
+MSG_CHEAT_SET_DAY: str = "Day set to {value}"
+MSG_CHEAT_UNKNOWN_STAT: str = "Unknown stat: {stat}"
+MSG_CHEAT_GIVE_MISSING_ITEM: str = "Missing item. Usage: give <item id/name> [count]"
+MSG_CHEAT_GIVE_ONE_ENCHANT_ONLY: str = "Only one enchant can be specified."
+MSG_CHEAT_GIVE_ONE_RARITY_ONLY: str = "Only one rarity can be specified."
+MSG_CHEAT_GIVE_INVALID_ENHANCEMENT_TOKEN: str = "Invalid enhancement token: {token}"
+MSG_CHEAT_GIVE_ONE_ENHANCEMENT_ONLY: str = "Only one enhancement can be specified."
+MSG_CHEAT_GIVE_MISSING_ITEM_AFTER_METADATA: str = "Missing item name after metadata specifiers."
+MSG_CHEAT_GIVE_UNKNOWN_ITEM: str = "Unknown item: {item_query}"
+MSG_CHEAT_GIVE_AMBIGUOUS_ITEM: str = "Ambiguous item: {item_query}. Matches: {matches}"
+MSG_CHEAT_GIVE_CANNOT_ENHANCE: str = "{name} cannot be enhanced to +{level}."
+MSG_CHEAT_GIVE_NO_RARITY_SUPPORT: str = "{name} does not support rarity rolls."
+MSG_CHEAT_GIVE_CANNOT_ENCHANT: str = "{name} cannot receive a {enchant_type} enchant."
+MSG_CHEAT_GIVE_INVALID_ITEM_SPEC: str = "Invalid item spec."
+MSG_CHEAT_GIVE_INVENTORY_FULL: str = "Inventory is full."
+MSG_CHEAT_GIVE_SUCCESS_PARTIAL: str = "Gave {label}{rarity_suffix}. {overflow} could not fit."
+MSG_CHEAT_GIVE_SUCCESS: str = "Gave {label}{rarity_suffix}"
+MSG_CHEAT_KILLED_ENEMIES: str = "Killed {count} enemies"
+MSG_CHEAT_AUTOCOMPLETE_HINT: str = "Tab: autocomplete give item ids or names"
+MSG_CHEAT_AUTOCOMPLETE_GIVE_PREVIEW: str = "Give: {name}"
+MSG_CHEAT_AUTOCOMPLETE_MATCHES: str = "Matches: {matches}"
+MSG_CHEAT_AUTOKILL_USAGE: str = "Usage: autokill on|off"
+MSG_CHEAT_AUTOKILL_STATE: str = "Autokill {state} (1.0s interval)"
+MSG_CHEAT_TIMESTOP_USAGE: str = "Usage: timestop"
+MSG_CHEAT_TIME_ALREADY_STOPPED: str = "Time is already stopped."
+MSG_CHEAT_TIME_STOPPED: str = "Time stopped."
+MSG_CHEAT_TIMESTART_USAGE: str = "Usage: timestart"
+MSG_CHEAT_TIME_ALREADY_RUNNING: str = "Time is already running."
+MSG_CHEAT_TIME_RESTARTED: str = "Time restarted."
+MSG_CHEAT_LEVELUP_RESULT: str = "Leveled up {amount}x → Lv.{level} (+{stat_points} stat points)"
 
 # ######################################################################
 # ##  END OF CENTRALIZED GAME MESSAGES SECTION                        ##
