@@ -604,10 +604,10 @@ class Game:
         self.cave_snapshots.clear()
         # Restore physics for overworld
         self.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
-        self.player_id = self._create_player()
-        self._populate_world()
         self.daynight = DayNightCycle(day_length=DAY_LENGTH_BASE)
         self.wave_system = WaveSystem(difficulty=self.difficulty)
+        self.player_id = self._create_player()
+        self._populate_world()
         self.dead = False
         self.paused = False
         self.sleeping = False

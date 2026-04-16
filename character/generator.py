@@ -418,6 +418,8 @@ class CharacterGenerator:
     def _start_game(self, g: 'Game') -> None:
         """Finalize character and enter the game."""
         from core.components import Renderable, Equipment
+        if not self._is_legacy_migration:
+            g._full_restart()
         # Build sprite with current equipment if loading a save
         eq: Equipment = g.em.get_component(g.player_id, Equipment)
         weapon = eq.weapon or '' if eq else ''
@@ -431,7 +433,7 @@ class CharacterGenerator:
             # Returning to a loaded game — go to paused state
             g.paused = True
             self._is_legacy_migration = False
-        g.music_manager.start(g.daynight.is_night())
+            g.music_manager.start(g.daynight.is_night())
 
     def _randomize(self, cd: 'CharacterData') -> None:
         """Randomize all character customization choices."""

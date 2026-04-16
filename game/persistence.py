@@ -163,6 +163,16 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
     _sh.clear()
 
     g.physics = PhysicsSystem(WORLD_WIDTH, WORLD_HEIGHT)
+    g.difficulty = data.get('difficulty', DIFFICULTY_EASY)
+    g.wave_system.difficulty = g.difficulty
+    g.daynight.time = data.get('day_time', 0.3)
+    g.daynight.day_number = data.get('day_number', 1)
+    is_day_now = TIME_DAY_START <= g.daynight.time < TIME_DAY_END
+    g.daynight._was_day = data.get('was_day', is_day_now)
+    g.daynight._day_flash_timer = 0.0
+    g.daynight._night_flash_timer = 0.0
+    g.wave_system.night_count = data.get('night_count', 0)
+    g.wave_system.was_night = not is_day_now
 
     if g.in_cave >= 0:
         g.overworld = g.world
@@ -232,16 +242,6 @@ def apply_save_data(g: 'Game', data: Dict[str, Any]) -> None:
         eq.rarities[k] = normalize_rarity(eq.rarities.get(k, 'common'))
     inv._equipment_ref = eq
     inv._action_bar_ref = g.action_bar_mgr
-    g.daynight.time = data.get('day_time', 0.3)
-    g.daynight.day_number = data.get('day_number', 1)
-    is_day_now = TIME_DAY_START <= g.daynight.time < TIME_DAY_END
-    g.daynight._was_day = data.get('was_day', is_day_now)
-    g.daynight._day_flash_timer = 0.0
-    g.daynight._night_flash_timer = 0.0
-    g.wave_system.night_count = data.get('night_count', 0)
-    g.wave_system.was_night = not is_day_now
-    g.difficulty = data.get('difficulty', DIFFICULTY_EASY)
-    g.wave_system.difficulty = g.difficulty
     g.health_bar.max_value = ph.maximum
     g.health_bar.set_value(ph.current)
     g.xp_bar.max_value = ps.xp_to_next
