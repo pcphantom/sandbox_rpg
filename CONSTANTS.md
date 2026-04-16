@@ -888,6 +888,151 @@ Fire enchant on equipped weapon (hotbar or equipment slot) counts as a light sou
 | `MIN_WINDOW_WIDTH` | 640 | Minimum window width |
 | `MIN_WINDOW_HEIGHT` | 480 | Minimum window height |
 
+---
+
+## Centralized Game Messages (`game_controller.py`)
+
+> ⚠️ **AI AGENTS: DO NOT modify, rename, remove, or reword ANY message constant in this section or in `game_controller.py` unless the user has EXPLICITLY instructed you to do so.** These are the single source of truth for ALL player-visible pop-up notifications, flash banners, and overlay text.
+
+All notification messages are defined as `MSG_*` constants in `game_controller.py`. No raw message strings should ever appear in `g._notify()` calls.
+
+### Time-of-Day Flash Banners (already centralized)
+
+| Constant | Value | Duration | Trigger |
+|----------|-------|----------|---------|
+| `DAY_FLASH_TEXT` | `"Day {day}"` | 3.0s | DAY_BEGINS (07:12) |
+| `NIGHT_FLASH_TEXT` | `"Night falls — Defend!"` | 2.5s | NIGHT_BEGINS (18:43) |
+| `DAWN_FLASH_TEXT` | `""` (no banner) | 2.0s | DAWN_BEGINS (05:17) |
+| `DUSK_FLASH_TEXT` | `"Dusk approaches..."` | 2.0s | DUSK_BEGINS (16:48) |
+| `SLEEP_OVERLAY_TEXT` | `"Sleeping... Zzz"` | — | During sleep animation |
+
+### Combat Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_COMBAT_NO_RANGED` | `"No ranged weapon equipped!"` | `combat.py` |
+| `MSG_COMBAT_NO_AMMO` | `"No ammo!"` | `combat.py` |
+| `MSG_COMBAT_SPELL_COOLDOWN` | `"{name} on cooldown ({remaining:.1f}s)"` | `combat.py` |
+| `MSG_COMBAT_FULL_HEALTH` | `"Already at full health!"` | `combat.py` |
+| `MSG_COMBAT_CAST_SPELL` | `"Cast {name}!"` | `combat.py` |
+| `MSG_COMBAT_BOMB_THROWN` | `"Bomb thrown!"` | `combat.py` |
+
+### Interaction — Resources / Harvesting
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_MINED` | `"Mined {count} {name}!"` | `interaction.py` |
+
+### Interaction — Spells / Buffs
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_SPELL_COOLDOWN` | `"{name} on cooldown ({remaining:.1f}s)"` | `interaction.py` |
+| `MSG_INTERACT_BUFF_ALREADY` | `"Already have {effect} {level}!"` | `interaction.py` |
+| `MSG_INTERACT_BUFF_APPLIED` | `"Applied {name} ({duration:.0f}s)"` | `interaction.py` |
+| `MSG_INTERACT_NO_BED` | `"No bed found!"` | `interaction.py` |
+| `MSG_INTERACT_RETURNED_BED` | `"Returned to bed!"` | `interaction.py` |
+| `MSG_INTERACT_TARGET_SPELL` | `"Click target to cast spell. ESC/Right-click to cancel."` | `interaction.py` |
+| `MSG_INTERACT_TARGET_BOMB` | `"Click target to throw. ESC/Right-click to cancel."` | `interaction.py` |
+
+### Interaction — Consumables
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_FULL_HEALTH` | `"Already at full health!"` | `interaction.py` |
+| `MSG_INTERACT_USED_HEAL` | `"Used {name} (+{heal} HP)"` | `interaction.py` |
+
+### Interaction — Placement
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_PLACE_HINT` | `"Click to place {name}."` | `interaction.py` |
+| `MSG_INTERACT_PLACE_HINT_BED_ROTATE` | `" R to rotate."` | `interaction.py` |
+| `MSG_INTERACT_PLACE_HINT_CANCEL` | `" ESC/Right-click to cancel."` | `interaction.py` |
+| `MSG_INTERACT_PLACE_CAVE_BLOCKED` | `"Can't place items in caves!"` | `interaction.py` |
+| `MSG_INTERACT_PLACE_BLOCKED` | `"Can't place here!"` | `interaction.py` |
+| `MSG_INTERACT_PLACE_SAME_WALL` | `"Same wall type already here!"` | `interaction.py` |
+| `MSG_INTERACT_PLACE_NO_ITEMS` | `"No more items to place!"` | `interaction.py` |
+| `MSG_INTERACT_PLACE_REPLACED` | `"Replaced {old_name} with {new_name}"` | `interaction.py` |
+| `MSG_INTERACT_PLACE_SUCCESS` | `"Placed {name}"` | `interaction.py` |
+
+### Interaction — Repair
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_REPAIR_NO_TARGET` | `"No damaged structure nearby!"` | `interaction.py` |
+| `MSG_INTERACT_REPAIR_CANNOT` | `"Cannot repair this structure!"` | `interaction.py` |
+| `MSG_INTERACT_REPAIR_NEED_MAT` | `"Need {needed} {mat_name} to repair!"` | `interaction.py` |
+| `MSG_INTERACT_REPAIR_SUCCESS` | `"Repaired {name}! (Used {cost_str})"` | `interaction.py` |
+
+### Interaction — Crafting
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_CRAFT_NO_MATS` | `"Not enough materials!"` | `interaction.py` |
+| `MSG_INTERACT_CRAFT_SUCCESS` | `"Crafted {name}!"` | `interaction.py` |
+
+### Interaction — Bed / Sleep
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_INTERACT_SLEEP_DAY_ONLY` | `"You can only sleep at night!"` | `interaction.py` |
+| `MSG_INTERACT_SLEEPING` | `"Sleeping..."` | `interaction.py` |
+| `MSG_INTERACT_NO_BED_NEARBY` | `"No bed nearby!"` | `interaction.py` |
+
+### Entity / Progression Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_ENTITY_CAVE_BOSS_DEFEATED` | `"Cave boss defeated! Loot added to inventory!"` | `entities.py` |
+| `MSG_ENTITY_CAVE_BOSS_DEFEATED_DURATION` | `3.0` | `entities.py` |
+| `MSG_ENTITY_LEVEL_UP` | `"Level Up! Level {level}  (+3 stat points)"` | `entities.py` |
+
+### Persistence / Save-Load Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_PERSIST_QUICK_SAVED` | `"Quick Saved!"` | `persistence.py` |
+| `MSG_PERSIST_SAVE_FAILED` | `"Save failed!"` | `persistence.py` |
+| `MSG_PERSIST_NO_QUICK_SAVE` | `"No quick save found!"` | `persistence.py` |
+| `MSG_PERSIST_QUICK_LOADED` | `"Quick Loaded!"` | `persistence.py` |
+| `MSG_PERSIST_SAVED_SLOT` | `"Saved to slot {slot}!"` | `persistence.py` |
+| `MSG_PERSIST_SLOT_EMPTY` | `"Slot {slot} is empty!"` | `persistence.py` |
+| `MSG_PERSIST_LOADED_SLOT` | `"Loaded slot {slot}!"` | `persistence.py` |
+| `MSG_PERSIST_DELETED_SLOT` | `"Deleted slot {slot}."` | `persistence.py` |
+
+### Update / Game Loop Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_UPDATE_DEFEND` | `"Defend yourself!"` | `update.py` |
+| `MSG_UPDATE_DEFEND_DURATION` | `2.5` | `update.py` |
+| `MSG_UPDATE_WAKE_UP` | `"You wake up refreshed."` | `update.py` |
+| `MSG_UPDATE_BUFF_EXPIRED` | `"{effect} buff expired."` | `update.py` |
+
+### Equipment Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_EQUIP_INVENTORY_FULL` | `"Inventory full!"` | `character_menu.py` → `events.py` |
+
+### Stone Oven Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_OVEN_TOOK_ITEM` | `"Took {count} {name}"` | `stone_oven.py` |
+| `MSG_OVEN_ADDED_ITEM` | `"Added {count} {name}"` | `stone_oven.py` |
+| `MSG_OVEN_REJECT` | `"You don't want to burn that."` | `stone_oven.py` |
+
+### Main Game Messages
+
+| Constant | Value | Used In |
+|----------|-------|---------|
+| `MSG_GAME_RESPAWN` | `"Respawned! You lost some items."` | `sandbox_rpg.py` |
+| `MSG_GAME_ENTERED_CAVE` | `"Entered cave {index}..."` | `sandbox_rpg.py` |
+| `MSG_GAME_RETURNED_SURFACE` | `"Returned to the surface."` | `sandbox_rpg.py` |
+| `MSG_GAME_NEW_GAME` | `"New game started."` | `sandbox_rpg.py` |
+
 ## Initial Mob Population (`data/day_events.py`, re-exported via `constants.py`)
 
 Format: `(mob_type, required_tile, count)`
