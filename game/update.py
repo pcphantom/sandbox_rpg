@@ -16,7 +16,7 @@ from core.constants import (
 from data import RESOURCE_RESPAWN_DAYS, CAVE_RESET_DAYS
 from core.components import (
     Transform, Velocity, Renderable, Health, Inventory, Collider,
-    AI, PlayerStats, Equipment, Placeable, Building,
+    AI, PlayerStats, Equipment, Placeable,
 )
 from game.cheats import kill_all_enemies
 from game import entities as game_entities
@@ -24,10 +24,8 @@ from enchantments.effects import get_enchant_regen_rate
 
 
 def _get_levitate_ignored_entity_ids(g) -> set[int]:
-    """Return static natural/resource blockers the player may float through."""
+    """Return all solid static entities the player floats through while levitating."""
     ignored_entity_ids: set[int] = set()
-    tree_surface = g.textures.get('tree')
-    rock_surface = g.textures.get('rock')
     for eid in g.em.get_entities_with(Transform, Collider):
         if eid == g.player_id:
             continue
@@ -36,18 +34,7 @@ def _get_levitate_ignored_entity_ids(g) -> set[int]:
             continue
         if g.em.has_component(eid, Velocity) or g.em.has_component(eid, AI):
             continue
-        if g.em.has_component(eid, Building):
-            continue
-        if g.em.has_component(eid, Placeable):
-            placeable = g.em.get_component(eid, Placeable)
-            if placeable.drop_item:
-                ignored_entity_ids.add(eid)
-                continue
-        if not g.em.has_component(eid, Renderable):
-            continue
-        renderable = g.em.get_component(eid, Renderable)
-        if renderable.surface in (tree_surface, rock_surface):
-            ignored_entity_ids.add(eid)
+        ignored_entity_ids.add(eid)
     return ignored_entity_ids
 
 
