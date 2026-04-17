@@ -66,7 +66,7 @@ class DraggableWindow:
         # Close signal — checked by the owning panel after handle_event
         self.close_requested = False
 
-        self._font = pygame.font.SysFont('consolas', 13, bold=True)
+        self._font = pygame.font.SysFont('consolas, monospace', 13, bold=True)
 
     # ------------------------------------------------------------------
     #  Computed rectangles

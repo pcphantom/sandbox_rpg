@@ -21,9 +21,9 @@ class CraftingPanel:
 
     def __init__(self, textures: Any) -> None:
         self.textures = textures
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
-        self.title_font = pygame.font.SysFont('consolas', 22, bold=True)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
+        self.title_font = pygame.font.SysFont('consolas, monospace', 22, bold=True)
         self.scroll = 0
         pw = 420
         pht = 55 + self.SCROLL_VISIBLE * 52 + 30

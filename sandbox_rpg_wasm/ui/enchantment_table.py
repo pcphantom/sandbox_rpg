@@ -40,8 +40,8 @@ class EnchantmentTableUI:
 
     def __init__(self, textures: Any) -> None:
         self.textures = textures
-        self.font = pygame.font.SysFont('consolas', 14)
-        self.title_font = pygame.font.SysFont('consolas', 18, bold=True)
+        self.font = pygame.font.SysFont('consolas, monospace', 14)
+        self.title_font = pygame.font.SysFont('consolas, monospace', 18, bold=True)
         self.slot_size = 44
         self.table_cols = 3
         self.inv_cols = 6

@@ -1,6 +1,7 @@
 # sandbox_rpg.py — Sandbox Survival RPG (Modular Edition)
 # Python 3.10+ | pygame 2.5+
 """Entry point.  All game logic lives in dedicated modules."""
+import asyncio
 import pygame
 import random
 import sys
@@ -110,10 +111,10 @@ class Game:
         self.char_gen_ui = CharacterGenerator()
 
         # Fonts
-        self.font = pygame.font.SysFont('consolas', FONT_SIZE_MAIN)
-        self.font_sm = pygame.font.SysFont('consolas', FONT_SIZE_SM)
-        self.font_lg = pygame.font.SysFont('consolas', FONT_SIZE_LG, bold=True)
-        self.font_xl = pygame.font.SysFont('consolas', FONT_SIZE_XL, bold=True)
+        self.font = pygame.font.SysFont('consolas, monospace', FONT_SIZE_MAIN)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', FONT_SIZE_SM)
+        self.font_lg = pygame.font.SysFont('consolas, monospace', FONT_SIZE_LG, bold=True)
+        self.font_xl = pygame.font.SysFont('consolas, monospace', FONT_SIZE_XL, bold=True)
 
         # Textures
         self.textures = TextureGenerator(seed=self.seed)
@@ -455,7 +456,7 @@ class Game:
     def _destroy_non_player_entities(self) -> None:
         game_entities.destroy_non_player_entities(self)
 
-    def run(self) -> None:
+    async def run(self) -> None:
         while self.running:
             dt = min(self.clock.tick(FPS) / 1000.0, 0.05)  # Cap at 50ms to prevent velocity spikes
             # Handle global display events
@@ -489,8 +490,8 @@ class Game:
                     for x, y, t, c, l in self.dmg_numbers if l - dt > 0
                 ]
                 self._render()
+            await asyncio.sleep(0)
         pygame.quit()
-        sys.exit()
 
     def _process_display_events(self) -> None:
         """Peek at event queue for resize / Alt+Enter without consuming."""
@@ -798,5 +799,8 @@ class Game:
     def _draw_boss_glow(self) -> None:
         game_drawing.draw_boss_glow(self)
 
+async def main():
+    await Game().run()
+
 if __name__ == "__main__":
-    Game().run()
+    asyncio.run(main())

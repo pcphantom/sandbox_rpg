@@ -26,8 +26,8 @@ class SplitDialog:
         self.total: int = 0
         self.amount: int = 0          # amount to split off
         self.typing: str = ''         # keyboard buffer
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
         # External storage refs (used for extra_bar splits or chest splits)
         self._ext_slots = None
         self._ext_enchants = None

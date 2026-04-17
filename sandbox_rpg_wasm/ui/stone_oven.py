@@ -116,8 +116,8 @@ class StoneOvenUI:
 
     def __init__(self, textures) -> None:
         self.textures = textures
-        self.font = pygame.font.SysFont('consolas', 14)
-        self.font_sm = pygame.font.SysFont('consolas', 12)
+        self.font = pygame.font.SysFont('consolas, monospace', 14)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 12)
         # Panel dimensions
         self.pw, self.ph = 300, 240
         # Draggable window — positioned on left side of screen

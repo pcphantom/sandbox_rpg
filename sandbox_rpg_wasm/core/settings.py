@@ -1,5 +1,4 @@
 """Persistent game settings — display mode, resolution, difficulty."""
-import json
 import os
 from typing import Dict, Any
 
@@ -43,24 +42,16 @@ DEFAULTS: Dict[str, Any] = {
 
 
 def load_settings() -> Dict[str, Any]:
-    """Load settings from disk, falling back to defaults."""
+    """Load settings from storage, falling back to defaults."""
+    from core import web_storage
     settings = dict(DEFAULTS)
-    if os.path.exists(SETTINGS_PATH):
-        try:
-            with open(SETTINGS_PATH, 'r') as f:
-                saved = json.load(f)
-            settings.update(saved)
-        except (json.JSONDecodeError, IOError):
-            pass
+    saved = web_storage.load_settings()
+    if saved:
+        settings.update(saved)
     return settings
 
 
 def save_settings(settings: Dict[str, Any]) -> None:
-    """Persist settings to disk."""
-    try:
-        with open(SETTINGS_PATH, 'w') as f:
-            json.dump(settings, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-    except OSError:
-        pass
+    """Persist settings to storage."""
+    from core import web_storage
+    web_storage.save_settings(settings)
