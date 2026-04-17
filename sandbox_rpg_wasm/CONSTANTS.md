@@ -22,6 +22,7 @@ This document tracks all global constants, key variables, and data structures us
 | `core/camera.py` | Camera | Viewport tracking |
 | `core/settings.py` | Display/audio settings | load_settings, save_settings |
 | `core/music.py` | MusicManager | Background music |
+| `core/web_storage.py` | Platform-aware storage shim (desktop filesystem / browser localStorage) | save_slot, load_slot, delete_slot, slot_exists, save_settings, load_settings, _IS_WEB |
 | **game/** | Game logic modules | |
 | `game/combat.py` | Combat mechanics, damage, spells, bombs (god mode check) | 16 functions |
 | `game/drawing.py` | All rendering/drawing + cheats button/help overlay | 15 functions |
@@ -29,7 +30,7 @@ This document tracks all global constants, key variables, and data structures us
 | `game/interaction.py` | Interact, placement, crafting, sleep | 8 functions |
 | `game/menus.py` | Main menu, options menu | 6 functions |
 | `game/persistence.py` | Save/load orchestration (includes cheats_enabled and has_cheated) | 8 functions |
-| `game/save_load.py` | Low-level save file I/O | File operations |
+| `game/save_load.py` | Low-level save I/O (delegates to core.web_storage) | save_game, load_game, delete_save, slot_info, list_slots |
 | `game/cheats.py` | Cheat commands for F12 command bar | execute_command, help, set, give, god, heal, kill, autokill, timestop, timestart, levelup, kill_all_enemies |
 | **systems/** | ECS systems | |
 | `systems/movement.py` | Movement — imports from `game_controller.py` | MovementSystem |
