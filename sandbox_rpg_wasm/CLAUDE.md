@@ -54,4 +54,4 @@
 **CLAUDE.md**: This file, which contains the rules that AI should ALWAYS follow and adhere to at all times. This is your bible and should never be ignored or disregarded. You should never modify this document ever under any circumstances.
 
 ## Project Knowledge
-**Root Local Directory**: C:\Users\billy\Workspace\Sandbox\sandbox_rpg
+**Root Local Directory**: \sandbox_rpg\sandbox_rpg_wasm
