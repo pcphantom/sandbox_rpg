@@ -1,12 +1,9 @@
 """Music manager — day/night tracks with crossfade transitions."""
-import os
 import pygame
 from game_controller import CROSSFADE_MS
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOUNDS_DIR = os.path.join(_PROJECT_ROOT, "sounds")
-DAY_TRACK = os.path.join(SOUNDS_DIR, "little town - orchestral midi.ogg")
-NIGHT_TRACK = os.path.join(SOUNDS_DIR, "Night of the Streets.ogg")
+DAY_TRACK = "sounds/little town - orchestral midi.ogg"
+NIGHT_TRACK = "sounds/Night of the Streets.ogg"
 
 
 class MusicManager:
@@ -59,15 +56,13 @@ class MusicManager:
         pygame.mixer.music.set_volume(self.volume)
 
     def _play(self, track: str) -> None:
-        if not os.path.exists(track):
-            return
         try:
             pygame.mixer.music.load(track)
             pygame.mixer.music.set_volume(self.volume)
             pygame.mixer.music.play(-1)
             self._current_track = track
-        except pygame.error:
-            pass
+        except Exception:
+            return
 
     def _crossfade(self, new_track: str) -> None:
         if self._current_track:

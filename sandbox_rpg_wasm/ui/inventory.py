@@ -36,8 +36,8 @@ class InventoryGrid(UIElement):
         self.slot_size = 48; self.cols = INVENTORY_COLS
         self.rows = INVENTORY_SLOTS_PER_PAGE // self.cols  # 4
         self.page = 0
-        self.font = pygame.font.SysFont('consolas', 14)
-        self.title_font = pygame.font.SysFont('consolas', 20, bold=True)
+        self.font = pygame.font.SysFont('consolas, monospace', 14)
+        self.title_font = pygame.font.SysFont('consolas, monospace', 20, bold=True)
         self.split_dialog = SplitDialog()
         self.drop_confirm = DropConfirmDialog()
         # Which hotbar is shown: -1 = primary, 0+ = extra bar index

@@ -16,9 +16,9 @@ from ui.draggable import DraggableWindow
 class PauseMenu:
     def __init__(self) -> None:
         self.selected_slot = 1  # default to slot 1
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.title_font = pygame.font.SysFont('consolas', 32, bold=True)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.title_font = pygame.font.SysFont('consolas, monospace', 32, bold=True)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
         self.dw = DraggableWindow(460, 440, title="Pause Menu")
 
     def draw(self, surface: pygame.Surface,

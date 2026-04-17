@@ -1,11 +1,9 @@
 """Multi-slot save / load with JSON serialisation."""
-import json
-import os
 import re
-import tempfile
 from typing import Dict, Any, Optional
 
-from core.constants import SAVE_DIR, SAVE_SLOTS
+from core import web_storage
+from core.constants import SAVE_SLOTS
 
 # -- Save-data migration: rename old ench_ item IDs to spell_ --
 _ENCH_RE = re.compile(r'^ench_(regen|protection|strength)_([123])$')
@@ -35,49 +33,20 @@ def _migrate_save_data(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
-def _slot_path(slot: int) -> str:
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    return os.path.join(SAVE_DIR, f"save_{slot}.json")
-
-
 def save_game(slot: int, data: Dict[str, Any]) -> bool:
-    """Atomic save: write to temp file, fsync, then rename over target.
-    Returns True on success, False on failure."""
-    target = _slot_path(slot)
-    try:
-        fd, tmp = tempfile.mkstemp(dir=SAVE_DIR, suffix='.tmp')
-        with os.fdopen(fd, 'w') as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        # Atomic replace (Windows: os.replace handles overwrite)
-        os.replace(tmp, target)
-        return True
-    except Exception:
-        # Clean up temp file on failure
-        try:
-            os.remove(tmp)
-        except OSError:
-            pass
-        return False
+    """Save game data for *slot*. Returns True on success."""
+    return web_storage.save_slot(slot, data)
 
 
 def load_game(slot: int) -> Optional[Dict[str, Any]]:
-    path = _slot_path(slot)
-    if not os.path.exists(path):
+    data = web_storage.load_slot(slot)
+    if data is None:
         return None
-    try:
-        with open(path, 'r') as f:
-            data = json.load(f)
-        return _migrate_save_data(data)
-    except (json.JSONDecodeError, IOError):
-        return None
+    return _migrate_save_data(data)
 
 
 def delete_save(slot: int) -> None:
-    path = _slot_path(slot)
-    if os.path.exists(path):
-        os.remove(path)
+    web_storage.delete_slot(slot)
 
 
 def slot_info(slot: int) -> Optional[Dict[str, Any]]:

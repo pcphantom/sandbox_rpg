@@ -31,8 +31,8 @@ class CommandBar:
         self.result_ok: bool = True
         self.result_timer: float = 0.0
         self.autocomplete_hint: str = ""
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
 
     def toggle(self) -> None:
         if self.visible:

@@ -99,9 +99,9 @@ class ActionBarManager:
 
     def _ensure_fonts(self) -> None:
         if self.font is None:
-            self.font = pygame.font.SysFont('consolas', 14)
+            self.font = pygame.font.SysFont('consolas, monospace', 14)
         if self.font_sm is None:
-            self.font_sm = pygame.font.SysFont('consolas', 12)
+            self.font_sm = pygame.font.SysFont('consolas, monospace', 12)
 
     def create_extra_bar(self) -> ExtraActionBar:
         """Create a new extra action bar."""

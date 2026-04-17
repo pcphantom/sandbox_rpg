@@ -43,9 +43,9 @@ class CharacterMenu:
 
     def __init__(self, textures: Any) -> None:
         self.textures = textures
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
-        self.title_font = pygame.font.SysFont('consolas', 24, bold=True)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
+        self.title_font = pygame.font.SysFont('consolas, monospace', 24, bold=True)
         # Dropdown state for equip selection
         self._dropdown_open: bool = False
         self._dropdown_attr: str = ''

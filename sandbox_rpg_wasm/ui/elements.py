@@ -69,7 +69,7 @@ class Tooltip:
         self.colors: List[Tuple[int, int, int]] = []
         self.visible = False
         self.pos = (0, 0)
-        self.font = pygame.font.SysFont('consolas', 13)
+        self.font = pygame.font.SysFont('consolas, monospace', 13)
 
     def clear(self) -> None:
         self.visible = False

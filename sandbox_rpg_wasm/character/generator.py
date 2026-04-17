@@ -126,9 +126,9 @@ class CharacterGenerator:
     """Full-screen character customization UI."""
 
     def __init__(self) -> None:
-        self._font = pygame.font.SysFont('consolas', 16)
-        self._font_sm = pygame.font.SysFont('consolas', 13)
-        self._font_lg = pygame.font.SysFont('consolas', 22, bold=True)
+        self._font = pygame.font.SysFont('consolas, monospace', 16)
+        self._font_sm = pygame.font.SysFont('consolas, monospace', 13)
+        self._font_lg = pygame.font.SysFont('consolas, monospace', 22, bold=True)
         self._option_label_width = max(
             self._font.size(f"{label}:")[0] for label, _attr, _palette in _OPTIONS
         )

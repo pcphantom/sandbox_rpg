@@ -31,8 +31,8 @@ class DropConfirmDialog:
         self.count: int = 0
         self.enchant: Optional[dict] = None
         self.rarity: str = 'common'
-        self.font = pygame.font.SysFont('consolas', 16)
-        self.font_sm = pygame.font.SysFont('consolas', 13)
+        self.font = pygame.font.SysFont('consolas, monospace', 16)
+        self.font_sm = pygame.font.SysFont('consolas, monospace', 13)
 
     def open(self, item_id: str, count: int,
              enchant: Optional[dict], rarity: str = 'common') -> None:
